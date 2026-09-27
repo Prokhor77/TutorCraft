@@ -1,0 +1,11 @@
+tutorcraft:
+  web-origin: http://localhost:3000
+  security:
+    jwt-secret: test-secret-test-secret-test-secret-0123456789
+    data-encryption-key: test-encryption-key-0123456789
+    cookie-secure: false
+  storage:
+    access-key: test
+    secret-key: test-secret
+  kafka:
+    outbox-poll-interval: PT0.2S

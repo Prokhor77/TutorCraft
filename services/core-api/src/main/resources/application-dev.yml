@@ -1,0 +1,6 @@
+tutorcraft:
+  security:
+    cookie-secure: false
+logging:
+  level:
+    com.tutorcraft: DEBUG

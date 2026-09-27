@@ -1,0 +1,142 @@
+# Локальное окружение одной командой (ARCH-08):  cp .env.example .env && docker compose up --build
+name: tutorcraft
+
+x-healthcheck: &hc
+  interval: 5s
+  timeout: 5s
+  retries: 30
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports: ["5432:5432"]
+    volumes: [pg-data:/var/lib/postgresql/data]
+    healthcheck: { <<: *hc, test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"] }
+
+  mongo:
+    image: mongo:7
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    ports: ["27017:27017"]
+    volumes: [mongo-data:/data/db]
+    healthcheck:
+      <<: *hc
+      test: ["CMD", "mongosh", "--quiet", "--eval", "try { rs.status().ok } catch (e) { rs.initiate({_id:'rs0',members:[{_id:0,host:'mongo:27017'}]}).ok }"]
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
+    ports: ["6379:6379"]
+    healthcheck: { <<: *hc, test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"] }
+
+  kafka:
+    image: apache/kafka:3.8.0
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_NUM_PARTITIONS: 6
+    ports: ["29092:29092"]
+    healthcheck: { <<: *hc, test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"] }
+
+  kafka-init:
+    image: apache/kafka:3.8.0
+    depends_on: { kafka: { condition: service_healthy } }
+    volumes: ["./infra/kafka/create-topics.sh:/create-topics.sh:ro"]
+    entrypoint: ["/bin/bash", "/create-topics.sh"]
+    restart: "no"
+
+  minio:
+    image: minio/minio:RELEASE.2024-10-13T13-34-11Z
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY}
+    ports: ["9000:9000", "9001:9001"]
+    volumes: [minio-data:/data]
+    healthcheck: { <<: *hc, test: ["CMD", "mc", "ready", "local"] }
+
+  minio-init:
+    image: minio/mc:RELEASE.2024-10-08T09-37-26Z
+    depends_on: { minio: { condition: service_healthy } }
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      S3_BUCKET: ${S3_BUCKET}
+      WEB_ORIGIN: ${WEB_ORIGIN}
+    volumes: ["./infra/minio/init.sh:/init.sh:ro"]
+    entrypoint: ["/bin/sh", "/init.sh"]
+    restart: "no"
+
+  mailpit:
+    image: axllent/mailpit:v1.20
+    ports: ["8025:8025", "1025:1025"]
+
+  core-api:
+    build: ./services/core-api
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: ${CORE_PROFILE:-dev}
+      POSTGRES_HOST: postgres
+      MONGO_URI: mongodb://mongo:27017/${MONGO_DB}?replicaSet=rs0
+      REDIS_HOST: redis
+      KAFKA_BOOTSTRAP: kafka:9092
+      S3_ENDPOINT: http://minio:9000
+    ports: ["8080:8080"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      mongo: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      kafka-init: { condition: service_completed_successfully }
+      minio-init: { condition: service_completed_successfully }
+    healthcheck: { <<: *hc, retries: 60, test: ["CMD", "wget", "-qO-", "http://localhost:8080/health/ready"] }
+
+  media-worker:
+    build: ./services/media-worker
+    env_file: .env
+    environment:
+      KAFKA_BROKERS: kafka:9092
+      S3_ENDPOINT: http://minio:9000
+    depends_on:
+      kafka-init: { condition: service_completed_successfully }
+      minio-init: { condition: service_completed_successfully }
+
+  notifier:
+    build: ./services/notifier
+    env_file: .env
+    environment:
+      KAFKA_BROKERS: kafka:9092
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+    ports: ["8090:8090"]
+    depends_on:
+      kafka-init: { condition: service_completed_successfully }
+
+  web:
+    build:
+      context: ./apps/web
+      args:
+        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL}
+    env_file: .env
+    environment:
+      CORE_API_URL: http://core-api:8080
+    ports: ["3000:3000"]
+    depends_on:
+      core-api: { condition: service_healthy }
+
+volumes:
+  pg-data:
+  mongo-data:
+  minio-data:
