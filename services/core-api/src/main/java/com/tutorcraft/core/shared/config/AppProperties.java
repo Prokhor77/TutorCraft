@@ -55,10 +55,27 @@ public record AppProperties(
         }
     }
 
-    public record Storage(@NotBlank String endpoint, @NotBlank String publicEndpoint, @NotBlank String region,
-                          @NotBlank String bucket, @NotBlank String accessKey, @NotBlank String secretKey,
+    /**
+     * Хранилище файлов. {@code driver=local} — файлы на диске сервера в {@code localRoot}, загрузка и выдача идут
+     * через core-api по подписанным ссылкам; {@code driver=s3} — S3-совместимое хранилище, поля S3 обязательны
+     * (проверяются при создании клиента, см. S3StorageConfig).
+     */
+    public record Storage(@NotNull StorageDriver driver, String localRoot,
+                          String endpoint, String publicEndpoint, String region,
+                          String bucket, String accessKey, String secretKey,
                           @NotNull Duration uploadUrlTtl, @NotNull Duration downloadUrlTtl,
                           @Min(1) long maxFileSizeBytes) {
+
+        @Override
+        public String toString() {
+            return "Storage[driver=" + driver + ", localRoot=" + localRoot + ", endpoint=" + endpoint + ", bucket=" + bucket
+                    + ", accessKey=***, secretKey=***]";
+        }
+    }
+
+    public enum StorageDriver {
+        LOCAL,
+        S3
     }
 
     public record Kafka(@NotBlank String topicPrefix, @Min(1) int outboxBatchSize, @NotNull Duration outboxPollInterval) {

@@ -10,11 +10,12 @@ import (
 
 func baseEnv() map[string]string {
 	return map[string]string{
-		"KAFKA_BROKERS": "kafka:9092, kafka2:9092",
-		"S3_ENDPOINT":   "http://minio:9000",
-		"S3_ACCESS_KEY": "ak",
-		"S3_SECRET_KEY": "sk",
-		"S3_BUCKET":     "tutorcraft",
+		"KAFKA_BROKERS":  "kafka:9092, kafka2:9092",
+		"STORAGE_DRIVER": "s3",
+		"S3_ENDPOINT":    "http://minio:9000",
+		"S3_ACCESS_KEY":  "ak",
+		"S3_SECRET_KEY":  "sk",
+		"S3_BUCKET":      "tutorcraft",
 	}
 }
 
@@ -43,6 +44,35 @@ func TestLoadFailsFastWithAllProblems(t *testing.T) {
 	for _, key := range []string{"S3_SECRET_KEY", "WORKER_CONCURRENCY", "TRANSCODE_TIMEOUT", "WORK_DIR"} {
 		if !strings.Contains(err.Error(), key) {
 			t.Errorf("error does not mention %s: %v", key, err)
+		}
+	}
+}
+
+func TestLoadLocalStorageNeedsNoS3Settings(t *testing.T) {
+	root := t.TempDir()
+	env := map[string]string{"KAFKA_BROKERS": "kafka:9092", "STORAGE_LOCAL_ROOT": root}
+	cfg, err := Load(envconfig.FromMap(env))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.StorageDriver != DriverLocal || cfg.LocalStorageRoot != root || cfg.S3Bucket != LocalBucket {
+		t.Fatalf("unexpected storage config %+v", cfg)
+	}
+}
+
+func TestLoadRejectsMissingLocalRootAndUnknownDriver(t *testing.T) {
+	cases := map[string]map[string]string{
+		"STORAGE_LOCAL_ROOT": {"STORAGE_LOCAL_ROOT": "/definitely/missing"},
+		"STORAGE_DRIVER":     {"STORAGE_DRIVER": "ftp"},
+	}
+	for key, extra := range cases {
+		env := map[string]string{"KAFKA_BROKERS": "kafka:9092"}
+		for k, v := range extra {
+			env[k] = v
+		}
+		_, err := Load(envconfig.FromMap(env))
+		if err == nil || !strings.Contains(err.Error(), key) {
+			t.Errorf("%s: expected error mentioning it, got %v", key, err)
 		}
 	}
 }

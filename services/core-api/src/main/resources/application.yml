@@ -100,6 +100,10 @@ tutorcraft:
     telegram-bot-username: ${TELEGRAM_BOT_USERNAME:}
     telegram-auth-max-age: P1D
   storage:
+    # local — файлы на диске сервера (временно, пока не подключено S3); s3 — S3-совместимое хранилище.
+    driver: ${STORAGE_DRIVER:local}
+    # Каталог для driver=local. В контейнерах — общий volume с media-worker (он пишет туда HLS).
+    local-root: ${STORAGE_LOCAL_ROOT:./data/files}
     endpoint: ${S3_ENDPOINT:http://localhost:9000}
     public-endpoint: ${S3_PUBLIC_ENDPOINT:http://localhost:9000}
     region: ${S3_REGION:us-east-1}

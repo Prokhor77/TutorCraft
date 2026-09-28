@@ -160,6 +160,12 @@ services:
       REDIS_PORT: "6379"
       KAFKA_BOOTSTRAP: kafka:9092
       SEED_DEMO_DATA: "false"
+      # Временно файлы хранятся на диске сервера (volume file-storage), а не в S3.
+      # Переезд на S3: STORAGE_DRIVER=s3 в .env + заполненные S3_* (docs/deployment.md).
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
+      STORAGE_LOCAL_ROOT: /data/files
+    volumes:
+      - file-storage:/data/files
     depends_on:
       postgres: { condition: service_healthy }
       mongo: { condition: service_healthy }
@@ -180,6 +186,8 @@ services:
     environment:
       KAFKA_BROKERS: kafka:9092
       KAFKA_TOPIC_PREFIX: ${KAFKA_TOPIC_PREFIX:-tc}
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
+      STORAGE_LOCAL_ROOT: /data/files
       S3_ENDPOINT: ${S3_ENDPOINT}
       S3_REGION: ${S3_REGION:-us-east-1}
       S3_BUCKET: ${S3_BUCKET}
@@ -193,6 +201,8 @@ services:
     volumes:
       # Scratch транскодинга (оригинал до 2 ГиБ + HLS) — на volume, а не в overlay-слое контейнера.
       - media-scratch:/work
+      # Локальное хранилище core-api: воркер читает оригинал и пишет HLS в hls/{fileId}/.
+      - file-storage:/data/files
     depends_on:
       kafka-init: { condition: service_completed_successfully }
     networks: [tutorcraft_net]
@@ -245,3 +255,5 @@ volumes:
   mongo-data:
   kafka-data:
   media-scratch:
+  # Загруженные файлы и HLS при STORAGE_DRIVER=local. Не удалять: это единственная копия файлов.
+  file-storage:

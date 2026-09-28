@@ -10,6 +10,9 @@ public final class FilesErrors {
     public static final String SIZE_MISMATCH = "files.size_mismatch";
     public static final String TYPE_MISMATCH = "files.type_mismatch";
     public static final String QUOTA_EXCEEDED = "files.quota_exceeded";
+    public static final String LINK_INVALID = "files.link_invalid";
+    public static final String LINK_EXPIRED = "files.link_expired";
+    public static final String ALREADY_UPLOADED = "files.already_uploaded";
     public static final String FILE_NOT_READY_FIELD_CODE = "file_not_ready";
 
     private FilesErrors() {

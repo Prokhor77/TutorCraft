@@ -8,6 +8,7 @@ import java.time.Duration;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -25,6 +26,7 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequ
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
 @Component
+@ConditionalOnProperty(prefix = "tutorcraft.storage", name = "driver", havingValue = "s3")
 class S3ObjectStorage implements ObjectStorage {
 
     private static final Logger log = LoggerFactory.getLogger(S3ObjectStorage.class);
@@ -43,8 +45,9 @@ class S3ObjectStorage implements ObjectStorage {
         this.publicBase = stripTrailingSlash(properties.storage().publicEndpoint()) + PATH_SEPARATOR + bucket + PATH_SEPARATOR;
     }
 
+    /** Размер в подпись не входит: его сверяет завершение загрузки (HEAD), как и раньше. */
     @Override
-    public PresignedUrl presignUpload(String key, String contentType, Duration ttl) {
+    public PresignedUrl presignUpload(String key, String contentType, long sizeBytes, Duration ttl) {
         PutObjectRequest put = PutObjectRequest.builder().bucket(bucket).key(key).contentType(contentType).build();
         PresignedPutObjectRequest presigned = presigner.presignPutObject(
                 PutObjectPresignRequest.builder().signatureDuration(ttl).putObjectRequest(put).build());

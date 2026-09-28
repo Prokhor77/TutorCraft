@@ -59,7 +59,7 @@ Four deployables, described in [`docs/architecture.md`](docs/architecture.md):
 
 - **`apps/web`** — all UI, SSR storefront/landings (`/c/[tenantSlug]`), PWA. Owns no business logic.
 - **`services/core-api`** — modular monolith holding *all* business logic and transactions (PostgreSQL, MongoDB, Redis,
-  S3, Kafka producer/consumer).
+  local disk or S3, Kafka producer/consumer).
 - **`services/media-worker`** (Go) — `tc.media.video-uploaded.v1` → FFmpeg HLS → S3 → `tc.media.video-processed.v1`.
 - **`services/notifier`** (Go) — `tc.notify.requested.v1` → Telegram bot / SMTP / WebSocket hub; also serves `/ws`.
 
@@ -145,14 +145,20 @@ core change), implement `courses.spi.ActivityType` in your own module, plus `Ite
 Two documented targets, both driven by `.github/workflows/deploy-production.yml` (push to `main` → green `ci` →
 build 4 images to GHCR → scp compose files → `pull` + `up -d` → wait for healthchecks):
 
-- [`docs/deployment-ip.md`](docs/deployment-ip.md) — **current**: bare IP `91.149.179.186` over HTTP, bundled
-  SeaweedFS (`docker-compose.ip.yml`), no SMTP. `COOKIE_SECURE=false` is mandatory here, since browsers drop
+- [`docs/deployment-ip.md`](docs/deployment-ip.md) — **current**: bare IP `91.149.179.186` over HTTP, files on the
+  server's disk (`STORAGE_DRIVER=local`, volume `file-storage`), no SMTP. `COOKIE_SECURE=false` is mandatory here, since browsers drop
   `Secure` cookies over HTTP.
 - [`docs/deployment.md`](docs/deployment.md) — domain + Cloudflare + external S3/SMTP.
 
 Server-side prod config lives in `application-prod.yml` (Swagger/OpenAPI/`/actuator` disabled, Tomcat timeouts,
 `X-Forwarded-*` trusted only from proxies) and `infra/deploy/nginx/tutorcraft-ip.conf` (rate limits, scanner
-blocking, separate `:9000` server for the S3 gateway).
+blocking, `/storage/` routed straight to core-api on `127.0.0.1:3180`).
+
+**File storage is temporarily local** (`tutorcraft.storage.driver`, env `STORAGE_DRIVER`, default `local`):
+`files.application.ObjectStorage` has two implementations — `LocalObjectStorage` (disk under `STORAGE_LOCAL_ROOT`,
+signed `/storage/{key}` links served by `files.web.StorageController` via the `DirectObjectTransfer` port, HMAC key
+derived from `JWT_SECRET`, only `hls/` is public) and `S3ObjectStorage` (`STORAGE_DRIVER=s3` + `S3_*`). media-worker
+mirrors it (`STORAGE_DRIVER`, `internal/localfs`) and shares the volume with core-api (both run as UID 10001).
 
 **What gates a deploy.** `ci` runs only fast, hermetic checks: gitleaks, `mvn verify -DskipITs` + trivy,
 `go vet`/`test -race`/govulncheck, and the web lint/type/format/i18n/contrast/test/build/audit chain. The two

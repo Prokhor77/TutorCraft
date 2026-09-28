@@ -70,7 +70,7 @@ public class UploadService {
         String key = StorageKeys.of(user.tenantId(), now, fileId);
         files.insert(new StoredFile(fileId, user.tenantId(), user.userId(), FileNames.sanitize(request.fileName()),
                 request.size(), contentType, contentType, purpose, FileStatus.PENDING, key, null, now));
-        PresignedUrl url = storage.presignUpload(key, contentType, uploadTtl);
+        PresignedUrl url = storage.presignUpload(key, contentType, request.size(), uploadTtl);
         log.info("Upload {} created: purpose {}, {} bytes", fileId, purpose.key(), request.size());
         return new UploadTicket(fileId, url.url(), Map.of(HttpHeaders.CONTENT_TYPE, contentType), url.expiresAt());
     }

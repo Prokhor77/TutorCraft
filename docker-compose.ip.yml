@@ -1,78 +1,29 @@
-# Оверлей к docker-compose.prod.yml для развёртывания по голому IP без внешнего S3.
+# Оверлей к docker-compose.prod.yml для развёртывания по голому IP.
 #
 #   docker compose -f docker-compose.prod.yml -f docker-compose.ip.yml up -d
 #
-# Зачем он нужен, если «S3 пока не используем»: AppProperties.Storage помечен @NotBlank по
-# endpoint/bucket/accessKey/secretKey, и core-api просто не стартует с пустыми значениями
-# (ARCH-05: невалидная конфигурация останавливает старт). Поэтому поднимаем локальный
-# SeaweedFS — тот же, что в dev. Переезд на Yandex Object Storage / R2 позже = убрать этот
-# оверлей и заполнить четыре переменные S3_* в .env.
+# Файлы ВРЕМЕННО хранятся на диске сервера (STORAGE_DRIVER=local, volume file-storage из
+# docker-compose.prod.yml) — SeaweedFS больше не поднимается. Загрузка и скачивание идут через
+# core-api по подписанным ссылкам /storage/{key}; nginx (infra/deploy/nginx/tutorcraft-ip.conf)
+# проводит /storage/ прямо в core-api на 127.0.0.1:3180, минуя
+# BFF Next.js — через него 2-гигабайтные видео шли бы с лимитами и таймаутами Node.
 #
-# Наружу SeaweedFS не публикуется: контейнер слушает 127.0.0.1:9100, а на 0.0.0.0:9000 стоит
-# nginx (infra/deploy/nginx/tutorcraft-ip.conf) — так порт остаётся под контролем UFW, который
-# публикация порта докером в обход цепочки DOCKER-USER просто обошла бы.
+# Переезд на S3 (Yandex Object Storage / R2): STORAGE_DRIVER=s3 и четыре переменные S3_* в .env,
+# location /storage/ в nginx можно оставить — при driver=s3 core-api ссылок /storage/ не выдаёт.
+# Старый volume s3-data с файлами SeaweedFS не удаляется автоматически.
+#
+# Наружу core-api не публикуется: только 127.0.0.1:3180, дальше — nginx под контролем UFW.
 #
 # Якоря (*hardening, *logging, *hc) здесь НЕ используются намеренно: YAML-алиасы действуют в
 # пределах одного файла, а compose объединяет файлы уже после разбора — ссылка на якорь из
 # docker-compose.prod.yml развалила бы парсинг. Значения продублированы явно.
 
 services:
-  s3:
-    image: chrislusf/seaweedfs:3.80
-    container_name: tutorcraft_s3
-    restart: unless-stopped
-    security_opt: ["no-new-privileges:true"]
-    logging:
-      driver: json-file
-      options: { max-size: "20m", max-file: "3" }
-    environment:
-      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
-      S3_SECRET_KEY: ${S3_SECRET_KEY}
-      S3_BUCKET: ${S3_BUCKET}
-    entrypoint: ["/bin/sh", "/s3-start.sh"]
-    volumes:
-      - "./infra/s3/start-prod.sh:/s3-start.sh:ro"
-      - s3-data:/data
-    ports:
-      - "127.0.0.1:9100:8333"
-    networks: [tutorcraft_net]
-    deploy:
-      resources:
-        limits: { cpus: "1.0", memory: 512M }
-    healthcheck:
-      interval: 10s
-      timeout: 5s
-      retries: 30
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9333/cluster/status >/dev/null"]
-
-  s3-init:
-    image: chrislusf/seaweedfs:3.80
-    container_name: tutorcraft_s3_init
-    security_opt: ["no-new-privileges:true"]
-    logging:
-      driver: json-file
-      options: { max-size: "20m", max-file: "3" }
-    depends_on: { s3: { condition: service_healthy } }
-    environment:
-      S3_BUCKET: ${S3_BUCKET}
-    volumes: ["./infra/s3/init.sh:/init.sh:ro"]
-    entrypoint: ["/bin/sh", "/init.sh"]
-    networks: [tutorcraft_net]
-    restart: "no"
-
-  # core-api и media-worker ходят в бакет по внутреннему адресу, браузер — по внешнему
-  # (S3_PUBLIC_ENDPOINT из .env), поэтому endpoint'ы разные.
   core-api:
-    environment:
-      S3_ENDPOINT: http://s3:8333
-    depends_on:
-      s3-init: { condition: service_completed_successfully }
+    ports:
+      - "127.0.0.1:3180:8080"
 
   media-worker:
-    environment:
-      S3_ENDPOINT: http://s3:8333
-    depends_on:
-      s3-init: { condition: service_completed_successfully }
     deploy:
       resources:
         limits: { cpus: "1.5", memory: 768M, pids: 256 }
@@ -102,6 +53,3 @@ services:
     deploy:
       resources:
         limits: { cpus: "1.0", memory: 768M }
-
-volumes:
-  s3-data:

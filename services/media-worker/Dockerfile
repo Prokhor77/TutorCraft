@@ -16,8 +16,10 @@ RUN apk add --no-cache ffmpeg ca-certificates \
     && addgroup -S -g 10001 app \
     && adduser -S -D -H -u 10001 -G app app
 # Transcoding scratch space, writable by the non-root user.
-RUN mkdir -p /work && chown 10001:10001 /work
-ENV WORK_DIR=/work
+# Transcoding scratch space and the local object storage root (shared volume with core-api,
+# STORAGE_DRIVER=local), both writable by the non-root user.
+RUN mkdir -p /work /data/files && chown 10001:10001 /work /data/files
+ENV WORK_DIR=/work STORAGE_LOCAL_ROOT=/data/files
 COPY --from=build /out/media-worker /usr/local/bin/media-worker
 USER 10001:10001
 EXPOSE 8091

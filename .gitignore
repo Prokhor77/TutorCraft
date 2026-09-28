@@ -14,6 +14,8 @@ dist/
 .vscode/
 coverage/
 /services/*/bin/
+# Локальное хранилище файлов (STORAGE_DRIVER=local) при запуске core-api с хоста
+/services/core-api/data/
 
 # javac @argfiles from ad-hoc compile harnesses
 javac.*.args

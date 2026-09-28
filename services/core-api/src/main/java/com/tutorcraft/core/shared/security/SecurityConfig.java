@@ -7,6 +7,7 @@ import java.util.List;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -41,8 +42,35 @@ public class SecurityConfig {
         "/error"
     };
     private static final long CORS_MAX_AGE_SECONDS = 3600;
+    /** Шлюз файлов локального хранилища (files.web.StorageController): доступ по подписи ссылки, не по JWT. */
+    private static final String STORAGE_PATHS = "/storage/**";
+    /**
+     * Пользовательские файлы отдаются с origin приложения, поэтому скрипты в них запрещены (SVG, HTML уходят как
+     * attachment — NFR-SEC-05, это второй рубеж). frame-ancestors 'self' — чтобы работал предпросмотр PDF в {@code <object>}.
+     */
+    private static final String STORAGE_CSP = "default-src 'none'; img-src 'self' data:; media-src 'self'; "
+            + "style-src 'unsafe-inline'; frame-ancestors 'self'";
+
+    /** Отдельная цепочка раньше основной: без JWT, CORS и сессий, со своими заголовками для содержимого файлов. */
+    @Bean
+    @Order(1)
+    SecurityFilterChain storageFilterChain(HttpSecurity http) throws Exception {
+        http
+            .securityMatcher(STORAGE_PATHS)
+            .csrf(AbstractHttpConfigurer::disable)
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .requestCache(AbstractHttpConfigurer::disable)
+            .headers(headers -> headers
+                .contentSecurityPolicy(csp -> csp.policyDirectives(STORAGE_CSP))
+                .frameOptions(frame -> frame.sameOrigin())
+                // Cache-Control выставляет StorageController: сегменты HLS кешируются, личные файлы — нет.
+                .cacheControl(cache -> cache.disable()))
+            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+        return http.build();
+    }
 
     @Bean
+    @Order(2)
     SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService jwtService, ProblemWriter problemWriter,
                                             ObjectProvider<PersonalAccessTokenFilter> patFilters) throws Exception {
         PersonalAccessTokenFilter patFilter = patFilters.getIfAvailable();

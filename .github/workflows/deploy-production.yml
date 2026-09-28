@@ -134,9 +134,9 @@ jobs:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_USER }}
           key: ${{ secrets.PROD_SSH_KEY }}
-          # infra/s3/*.sh монтируются в контейнер SeaweedFS, nginx-конфиги — справочно,
-          # чтобы правки vhost доезжали до сервера вместе с релизом.
-          source: "docker-compose.prod.yml,docker-compose.ip.yml,infra/kafka/create-topics.sh,infra/s3/start-prod.sh,infra/s3/init.sh,infra/deploy/backup.sh,infra/deploy/nginx/tutorcraft-ip.conf,infra/deploy/nginx/tutorcraft-proxy.conf"
+          # nginx-конфиги — справочно, чтобы правки vhost доезжали до сервера вместе с релизом
+          # (ставятся в /etc/nginx вручную, см. docs/deployment-ip.md).
+          source: "docker-compose.prod.yml,docker-compose.ip.yml,infra/kafka/create-topics.sh,infra/deploy/backup.sh,infra/deploy/nginx/tutorcraft-ip.conf,infra/deploy/nginx/tutorcraft-proxy.conf"
           target: ${{ secrets.PROD_PATH }}
           overwrite: true
 
@@ -154,7 +154,7 @@ jobs:
             set -e
             cd "${{ secrets.PROD_PATH }}"
             test -f .env || { echo ".env отсутствует в $(pwd) — запустите infra/deploy/bootstrap-ip.sh"; exit 1; }
-            chmod +x infra/deploy/backup.sh infra/s3/start-prod.sh infra/s3/init.sh
+            chmod +x infra/deploy/backup.sh
 
             COMPOSE="docker compose -f docker-compose.prod.yml -f docker-compose.ip.yml"
 
@@ -167,7 +167,7 @@ jobs:
 
             # Ждём healthcheck'и явно: `up --wait` по-разному трактует одноразовый kafka-init
             # в разных версиях compose. core-api стартует до ~2 минут (Flyway + прогрев).
-            for svc in tutorcraft_s3 tutorcraft_core_api tutorcraft_web tutorcraft_notifier tutorcraft_media_worker; do
+            for svc in tutorcraft_core_api tutorcraft_web tutorcraft_notifier tutorcraft_media_worker; do
               for attempt in $(seq 1 60); do
                 status=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$svc" 2>/dev/null || echo missing)
                 [ "$status" = "healthy" ] && { echo "$svc: healthy"; break; }

@@ -94,7 +94,11 @@ services:
       MONGO_URI: mongodb://mongo:27017/${MONGO_DB}?replicaSet=rs0
       REDIS_HOST: redis
       KAFKA_BOOTSTRAP: kafka:9092
+      # Файлы — на диске (общий volume с media-worker). STORAGE_DRIVER=s3 в .env вернёт SeaweedFS.
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
+      STORAGE_LOCAL_ROOT: /data/files
       S3_ENDPOINT: http://s3:8333
+    volumes: ["file-storage:/data/files"]
     ports: ["8080:8080"]
     depends_on:
       postgres: { condition: service_healthy }
@@ -110,7 +114,10 @@ services:
     env_file: .env
     environment:
       KAFKA_BROKERS: kafka:9092
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
+      STORAGE_LOCAL_ROOT: /data/files
       S3_ENDPOINT: http://s3:8333
+    volumes: ["file-storage:/data/files"]
     depends_on:
       kafka-init: { condition: service_completed_successfully }
       s3-init: { condition: service_completed_successfully }
@@ -144,3 +151,4 @@ volumes:
   pg-data:
   mongo-data:
   s3-data:
+  file-storage:

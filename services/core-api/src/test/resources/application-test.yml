@@ -5,6 +5,7 @@ tutorcraft:
     data-encryption-key: test-encryption-key-0123456789
     cookie-secure: false
   storage:
+    local-root: ${java.io.tmpdir}/tutorcraft-it-files
     access-key: test
     secret-key: test-secret
   kafka:

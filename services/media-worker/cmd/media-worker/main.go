@@ -12,6 +12,7 @@ import (
 
 	"github.com/tutorcraft/media-worker/internal/config"
 	"github.com/tutorcraft/media-worker/internal/ffmpeg"
+	"github.com/tutorcraft/media-worker/internal/localfs"
 	"github.com/tutorcraft/media-worker/internal/processor"
 	"github.com/tutorcraft/media-worker/internal/s3"
 	"github.com/tutorcraft/media-worker/internal/storage"
@@ -60,13 +61,18 @@ func run() error {
 
 	components := consumers(cfg, log, proc, producer)
 	components = append(components, healthServer(cfg))
-	log.Info("media-worker started", slog.Int("concurrency", cfg.WorkerConcurrency), slog.String("topic", cfg.UploadedTopic))
+	log.Info("media-worker started", slog.Int("concurrency", cfg.WorkerConcurrency), slog.String("topic", cfg.UploadedTopic),
+		slog.String("storage", cfg.StorageDriver))
 	err = lifecycle.Run(ctx, components...)
 	log.Info("media-worker stopped")
 	return err
 }
 
-func newStore(cfg config.Config) storage.Store {
+// newStore picks the object store for STORAGE_DRIVER (validated by config.Load).
+func newStore(cfg config.Config) processor.ObjectStore {
+	if cfg.StorageDriver == config.DriverLocal {
+		return localfs.Store{Root: cfg.LocalStorageRoot}
+	}
 	return storage.Store{Client: s3.NewClient(s3.Config{
 		Endpoint:    cfg.S3Endpoint,
 		Region:      cfg.S3Region,

@@ -5,15 +5,21 @@
 
 Вариант с доменом, Cloudflare и внешним S3 описан отдельно в [`deployment.md`](deployment.md).
 
+> **Файлы временно хранятся на диске сервера** (`STORAGE_DRIVER=local`, с 2026-09-29). SeaweedFS
+> больше не поднимается: загруженные файлы и HLS лежат в docker-volume `file-storage`
+> (`/data/files` в core-api и media-worker). Браузер грузит и скачивает их через core-api по
+> подписанным ссылкам `/storage/{key}?…&sig=…` (HMAC от `JWT_SECRET`, срок — как у pre-signed
+> URL S3); публичен только префикс `hls/`. См. §6.1 — после первого деплоя с этим изменением
+> нужно один раз обновить nginx. Переезд на S3 — `STORAGE_DRIVER=s3` и `S3_*` в `.env`.
+
 ---
 
 ## 0. Что изменилось в репозитории под этот сценарий
 
 | Файл | Что делает |
 |---|---|
-| `docker-compose.ip.yml` | оверлей к `docker-compose.prod.yml`: поднимает локальный SeaweedFS вместо внешнего S3 |
-| `infra/s3/start-prod.sh` | SeaweedFS с анонимным чтением **только** префикса `hls/` (в dev-скрипте открыт весь бакет) |
-| `infra/deploy/nginx/tutorcraft-ip.conf` | vhost на IP: лимиты запросов, блокировка сканеров, отдельный сервер `:9000` под S3 |
+| `docker-compose.ip.yml` | оверлей к `docker-compose.prod.yml`: публикует core-api на `127.0.0.1:3180` для `/storage/`, лимиты под сервер |
+| `infra/deploy/nginx/tutorcraft-ip.conf` | vhost на IP: лимиты запросов, блокировка сканеров, `location /storage/` → core-api (файлы до 2 ГиБ) |
 | `infra/deploy/nginx/tutorcraft-proxy.conf` | общий сниппет proxy-заголовков |
 | `infra/deploy/bootstrap-ip.sh` | одноразовая подготовка сервера (пользователь, `.env`, vhost) |
 | `services/core-api/.../application-prod.yml` | выключены Swagger, OpenAPI и `/actuator`; таймауты Tomcat; доверие `X-Forwarded-*` только прокси |
@@ -160,7 +166,7 @@ sudo grep ADMIN_PASSWORD /opt/tutorcraft/.env
 GitHub → Actions → **Deploy to Production** → Run workflow → `all`.
 
 Workflow соберёт четыре образа в GHCR, зальёт compose-файлы и скрипты в `/opt/tutorcraft`,
-сделает `pull`, `up -d` и дождётся `healthy` у s3, core-api, web, notifier и media-worker.
+сделает `pull`, `up -d` и дождётся `healthy` у core-api, web, notifier и media-worker.
 Дальше каждый push в `main` → зелёный `ci` → автодеплой.
 
 Проверка:
@@ -188,6 +194,24 @@ dmesg -T | grep -i 'killed process' | tail          # пусто = OOM-killer н
 В браузере: `http://91.149.179.186` → вход под `ADMIN_EMAIL` / `ADMIN_PASSWORD` → создание курса.
 
 ---
+
+
+### 6.1. Переход на локальное хранилище файлов (один раз)
+
+Деплой сам уберёт контейнеры SeaweedFS (`--remove-orphans`) и поднимет volume `file-storage`.
+nginx обновляется вручную — без этого файлы > 25 МБ не загрузятся (запросы `/storage/` пойдут
+через Next.js с лимитом `client_max_body_size 25m`):
+
+```bash
+cd /opt/tutorcraft
+sudo cp infra/deploy/nginx/tutorcraft-ip.conf /etc/nginx/sites-available/tutorcraft.conf
+sudo nginx -t && sudo systemctl reload nginx
+sudo nginx -T 2>/dev/null | grep -c 'location ^~ /storage/'   # 1 — новый vhost активен
+```
+
+Файлы, загруженные раньше в SeaweedFS, остаются в volume `tutorcraft_s3-data` и в новом
+хранилище не видны. Бэкап (`infra/deploy/backup.sh`) volume `file-storage` не копирует —
+при необходимости снимайте его отдельно (`docker run --rm -v tutorcraft_file-storage:/d …`).
 
 ## 7. Что сделано для защиты
 
@@ -218,9 +242,10 @@ dmesg -T | grep -i 'killed process' | tail          # пусто = OOM-killer н
 
 - `no-new-privileges` у всех, `cap_drop: ALL` у четырёх контейнеров приложения (все они уже
   работают под non-root);
-- наружу открыты только `127.0.0.1:3100`, `127.0.0.1:8190`, `127.0.0.1:9100` и `127.0.0.1:5434` —
+- наружу открыты только `127.0.0.1:3100`, `127.0.0.1:8190`, `127.0.0.1:3180` и `127.0.0.1:5434` —
   публикация без `127.0.0.1:` обошла бы UFW через цепочку `DOCKER-USER`;
-- анонимное чтение в S3 ограничено префиксом `hls/`, остальное только по pre-signed URL.
+- без подписи отдаётся только префикс `hls/`, остальные файлы — по подписанным ссылкам
+  `/storage/…` с ограниченным сроком; ответы `/storage/` идут с CSP `default-src 'none'`.
 
 ### Что защитой **не** закрыто
 
@@ -237,17 +262,8 @@ dmesg -T | grep -i 'killed process' | tail          # пусто = OOM-killer н
 ### Опционально: UFW и fail2ban
 
 Сервер общий с двумя чужими приложениями, поэтому автоматически я это не включаю — неверное
-правило отрежет confeek или crm. Если UFW уже активен, порт 9000 нужно открыть явно, иначе
-браузер не сможет загружать файлы:
-
-```bash
-ufw status numbered                 # сначала посмотреть, что уже есть
-ufw allow 9000/tcp comment 'tutorcraft s3'
-```
-
-Порт 9000 слушает nginx (не докер), поэтому UFW им управляет нормально. Если бы SeaweedFS
-публиковался докером напрямую, правило бы не подействовало: публикация портов проходит мимо
-цепочки UFW через `DOCKER-USER` — ровно поэтому контейнер привязан к `127.0.0.1:9100`.
+правило отрежет confeek или crm. Пока файлы хранятся на диске, отдельный порт 9000 не нужен:
+всё идёт через `:80` (правило `ufw allow 9000/tcp`, если оно было, можно удалить).
 
 fail2ban по логам nginx (`/var/log/nginx/tutorcraft.access.log`) имеет смысл ставить после того,
 как вы увидите реальный профиль атак — до этого лимитов nginx достаточно.
