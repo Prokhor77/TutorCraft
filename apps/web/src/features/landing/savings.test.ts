@@ -5,13 +5,13 @@ import { calculateSavings, clampStudents, declension, roundHours } from './savin
 const STUDENT = { one: 'ученик', few: 'ученика', many: 'учеников', other: 'ученика' };
 
 describe('landing savings calculator', () => {
-  it('matches the default estimate: 22 students → 18.7 h/week, ≈ 56 100 ₽/month', () => {
+  it('matches the default estimate: 22 students → 18.7 h/week, ≈ 2 240 BYN/month', () => {
     const result = calculateSavings(22, LANDING.savings);
     expect(result.hoursPerWeek).toBe(18.7);
     expect(result.grading).toBe(9.2);
     expect(result.quizzes).toBe(5.5);
     expect(result.messaging).toBe(4);
-    expect(result.rublesPerMonth).toBe(56100);
+    expect(result.moneyPerMonth).toBe(2240);
   });
 
   it('clamps the slider range and rounds counts', () => {

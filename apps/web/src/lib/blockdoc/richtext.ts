@@ -1,4 +1,9 @@
 import { MARKS, type Mark, type RichText, type RichTextSpan } from '@/lib/api/schemas/blockdoc';
+import { escapeMathText, parseMathText, wrapLatex } from '@/lib/math/inline-math';
+import { atomLatex, isMathAtom, mathAtomHtml } from '@/lib/math/math-dom';
+import { escapeHtml } from '@/lib/utils/html';
+
+export { escapeHtml };
 
 /** Canonical mark nesting order when serializing to HTML (outermost first). */
 const MARK_ORDER: readonly Mark[] = ['bold', 'italic', 'underline', 'strike', 'code'];
@@ -24,15 +29,6 @@ const SAFE_URL = /^(https?:|mailto:|\/(?!\/)|#)/i;
 
 export function isSafeHref(href: string | undefined | null): href is string {
   return !!href && SAFE_URL.test(href.trim());
-}
-
-export function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
 
 function sortMarks(marks: readonly Mark[] | undefined): Mark[] {
@@ -73,11 +69,22 @@ export function plainToRichText(text: string): RichText {
   return text ? [{ text }] : [];
 }
 
-/** Serializes RichText to safe HTML for contenteditable seeding. Newlines become <br>. */
+/** Span text → HTML: newlines become <br>, `$…$` formulas become non-editable atoms. */
+function spanTextToHtml(text: string): string {
+  return parseMathText(text)
+    .map((segment) =>
+      segment.kind === 'math'
+        ? mathAtomHtml(segment.latex)
+        : escapeHtml(segment.text).replace(/\n/g, '<br>'),
+    )
+    .join('');
+}
+
+/** Serializes RichText to safe HTML for contenteditable seeding. */
 export function richTextToHtml(richText: RichText): string {
   return normalizeRichText(richText)
     .map((span) => {
-      let html = escapeHtml(span.text).replace(/\n/g, '<br>');
+      let html = spanTextToHtml(span.text);
       for (const mark of [...sortMarks(span.marks)].reverse())
         html = `<${MARK_TAG[mark]}>${html}</${MARK_TAG[mark]}>`;
       return span.href ? `<a href="${escapeHtml(span.href)}">${html}</a>` : html;
@@ -92,7 +99,12 @@ export function domToRichText(root: Node): RichText {
   const spans: RichText = [];
   const walk = (node: Node, context: WalkContext) => {
     if (node.nodeType === Node.TEXT_NODE) {
-      const text = (node.textContent ?? '').replace(/ /g, ' ');
+      const text = escapeMathText((node.textContent ?? '').replace(/ /g, ' '));
+      if (text) spans.push({ text, marks: [...context.marks], href: context.href });
+      return;
+    }
+    if (isMathAtom(node)) {
+      const text = wrapLatex(atomLatex(node));
       if (text) spans.push({ text, marks: [...context.marks], href: context.href });
       return;
     }

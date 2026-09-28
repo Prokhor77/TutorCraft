@@ -18,7 +18,7 @@ class WebConfig implements WebMvcConfigurer {
     private static final String[] MESSAGE_BUNDLES = {
         "i18n/shared", "i18n/identity", "i18n/org", "i18n/access", "i18n/audit", "i18n/files", "i18n/courses",
         "i18n/enrollment", "i18n/assessment", "i18n/gradebook", "i18n/progress", "i18n/communication",
-        "i18n/dashboard", "i18n/billing", "i18n/integrations"
+        "i18n/dashboard", "i18n/billing", "i18n/integrations", "i18n/activity"
     };
     private static final Locale DEFAULT_LOCALE = Locale.forLanguageTag("ru");
     private static final List<Locale> SUPPORTED_LOCALES = List.of(DEFAULT_LOCALE, Locale.ENGLISH);

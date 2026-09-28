@@ -96,13 +96,13 @@ components, logo, content and accessibility rules). The essentials:
 
 The landing page (`/`) takes its business data from `src/content/landing.ts`, typed and localised (`{ ru, en }`):
 
-| Field          | Default                                            | Effect                                                          |
-| -------------- | -------------------------------------------------- | --------------------------------------------------------------- |
-| `socialProof`  | `null`                                             | hero strip «N+ репетиторов…» and rating — hidden while `null`   |
-| `testimonials` | `[]`                                               | «Отзывы» section and its header anchor — hidden while empty     |
-| `plans`        | Старт 0 ₽ · Профи 1 490 ₽ · Студия 3 990 ₽         | pricing cards; features must describe real product capabilities |
-| `savings`      | 0.42 + 0.25 + 0.18 h per student, 750 ₽/h, 4 weeks | calculator assumptions (shown to visitors as an estimate)       |
-| `contacts`     | `email: null`, `telegram: null`                    | footer «Компания» column — hidden while empty                   |
+| Field          | Default                                                           | Effect                                                               |
+| -------------- | ----------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `socialProof`  | `null`                                                            | hero strip «N+ репетиторов…» and rating — hidden while `null`        |
+| `testimonials` | `[]`                                                              | «Отзывы» section and its header anchor — hidden while empty          |
+| `pricing`      | USD: 1 мес. 40 · 3 мес. 120 · 1 год 240; one feature list for all | subscription terms; features must describe real product capabilities |
+| `savings`      | 0.42 + 0.25 + 0.18 h per student, 30 BYN/h, 4 weeks               | calculator assumptions (shown to visitors as an estimate)            |
+| `contacts`     | `email: null`, `telegram: null`                                   | footer «Компания» column — hidden while empty                        |
 
 Only put **real, verifiable** numbers and quotes from real customers (with consent) into `socialProof` and
 `testimonials`; they are rendered as facts. Calculator math and Russian declension live in

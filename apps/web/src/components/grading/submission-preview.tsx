@@ -7,6 +7,7 @@ import { FileCard, FilePreview } from '@/components/media/file-preview';
 import { StatusBadge } from '@/components/course/item-meta';
 import { ErrorState } from '@/components/ui/error-state';
 import { SkeletonList } from '@/components/ui/skeleton';
+import { MathText } from '@/components/math/math-text';
 import { useSubmission } from '@/features/assessment/use-assessment';
 import { parseEssayId } from '@/features/assessment/quick-comments';
 import { useAttempt } from '@/features/quiz/use-quiz';
@@ -115,7 +116,11 @@ export function EssayPreview({ id }: { id: string }) {
       <BlockRenderer doc={question.body} />
       <div className="rounded-md bg-surface-muted p-3 sm:p-4">
         <div className="whitespace-pre-wrap rounded-md bg-surface p-4 text-sm leading-relaxed shadow-sm sm:p-5">
-          {essayText(question.response) || t('emptySubmission')}
+          {essayText(question.response) ? (
+            <MathText value={essayText(question.response)} />
+          ) : (
+            t('emptySubmission')
+          )}
         </div>
       </div>
     </div>

@@ -1,12 +1,14 @@
 'use client';
-import { Bold, Code, Italic, Link2, Strikethrough, Underline } from 'lucide-react';
+import { Bold, Code, Italic, Link2, Sigma, Strikethrough, Underline } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { toast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
+import { useFormulaInsertion } from '@/components/math/use-formula-insertion';
 import {
   applyLink,
   applyMark,
@@ -30,6 +32,12 @@ export function EditorToolbar() {
   const [saved, setSaved] = useState<SavedSelection>(null);
   const [url, setUrl] = useState('https://');
   const [error, setError] = useState<string>();
+  const { insertAt } = useFormulaInsertion();
+  const insertFormula = () => {
+    const saved = saveSelection();
+    if (!saved) return toast({ tone: 'info', title: t('formulaPlaceCaret') });
+    insertAt(saved.editable, saved.range);
+  };
 
   return (
     <div
@@ -66,6 +74,17 @@ export function EditorToolbar() {
           }}
         >
           <Link2 aria-hidden />
+        </Button>
+      </Tooltip>
+      <Tooltip content={t('formulaHint')}>
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label={t('formulaHint')}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={insertFormula}
+        >
+          <Sigma aria-hidden /> {t('formula')}
         </Button>
       </Tooltip>
       <Dialog open={linkOpen} onOpenChange={setLinkOpen}>

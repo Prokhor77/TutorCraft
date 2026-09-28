@@ -1,6 +1,7 @@
 'use client';
-import { Minus, Plus, Upload } from 'lucide-react';
+import { Minus, Plus, Sigma, Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useCallback, useEffect, useRef } from 'react';
 import { EmbedFrame } from '@/components/blockdoc/embed-frame';
 import { MathView } from '@/components/blockdoc/math-view';
 import { BlockView } from '@/components/blockdoc/block-renderer';
@@ -8,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input, NativeSelect, Textarea } from '@/components/ui/input';
 import { CALLOUT_TONES, type Block, type BlockOf, type RichText } from '@/lib/api/schemas/blockdoc';
 import { cn } from '@/lib/utils/cn';
+import { useFormulaEditorStore } from '@/stores/formula-editor-store';
 import { RichTextEditable, type RichTextEditableHandle } from './rich-text-editable';
 
 export type BlockFieldProps<T extends Block['type']> = {
@@ -172,20 +174,50 @@ export function CodeBlockField({ block, onChange, autoFocus }: BlockFieldProps<'
 
 export function MathBlockField({ block, onChange, autoFocus }: BlockFieldProps<'math'>) {
   const t = useTranslations('editor');
+  const tMath = useTranslations('math');
+  const openFormulaEditor = useFormulaEditorStore((state) => state.open);
+  const openEditor = useCallback(
+    () =>
+      openFormulaEditor({
+        initialLatex: block.latex,
+        onSubmit: (latex) => onChange({ ...block, latex }),
+      }),
+    [openFormulaEditor, block, onChange],
+  );
+  const autoOpened = useRef(false);
+  useEffect(() => {
+    if (!autoFocus || block.latex || autoOpened.current) return;
+    autoOpened.current = true;
+    openEditor();
+  }, [autoFocus, block.latex, openEditor]);
+
   return (
-    <div className="grid grid-cols-1 gap-2 rounded bg-surface-muted p-3 md:grid-cols-2">
-      <Textarea
-        aria-label={t('latex')}
-        placeholder="E = mc^2"
-        value={block.latex}
-        autoFocus={autoFocus}
-        spellCheck={false}
-        onChange={(event) => onChange({ ...block, latex: event.target.value })}
-        className="min-h-20 font-mono text-sm"
-      />
-      <div className="flex items-center justify-center rounded bg-surface p-2" aria-live="polite">
-        <MathView latex={block.latex} />
-      </div>
+    <div className="flex flex-col gap-2 rounded bg-surface-muted p-3">
+      <button
+        type="button"
+        onClick={openEditor}
+        aria-label={tMath('openEditor')}
+        className="flex min-h-16 items-center justify-center rounded bg-surface p-2 transition-colors duration-fast hover:bg-primary-soft/40 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus-ring/20"
+      >
+        {block.latex ? (
+          <MathView latex={block.latex} className="pointer-events-none" />
+        ) : (
+          <span className="flex items-center gap-2 text-sm text-text-muted">
+            <Sigma className="size-4" aria-hidden /> {tMath('openEditor')}
+          </span>
+        )}
+      </button>
+      <details className="text-xs text-text-muted">
+        <summary className="cursor-pointer select-none">{t('latex')}</summary>
+        <Textarea
+          aria-label={t('latex')}
+          placeholder="E = mc^2"
+          value={block.latex}
+          spellCheck={false}
+          onChange={(event) => onChange({ ...block, latex: event.target.value })}
+          className="mt-2 min-h-20 font-mono text-sm"
+        />
+      </details>
     </div>
   );
 }

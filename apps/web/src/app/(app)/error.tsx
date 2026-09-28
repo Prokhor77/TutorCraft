@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/features/auth/routes';
+import { reportClientError } from '@/lib/activity/reporter';
 
 /** Route error inside the app shell: a Stitch white panel with a danger chip, retry and a way home. */
 export default function AppError({
@@ -17,6 +18,7 @@ export default function AppError({
   const t = useTranslations('errors');
   useEffect(() => {
     console.error('[ui] route error', error.name, error.digest ?? '');
+    reportClientError(error);
   }, [error]);
   return (
     <section

@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { useEffect, type ReactNode } from 'react';
 import { AppShell } from '@/components/layout/app-shell';
+import { FormulaDialogHost } from '@/components/math/formula-dialog-host';
 import { Spinner } from '@/components/ui/spinner';
 import { persistLocale } from '@/features/app/locale';
 import { useRequireAuth, useSessionBootstrap, useTenantBranding } from '@/features/auth/use-auth';
@@ -26,7 +27,12 @@ function AppRuntime({ children }: { children: ReactNode }) {
   useOfflineRunner();
   useTenantBranding();
   useLocaleSync();
-  return <AppShell>{children}</AppShell>;
+  return (
+    <>
+      <AppShell>{children}</AppShell>
+      <FormulaDialogHost />
+    </>
+  );
 }
 
 /** Client-side auth guard for the (app) route group (ADR-003: no authenticated SSR). */

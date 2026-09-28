@@ -55,6 +55,9 @@ com.tutorcraft.core.<module>/
 | V13 | progress | completion_states, course_completions, item_views |
 | V14 | communication.forum | forum_discussions, forum_posts, forum_subscriptions, forum_reads |
 | V15 | integrations | api_tokens, webhooks, webhook_deliveries |
+| V16 | activity | activity_log |
+| V16 | activity | activity_log |
+| V17 | billing | tenant_subscriptions, subscription_payments |
 
 ## MongoDB
 - `MongoTemplate`, коллекции: `modules`, `items` (courses); `question_categories`, `questions`, `question_versions`, `quiz_layouts` (assessment.quiz).

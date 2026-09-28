@@ -9,6 +9,7 @@ import com.tutorcraft.core.shared.domain.NotFoundException;
 import com.tutorcraft.core.shared.domain.RateLimitedException;
 import com.tutorcraft.core.shared.domain.UnauthorizedException;
 import com.tutorcraft.core.shared.domain.ValidationException;
+import com.tutorcraft.core.shared.web.RequestCorrelation;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -29,6 +30,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final String INTERNAL_ERROR = "internal.error";
 
     private final ProblemFactory problems;
 
@@ -76,7 +78,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     ProblemDetail handleUnexpected(Exception ex, Locale locale) {
         log.error("Unhandled error", ex);
-        return problems.create(HttpStatus.INTERNAL_SERVER_ERROR, "internal.error", Map.of(), List.of(), locale);
+        RequestCorrelation.rememberError(INTERNAL_ERROR, ex);
+        return problems.create(HttpStatus.INTERNAL_SERVER_ERROR, INTERNAL_ERROR, Map.of(), List.of(), locale);
     }
 
     private static HttpStatus statusOf(DomainException ex) {

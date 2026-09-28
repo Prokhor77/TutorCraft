@@ -15,7 +15,8 @@ class ModuleBoundariesTest {
 
     private static final String ROOT = "com.tutorcraft.core";
     private static final List<String> MODULES = List.of("identity", "org", "access", "audit", "files", "courses",
-            "enrollment", "assessment", "gradebook", "progress", "communication", "dashboard", "billing", "integrations");
+            "enrollment", "assessment", "gradebook", "progress", "communication", "dashboard", "billing", "integrations",
+            "activity");
     private static final List<String> INTERNAL_LAYERS = List.of("application", "infrastructure", "web");
 
     private static JavaClasses classes;

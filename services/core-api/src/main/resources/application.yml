@@ -113,6 +113,20 @@ tutorcraft:
     topic-prefix: ${KAFKA_TOPIC_PREFIX:tc}
     outbox-batch-size: 100
     outbox-poll-interval: PT0.5S
+  # Журнал активности (админка → «Активность»): каждый запрос к API, переходы и ошибки в браузере.
+  activity-log:
+    enabled: ${ACTIVITY_LOG_ENABLED:true}
+    # false — успешные GET не пишутся (меньше объём), изменения и любые ошибки пишутся всегда.
+    log-reads: ${ACTIVITY_LOG_READS:true}
+    retention: ${ACTIVITY_LOG_RETENTION:P30D}
+    queue-capacity: 10000
+    batch-size: 500
+    flush-interval: PT1S
+    purge-cron: "0 37 3 * * *"
+    max-stack-length: 8000
+    trail-before: PT30M
+    trail-after: PT5M
+    trail-limit: 300
   rate-limit:
     requests-per-minute-user: 600
     requests-per-minute-ip: 300

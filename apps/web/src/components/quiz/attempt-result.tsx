@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ErrorState } from '@/components/ui/error-state';
 import { SkeletonList } from '@/components/ui/skeleton';
+import { MathText } from '@/components/math/math-text';
 import { ROUTES } from '@/features/auth/routes';
 import { describeResponse } from '@/features/quiz/responses';
 import { useAttempt, useAttemptResult } from '@/features/quiz/use-quiz';
@@ -204,13 +205,15 @@ export function AttemptResultView({
                   )}
                 >
                   <dt className="text-label-md uppercase text-text-muted">{t('yourAnswer')}</dt>
-                  <dd className="text-sm">{describeResponse(question.response, view, labels)}</dd>
+                  <dd className="text-sm">
+                    <MathText value={describeResponse(question.response, view, labels)} />
+                  </dd>
                 </div>
                 {question.correctResponse ? (
                   <div className="flex flex-col gap-0.5 rounded bg-success-soft px-4 py-3">
                     <dt className="text-label-md uppercase text-success">{t('correctAnswer')}</dt>
                     <dd className="text-sm">
-                      {describeResponse(question.correctResponse, view, labels)}
+                      <MathText value={describeResponse(question.correctResponse, view, labels)} />
                     </dd>
                   </div>
                 ) : null}
@@ -222,7 +225,9 @@ export function AttemptResultView({
                         className="mt-0.5 size-4 shrink-0 text-primary"
                         aria-hidden
                       />
-                      {question.feedback}
+                      <span>
+                        <MathText value={question.feedback} />
+                      </span>
                     </dd>
                   </div>
                 ) : null}

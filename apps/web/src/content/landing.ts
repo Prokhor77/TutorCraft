@@ -29,20 +29,27 @@ export type Testimonial = {
   stars: number;
 };
 
-export type PlanFeature = { text: LocalizedText; included: boolean };
+/** Currency of a landing amount (ISO 4217), e.g. `USD` for subscriptions, `BYN` for the savings estimate. */
+export type LandingCurrency = 'USD' | 'BYN';
 
+/** One subscription term. Every term unlocks the same product — only duration and price differ. */
 export type Plan = {
   id: string;
   name: LocalizedText;
-  /** Monthly price in whole rubles; 0 = free. */
-  priceRub: number;
-  /** Price period caption, e.g. «навсегда» / «в месяц». */
-  period: LocalizedText;
-  description: LocalizedText;
+  /** Subscription length in months. */
+  months: number;
+  /** Price for the whole term in whole units of `Pricing.currency`. */
+  price: number;
   highlighted?: boolean;
   /** Badge over a highlighted plan. */
   badge?: LocalizedText;
-  features: PlanFeature[];
+};
+
+export type Pricing = {
+  currency: LandingCurrency;
+  /** Capabilities included in every subscription (listed once under the plans). */
+  features: LocalizedText[];
+  plans: Plan[];
 };
 
 /** Time-savings calculator assumptions (hours per student per week), shown to visitors as an estimate. */
@@ -51,87 +58,60 @@ export type SavingsAssumptions = {
   maxStudents: number;
   defaultStudents: number;
   hoursPerStudent: { grading: number; quizzes: number; messaging: number };
-  /** Hourly rate used for the «≈ N ₽ в месяц» estimate. */
-  hourlyRateRub: number;
+  /** Hourly rate used for the «≈ N BYN в месяц» estimate. */
+  hourlyRate: number;
+  currency: LandingCurrency;
   weeksPerMonth: number;
 };
 
 export type LandingContent = {
   socialProof: SocialProof | null;
   testimonials: Testimonial[];
-  plans: Plan[];
+  pricing: Pricing;
   savings: SavingsAssumptions;
   contacts: { email: string | null; telegram: string | null };
 };
 
 const t = (ru: string, en: string): LocalizedText => ({ ru, en });
-const yes = (ru: string, en: string): PlanFeature => ({ text: t(ru, en), included: true });
-const no = (ru: string, en: string): PlanFeature => ({ text: t(ru, en), included: false });
 
 export const LANDING: LandingContent = {
   // Fill only with real numbers — see README «Landing content».
   socialProof: null,
   testimonials: [],
-  plans: [
-    {
-      id: 'start',
-      name: t('Старт', 'Start'),
-      priceRub: 0,
-      period: t('навсегда', 'forever'),
-      description: t(
-        'Чтобы собрать первый курс и позвать учеников',
-        'Build your first course and invite students',
-      ),
-      features: [
-        yes('Конструктор курсов и блочный редактор', 'Course builder and block editor'),
-        yes('Задания и тесты: 8 типов вопросов', 'Assignments and quizzes: 8 question types'),
-        yes('Единая очередь проверки и журнал оценок', 'Unified grading queue and gradebook'),
-        yes('Уведомления в Telegram и на почту', 'Telegram and email notifications'),
-        no('Продажа курсов с онлайн-оплатой', 'Selling courses with online payments'),
-        no('API-токены и вебхуки', 'API tokens and webhooks'),
-      ],
-    },
-    {
-      id: 'pro',
-      name: t('Профи Репетитор', 'Pro Tutor'),
-      priceRub: 1490,
-      period: t('в месяц', 'per month'),
-      description: t(
-        'Для репетитора с потоком учеников',
-        'For a tutor with a steady flow of students',
-      ),
-      highlighted: true,
-      badge: t('Популярный выбор', 'Most popular'),
-      features: [
-        yes('Всё из тарифа «Старт»', 'Everything in Start'),
-        yes('Видео HLS и медиатека курса', 'HLS video and course media library'),
-        yes('Условия доступа и отчёт о прогрессе', 'Access conditions and progress report'),
-        yes('Продажа курсов с онлайн-оплатой', 'Selling courses with online payments'),
-        no('Брендинг школы и несколько преподавателей', 'School branding and multiple teachers'),
-        no('API-токены и вебхуки', 'API tokens and webhooks'),
-      ],
-    },
-    {
-      id: 'studio',
-      name: t('Студия / Онлайн-школа', 'Studio / Online school'),
-      priceRub: 3990,
-      period: t('в месяц', 'per month'),
-      description: t('Для команды преподавателей', 'For a team of teachers'),
-      features: [
-        yes('Всё из тарифа «Профи Репетитор»', 'Everything in Pro Tutor'),
-        yes('Брендинг школы: логотип и цвет', 'School branding: logo and colour'),
-        yes('Несколько преподавателей и ассистентов', 'Multiple teachers and assistants'),
-        yes('Группы, импорт пользователей из CSV', 'Groups and CSV user import'),
-        yes('API-токены, вебхуки и журнал аудита', 'API tokens, webhooks and audit log'),
-      ],
-    },
-  ],
+  pricing: {
+    currency: 'USD',
+    features: [
+      t('Конструктор курсов и блочный редактор', 'Course builder and block editor'),
+      t('Задания и тесты: 8 типов вопросов', 'Assignments and quizzes: 8 question types'),
+      t('Единая очередь проверки и журнал оценок', 'Unified grading queue and gradebook'),
+      t('Уведомления в Telegram и на почту', 'Telegram and email notifications'),
+      t('Видео и медиатека курса', 'Video and course media library'),
+      t('Условия доступа и отчёт о прогрессе', 'Access conditions and progress report'),
+      t('Брендинг школы: логотип и цвет', 'School branding: logo and colour'),
+      t('Несколько преподавателей и ассистентов', 'Multiple teachers and assistants'),
+      t('Группы, импорт пользователей из CSV', 'Groups and CSV user import'),
+      t('API-токены, вебхуки и журнал аудита', 'API tokens, webhooks and audit log'),
+    ],
+    plans: [
+      { id: 'month', name: t('1 месяц', '1 month'), months: 1, price: 40 },
+      { id: 'quarter', name: t('3 месяца', '3 months'), months: 3, price: 120 },
+      {
+        id: 'year',
+        name: t('1 год', '1 year'),
+        months: 12,
+        price: 240,
+        highlighted: true,
+        badge: t('Выгоднее всего', 'Best value'),
+      },
+    ],
+  },
   savings: {
     minStudents: 5,
     maxStudents: 60,
     defaultStudents: 22,
     hoursPerStudent: { grading: 0.42, quizzes: 0.25, messaging: 0.18 },
-    hourlyRateRub: 750,
+    hourlyRate: 30,
+    currency: 'BYN',
     weeksPerMonth: 4,
   },
   contacts: { email: null, telegram: null },

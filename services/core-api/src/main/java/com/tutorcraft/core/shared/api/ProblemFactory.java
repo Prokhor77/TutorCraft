@@ -1,6 +1,7 @@
 package com.tutorcraft.core.shared.api;
 
 import com.tutorcraft.core.shared.domain.FieldViolation;
+import com.tutorcraft.core.shared.web.RequestCorrelation;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
 import java.net.URI;
@@ -12,7 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.stereotype.Component;
 
-/** Сборка ProblemDetail: локализованный title по коду ошибки, traceId, errors[] (API-03). */
+/** Сборка ProblemDetail: локализованный title по коду ошибки, traceId, requestId (журнал активности), errors[] (API-03). */
 @Component
 public class ProblemFactory {
 
@@ -28,11 +29,13 @@ public class ProblemFactory {
 
     public ProblemDetail create(HttpStatus status, String code, Map<String, Object> args,
                                 List<FieldViolation> violations, Locale locale) {
+        RequestCorrelation.rememberError(code, null);
         ProblemDetail problem = ProblemDetail.forStatus(status);
         problem.setType(URI.create(TYPE_PREFIX + code));
         problem.setTitle(messages.getMessage(code, args.values().toArray(), status.getReasonPhrase(), locale));
         problem.setProperty("code", code);
         problem.setProperty("traceId", currentTraceId());
+        RequestCorrelation.currentRequestId().ifPresent(requestId -> problem.setProperty("requestId", requestId));
         if (!violations.isEmpty()) {
             problem.setProperty("errors", violations);
         }

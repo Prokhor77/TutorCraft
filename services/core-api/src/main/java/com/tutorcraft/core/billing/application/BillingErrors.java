@@ -10,6 +10,8 @@ public final class BillingErrors {
     public static final String PROVIDER_UNAVAILABLE = "billing.provider_unavailable";
     public static final String WEBHOOK_INVALID = "billing.webhook_invalid";
     public static final String FAKE_DISABLED = "billing.fake_disabled";
+    public static final String SUBSCRIPTION_INACTIVE = "billing.subscription_inactive";
+    public static final String SUBSCRIPTION_CHECKOUT_UNAVAILABLE = "billing.subscription_checkout_unavailable";
 
     private BillingErrors() {
     }

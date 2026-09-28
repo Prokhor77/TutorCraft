@@ -4,7 +4,9 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox, Radio } from '@/components/ui/checkbox';
-import { Input, NativeSelect, Textarea } from '@/components/ui/input';
+import { MathText } from '@/components/math/math-text';
+import { MathTextInput } from '@/components/math/math-text-input';
+import { Input } from '@/components/ui/input';
 import {
   currentOrder,
   essayResponse,
@@ -14,7 +16,9 @@ import {
   toggleOptionId,
 } from '@/features/quiz/responses';
 import type { QuestionResponse, StudentQuestionView } from '@/lib/api/schemas/quiz';
+import { mathTextToPlain } from '@/lib/math/inline-math';
 import { cn } from '@/lib/utils/cn';
+import { MatchChoiceSelect } from './match-choice-select';
 
 type Props = {
   question: StudentQuestionView;
@@ -34,6 +38,7 @@ export function QuestionInput({ question, response, onChange, disabled }: Props)
   const [numberDraft, setNumberDraft] = useState(
     response && 'number' in response ? String(response.number) : '',
   );
+  const [essayDraft, setEssayDraft] = useState(() => essayText(response));
 
   switch (question.type) {
     case 'single_choice':
@@ -48,7 +53,9 @@ export function QuestionInput({ question, response, onChange, disabled }: Props)
                 checked={!!response && 'optionId' in response && response.optionId === option.id}
                 onChange={() => onChange({ optionId: option.id }, false)}
               />
-              {option.text}
+              <span className="min-w-0 flex-1">
+                <MathText value={option.text} />
+              </span>
             </label>
           ))}
         </fieldset>
@@ -69,7 +76,9 @@ export function QuestionInput({ question, response, onChange, disabled }: Props)
                   checked={checked}
                   onCheckedChange={() => onChange(toggleOptionId(response, option.id), false)}
                 />
-                {option.text}
+                <span className="min-w-0 flex-1">
+                  <MathText value={option.text} />
+                </span>
               </label>
             );
           })}
@@ -120,12 +129,16 @@ export function QuestionInput({ question, response, onChange, disabled }: Props)
       );
     case 'essay':
       return (
-        <Textarea
-          aria-label={t('yourAnswer')}
+        <MathTextInput
+          multiline
+          ariaLabel={t('yourAnswer')}
           className="min-h-48 text-base"
           disabled={disabled}
-          defaultValue={essayText(response)}
-          onChange={(event) => onChange(essayResponse(event.target.value), true)}
+          value={essayDraft}
+          onChange={(text) => {
+            setEssayDraft(text);
+            onChange(essayResponse(text), true);
+          }}
         />
       );
     case 'matching':
@@ -136,22 +149,18 @@ export function QuestionInput({ question, response, onChange, disabled }: Props)
               key={prompt.id}
               className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-4"
             >
-              <span className="flex-1 text-base">{prompt.text}</span>
-              <NativeSelect
+              <span className="flex-1 text-base">
+                <MathText value={prompt.text} />
+              </span>
+              <MatchChoiceSelect
                 className="h-12 sm:w-64"
+                ariaLabel={mathTextToPlain(prompt.text)}
+                placeholder={t('choose')}
                 disabled={disabled}
+                choices={question.answerChoices ?? []}
                 value={response && 'matches' in response ? (response.matches[prompt.id] ?? '') : ''}
-                onChange={(event) =>
-                  onChange(setMatch(response, prompt.id, event.target.value), false)
-                }
-              >
-                <option value="">{t('choose')}</option>
-                {(question.answerChoices ?? []).map((choice) => (
-                  <option key={choice} value={choice}>
-                    {choice}
-                  </option>
-                ))}
-              </NativeSelect>
+                onChange={(choice) => onChange(setMatch(response, prompt.id, choice), false)}
+              />
             </label>
           ))}
         </div>
@@ -168,12 +177,14 @@ export function QuestionInput({ question, response, onChange, disabled }: Props)
               className="flex items-center gap-2 rounded-md border border-card-border bg-surface px-3 py-2 shadow-sm"
             >
               <span className="w-6 text-sm font-semibold text-text-muted">{index + 1}.</span>
-              <span className="flex-1 text-base">{byId.get(id)}</span>
+              <span className="flex-1 text-base">
+                <MathText value={byId.get(id) ?? ''} />
+              </span>
               <Button
                 variant="ghost"
                 size="icon-sm"
                 disabled={disabled || index === 0}
-                aria-label={t('moveUp', { text: byId.get(id) ?? '' })}
+                aria-label={t('moveUp', { text: mathTextToPlain(byId.get(id) ?? '') })}
                 onClick={() => onChange({ order: moveInOrder(effective, id, -1) }, false)}
               >
                 <ArrowUp aria-hidden />
@@ -182,7 +193,7 @@ export function QuestionInput({ question, response, onChange, disabled }: Props)
                 variant="ghost"
                 size="icon-sm"
                 disabled={disabled || index === effective.length - 1}
-                aria-label={t('moveDown', { text: byId.get(id) ?? '' })}
+                aria-label={t('moveDown', { text: mathTextToPlain(byId.get(id) ?? '') })}
                 onClick={() => onChange({ order: moveInOrder(effective, id, 1) }, false)}
               >
                 <ArrowDown aria-hidden />

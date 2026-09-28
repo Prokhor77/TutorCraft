@@ -3,13 +3,10 @@ import {
   BellRing,
   Check,
   CheckCircle2,
-  CreditCard,
   FileQuestion,
   FolderTree,
   GripVertical,
   Lock,
-  PlayCircle,
-  Rocket,
   Send,
   Sigma,
   Smartphone,
@@ -18,8 +15,6 @@ import {
   Timer,
   TrendingUp,
   UploadCloud,
-  Video,
-  X,
   Zap,
   type LucideIcon,
 } from 'lucide-react';
@@ -29,23 +24,16 @@ import type { ReactNode } from 'react';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { LANDING } from '@/content/landing';
+import { LANDING, type LandingCurrency, type Plan } from '@/content/landing';
 import { localize } from '@/content/localize';
 import { ROUTES } from '@/features/auth/routes';
+import { formatLandingPrice } from '@/features/landing/money';
 import { cn } from '@/lib/utils/cn';
+import { pricePerMonth, savingPercent } from '@/lib/utils/term-pricing';
 import { HeroMockup } from './hero-mockup';
 import { LANDING_ANCHORS } from './site-header';
 
 const MAX_STARS = 5;
-
-/** Whole-ruble prices without kopecks: «1 490 ₽». */
-export function formatRubles(amount: number, locale: string): string {
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency: 'RUB',
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
 
 /** Section wrapper: anchor target below the sticky header, eyebrow + headline + subtitle. */
 export function LandingSection({
@@ -110,7 +98,7 @@ async function SocialProofStrip() {
   );
 }
 
-/** Stitch hero: gradient canvas with two soft blobs, pill badge, headline with gradient accent, CTAs, mockup. */
+/** Stitch hero: gradient canvas with two soft blobs, headline with gradient accent, CTAs, mockup. */
 export async function Hero() {
   const t = await getTranslations('landing.hero');
   return (
@@ -123,15 +111,8 @@ export async function Hero() {
         aria-hidden
         className="pointer-events-none absolute -right-32 top-40 size-96 rounded-full bg-success-soft opacity-80 blur-3xl"
       />
-      <div className="relative mx-auto flex max-w-content flex-col gap-12 px-page-x pb-16 pt-12 md:pb-24 md:pt-20">
+      <div className="relative mx-auto flex max-w-content flex-col gap-12 px-page-x pb-16 pt-6 md:pb-24 md:pt-10">
         <div className="mx-auto flex max-w-4xl flex-col items-center gap-6 text-center">
-          <span className="inline-flex flex-wrap items-center justify-center gap-2 rounded-full border border-card-border bg-surface px-4 py-1.5 text-label-md text-primary shadow-sm">
-            <Rocket className="size-4" aria-hidden /> {t('badge')}
-            <span aria-hidden className="text-text-muted">
-              •
-            </span>
-            <span className="text-text-muted">{t('badgeNote')}</span>
-          </span>
           <h1 className="text-hero-mobile font-bold md:text-4xl">
             {t('titleStart')}
             <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
@@ -139,21 +120,11 @@ export async function Hero() {
             </span>
           </h1>
           <p className="max-w-2xl text-base text-text-muted md:text-lg">{t('subtitle')}</p>
-          <div className="flex w-full flex-col justify-center gap-3 sm:w-auto sm:flex-row">
+          <div className="flex w-full justify-center">
             <Button asChild size="lg" className="h-14 px-8 text-base">
               <Link href={ROUTES.register}>
                 {t('ctaPrimary')} <ArrowRight aria-hidden />
               </Link>
-            </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="ghost"
-              className="h-14 bg-surface px-8 text-base shadow-sm hover:shadow-md"
-            >
-              <a href={`#${LANDING_ANCHORS.demo}`}>
-                <PlayCircle aria-hidden /> {t('ctaDemo')}
-              </a>
             </Button>
           </div>
           <SocialProofStrip />
@@ -169,9 +140,7 @@ export async function Hero() {
 const TRUST_CHIPS: { key: string; icon: LucideIcon }[] = [
   { key: 'telegram', icon: Send },
   { key: 'latex', icon: Sigma },
-  { key: 'video', icon: Video },
   { key: 'quiz', icon: FileQuestion },
-  { key: 'payments', icon: CreditCard },
   { key: 'mobile', icon: Smartphone },
 ];
 
@@ -451,10 +420,11 @@ export async function Testimonials() {
   );
 }
 
-/** Pricing from `LANDING.plans`; every CTA leads to registration. */
+/** Subscription terms from `LANDING.pricing`: same product, different duration; every CTA leads to registration. */
 export async function Pricing() {
   const t = await getTranslations('landing.pricing');
   const locale = await getLocale();
+  const { currency, features, plans } = LANDING.pricing;
   return (
     <LandingSection
       id={LANDING_ANCHORS.pricing}
@@ -463,67 +433,84 @@ export async function Pricing() {
       subtitle={t('subtitle')}
     >
       <ul className="grid grid-cols-1 items-stretch gap-gutter lg:grid-cols-3">
-        {LANDING.plans.map((plan) => (
-          <li
+        {plans.map((plan) => (
+          <PlanCard
             key={plan.id}
-            className={cn(
-              'relative flex flex-col gap-5 rounded-lg border bg-surface p-6 shadow-sm md:p-8',
-              plan.highlighted
-                ? 'border-accent shadow-md ring-2 ring-primary lg:-translate-y-2'
-                : 'border-card-border',
-            )}
-          >
-            {plan.highlighted && plan.badge ? (
-              <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-primary px-4 py-1 text-label-md uppercase text-primary-foreground shadow-glow">
-                {localize(plan.badge, locale)}
-              </span>
-            ) : null}
-            <div className="flex flex-col gap-1">
-              <h3 className="text-xl">{localize(plan.name, locale)}</h3>
-              <p className="text-sm text-text-muted">{localize(plan.description, locale)}</p>
-            </div>
-            <p className="flex items-baseline gap-2">
-              <span className="font-heading text-4xl font-bold tracking-tight">
-                {plan.priceRub === 0 ? t('free') : formatRubles(plan.priceRub, locale)}
-              </span>
-              <span className="text-sm text-text-muted">/ {localize(plan.period, locale)}</span>
-            </p>
-            <ul className="flex flex-1 flex-col gap-2.5">
-              {plan.features.map((feature) => (
-                <li
-                  key={feature.text.ru}
-                  className={cn(
-                    'flex items-start gap-2 text-sm',
-                    !feature.included && 'text-text-muted',
-                  )}
-                >
-                  {feature.included ? (
-                    <Check
-                      className="mt-0.5 size-4 shrink-0 text-success"
-                      aria-label={t('included')}
-                    />
-                  ) : (
-                    <X
-                      className="mt-0.5 size-4 shrink-0 text-text-muted"
-                      aria-label={t('notIncluded')}
-                    />
-                  )}
-                  {localize(feature.text, locale)}
-                </li>
-              ))}
-            </ul>
-            <Button
-              asChild
-              size="lg"
-              variant={plan.highlighted ? 'primary' : 'secondary'}
-              className="w-full"
-            >
-              <Link href={ROUTES.register}>{plan.priceRub === 0 ? t('ctaFree') : t('cta')}</Link>
-            </Button>
-          </li>
+            plan={plan}
+            saving={savingPercent(plan, plans)}
+            currency={currency}
+            locale={locale}
+            labels={{
+              perMonth: t('perMonth', {
+                amount: formatLandingPrice(pricePerMonth(plan), currency, locale),
+              }),
+              saving: t('saving', { percent: savingPercent(plan, plans) }),
+              cta: t('cta'),
+            }}
+          />
         ))}
       </ul>
+      <div className="flex flex-col gap-5 rounded-lg border border-card-border bg-surface p-6 shadow-sm md:p-8">
+        <h3 className="text-xl">{t('featuresTitle')}</h3>
+        <ul className="grid grid-cols-1 gap-x-8 gap-y-2.5 sm:grid-cols-2">
+          {features.map((feature) => (
+            <li key={feature.ru} className="flex items-start gap-2 text-sm">
+              <Check className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
+              {localize(feature, locale)}
+            </li>
+          ))}
+        </ul>
+      </div>
     </LandingSection>
+  );
+}
+
+function PlanCard({
+  plan,
+  saving,
+  currency,
+  locale,
+  labels,
+}: {
+  plan: Plan;
+  saving: number;
+  currency: LandingCurrency;
+  locale: string;
+  labels: { perMonth: string; saving: string; cta: string };
+}) {
+  return (
+    <li
+      className={cn(
+        'relative flex flex-col gap-5 rounded-lg border bg-surface p-6 shadow-sm md:p-8',
+        plan.highlighted
+          ? 'border-accent shadow-md ring-2 ring-primary lg:-translate-y-2'
+          : 'border-card-border',
+      )}
+    >
+      {plan.highlighted && plan.badge ? (
+        <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-primary px-4 py-1 text-label-md uppercase text-primary-foreground shadow-glow">
+          {localize(plan.badge, locale)}
+        </span>
+      ) : null}
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-xl">{localize(plan.name, locale)}</h3>
+        {saving > 0 ? <Badge tone="success">{labels.saving}</Badge> : null}
+      </div>
+      <div className="flex flex-1 flex-col gap-1">
+        <p className="font-heading text-4xl font-bold tracking-tight">
+          {formatLandingPrice(plan.price, currency, locale)}
+        </p>
+        <p className="text-sm text-text-muted">{labels.perMonth}</p>
+      </div>
+      <Button
+        asChild
+        size="lg"
+        variant={plan.highlighted ? 'primary' : 'secondary'}
+        className="w-full"
+      >
+        <Link href={ROUTES.register}>{labels.cta}</Link>
+      </Button>
+    </li>
   );
 }
 

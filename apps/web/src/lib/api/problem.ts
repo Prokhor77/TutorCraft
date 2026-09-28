@@ -16,8 +16,12 @@ export const problemSchema = z.object({
   code: z.string().default('unknown'),
   errors: z.array(problemFieldErrorSchema).optional(),
   traceId: z.string().optional(),
+  /** Activity-log reference: the admin finds the failed request (and what preceded it) by this id. */
+  requestId: z.string().optional(),
   args: z.record(z.unknown()).optional(),
 });
+
+export const REQUEST_ID_HEADER = 'X-Request-Id';
 
 /** Machine codes the UI reacts to. Server codes come from the contract; `client.*` are produced locally. */
 export const PROBLEM_CODES = {
@@ -56,6 +60,7 @@ export class ApiProblem extends Error {
   readonly detail?: string;
   readonly errors: ProblemFieldError[];
   readonly traceId?: string;
+  readonly requestId?: string;
   readonly args: Record<string, unknown>;
   readonly retryAfterSec?: number;
 
@@ -66,6 +71,7 @@ export class ApiProblem extends Error {
     detail?: string;
     errors?: ProblemFieldError[];
     traceId?: string;
+    requestId?: string;
     args?: Record<string, unknown>;
     retryAfterSec?: number;
   }) {
@@ -77,6 +83,7 @@ export class ApiProblem extends Error {
     this.detail = init.detail;
     this.errors = init.errors ?? [];
     this.traceId = init.traceId;
+    this.requestId = init.requestId;
     this.args = init.args ?? {};
     this.retryAfterSec = init.retryAfterSec;
   }
@@ -109,10 +116,12 @@ function parseRetryAfter(response: Response): number | undefined {
 /** Converts any non-2xx response into ApiProblem, tolerating non-JSON bodies (e.g. proxy errors). */
 export async function problemFromResponse(response: Response): Promise<ApiProblem> {
   const retryAfterSec = parseRetryAfter(response);
+  const requestId = response.headers.get(REQUEST_ID_HEADER) ?? undefined;
   const fallback = {
     status: response.status,
     code: PROBLEM_CODES.unknown,
     title: response.statusText || `HTTP ${response.status}`,
+    requestId,
     retryAfterSec,
   };
   let body: unknown;
@@ -126,6 +135,7 @@ export async function problemFromResponse(response: Response): Promise<ApiProble
   return new ApiProblem({
     ...parsed.data,
     status: parsed.data.status || response.status,
+    requestId: parsed.data.requestId ?? requestId,
     retryAfterSec,
   });
 }
@@ -135,12 +145,17 @@ export function networkProblem(cause: unknown): ApiProblem {
   return new ApiProblem({ status: 0, code: PROBLEM_CODES.network, title: 'Network error', detail });
 }
 
-export function invalidResponseProblem(path: string, issues: string): ApiProblem {
+export function invalidResponseProblem(
+  path: string,
+  issues: string,
+  requestId?: string | null,
+): ApiProblem {
   return new ApiProblem({
     status: 0,
     code: PROBLEM_CODES.invalidResponse,
     title: 'Unexpected server response',
     detail: `${path}: ${issues}`,
+    requestId: requestId ?? undefined,
   });
 }
 

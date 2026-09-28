@@ -28,7 +28,8 @@
     "retry": "Try again",
     "notFoundEyebrow": "Error 404",
     "pageEyebrow": "Glitch",
-    "goToCabinet": "Open dashboard"
+    "goToCabinet": "Open dashboard",
+    "reference": "Error code: {id}"
   },
   "offline": {
     "dropped": "A queued action could not be completed",
@@ -80,6 +81,7 @@
     "logout": "Log out",
     "logoutAll": "Log out everywhere",
     "notificationSettings": "Notification settings",
+    "subscriptionSettings": "Subscription",
     "primary": "Main navigation",
     "profile": "Profile",
     "skipToContent": "Skip to content",
@@ -148,13 +150,10 @@
       "tryShort": "Start"
     },
     "hero": {
-      "badge": "A new-generation LMS for tutors",
-      "badgeNote": "No complex setup",
       "titleStart": "Create your own courses, grade assignments and ",
       "titleAccent": "help every student reach their best",
       "subtitle": "One studio for tutors: a course tree with access conditions, LaTeX formulas, grading in a single queue and streaming video with a media library.",
       "ctaPrimary": "Create a course for free",
-      "ctaDemo": "See the interface",
       "socialProof": "{count}+ tutors already work in TutorCraft",
       "rating": "{rating} of 5 · {source}"
     },
@@ -191,12 +190,10 @@
     },
     "trust": {
       "eyebrow": "Exam preparation",
-      "title": "Fits state exams and language certificates",
+      "title": "Fits CT, CE, USE, OGE and personal language courses",
       "telegram": "Telegram notifications",
       "latex": "LaTeX formulas",
-      "video": "HLS video",
       "quiz": "8 question types",
-      "payments": "Online course payments",
       "mobile": "Works on phones"
     },
     "tools": {
@@ -293,13 +290,12 @@
     },
     "pricing": {
       "eyebrow": "Pricing",
-      "title": "Simple pricing",
-      "subtitle": "Start for free and upgrade when your student base grows.",
-      "free": "0 ₽",
-      "ctaFree": "Start for free",
-      "cta": "Choose plan",
-      "included": "Included",
-      "notIncluded": "Not included"
+      "title": "One plan, every feature",
+      "subtitle": "Every subscription includes all features. Just pick the term: the longer, the better the price.",
+      "perMonth": "≈ {amount} per month",
+      "saving": "Save {percent}%",
+      "cta": "Subscribe",
+      "featuresTitle": "Included in every subscription"
     },
     "finalCta": {
       "badge": "Quick start",
@@ -990,7 +986,10 @@
     "duplicate": "Duplicate",
     "delete": "Delete",
     "uploading": "{name}: {percent}%",
-    "hint": "Tip: paste images from the clipboard (Ctrl+V) or drop files into the editor. Shift+Enter inserts a line break."
+    "hint": "Tip: paste images from the clipboard (Ctrl+V) or drop files into the editor. Shift+Enter inserts a line break.",
+    "formula": "Formula",
+    "formulaHint": "Insert formula (Alt+=)",
+    "formulaPlaceCaret": "Place the cursor in the text where the formula should go"
   },
   "files": {
     "download": "Download",
@@ -1600,6 +1599,36 @@
     "monthAgenda": "This month's events",
     "monthEmpty": "No deadlines or events this month."
   },
+  "subscription": {
+    "title": "Subscription",
+    "description": "Every TutorCraft feature in any subscription — just pick the term.",
+    "loadError": "Couldn't load the subscription",
+    "statusTitle": "School subscription",
+    "status": {
+      "trial": "Trial",
+      "active": "Active",
+      "expired": "Ended"
+    },
+    "accessUntil": "Access until {date} · {days, plural, one {# day left} other {# days left}}",
+    "expiredHint": "Access ended on {date}. Courses are read-only: you can't create or publish new ones, students keep learning.",
+    "ownerOnly": "Only the school owner can pay for the subscription.",
+    "terms": {
+      "month": "1 month",
+      "quarter": "3 months",
+      "year": "1 year"
+    },
+    "perMonth": "≈ {amount} per month",
+    "saving": "Save {percent}%",
+    "buy": "Subscribe",
+    "purchased": "Subscription activated",
+    "featuresTitle": "Included in every subscription",
+    "paymentsTitle": "Payment history",
+    "period": "{from} — {to}",
+    "renew": "Renew subscription",
+    "bannerExpired": "Your school subscription has ended",
+    "bannerExpiredHint": "Creating and publishing courses is unavailable until you renew.",
+    "bannerEndingSoon": "{days, plural, =0 {Subscription ends today} one {Subscription ends in # day} other {Subscription ends in # days}}"
+  },
   "profile": {
     "title": "Profile",
     "description": "Name, photo, time zone, language and password",
@@ -1621,13 +1650,14 @@
   "admin": {
     "adminChip": "Main administrator",
     "title": "Administration",
-    "description": "Users, categories, branding, audit, sales and integrations of the selected school",
+    "description": "Users, categories, branding, audit, activity, sales and integrations of the selected school",
     "sections": "Administration sections",
     "nav": {
       "users": "Users",
       "categories": "Categories",
       "branding": "Branding",
       "audit": "Audit log",
+      "activity": "Activity",
       "orders": "Sales",
       "integrations": "Integrations"
     },
@@ -1772,6 +1802,83 @@
     "loadError": "Could not load the audit log",
     "emptyTitle": "No entries",
     "emptyText": "Try changing the filters."
+  },
+  "adminActivity": {
+    "shownCount": "Shown: {count}",
+    "panelHint": "Every action in the school: who, what, on which page and how it ended. Open “Trail” to see what the person did before and after",
+    "loadError": "Could not load the activity log",
+    "emptyTitle": "No activity found",
+    "emptyText": "Try changing the filters or the period.",
+    "anonymous": "Not signed in",
+    "duration": "{ms} ms",
+    "filters": {
+      "outcome": "Outcome",
+      "anonymous": "Show actions without sign-in",
+      "actor": "User: name, e-mail or IP",
+      "route": "Route or page",
+      "requestId": "Error code (request id)",
+      "kind": "Event type",
+      "from": "From",
+      "to": "To"
+    },
+    "outcome": {
+      "all": "All",
+      "failed": "Failed",
+      "errors": "Errors"
+    },
+    "kind": {
+      "all": "All events",
+      "request": "Actions (requests)",
+      "page_view": "Page view",
+      "client_error": "Browser error"
+    },
+    "columns": {
+      "at": "When",
+      "actor": "Who",
+      "action": "What",
+      "page": "Where (page)",
+      "outcome": "Outcome",
+      "trail": "Trail"
+    },
+    "summary": {
+      "requests": "Actions in 24 h",
+      "failed": "Rejected: {count}",
+      "serverErrors": "Server errors",
+      "p95": "95% of responses under {ms} ms",
+      "clientErrors": "Browser errors",
+      "activeUsers": "Active users",
+      "window": "in the last 24 hours",
+      "topErrors": "Where it fails most"
+    },
+    "trail": {
+      "open": "Trail",
+      "title": "Action trail",
+      "description": "Details and what the same user did before and after",
+      "loadError": "Could not load the trail",
+      "anchor": {
+        "user": "User actions from {from} to {to}",
+        "session": "Actions in this browser tab from {from} to {to}",
+        "ip": "Anonymous actions from this IP from {from} to {to}",
+        "none": "No related actions"
+      },
+      "truncated": "Not all events are shown — narrow the period in the log.",
+      "at": "When",
+      "actor": "Who",
+      "anonymous": "Not signed in",
+      "ip": "IP",
+      "page": "Page",
+      "path": "Path",
+      "objects": "Objects",
+      "handler": "Handler",
+      "requestId": "Request ID",
+      "session": "Tab",
+      "browser": "Browser",
+      "error": "Error",
+      "stack": "Stack trace",
+      "copy": "Copy",
+      "copied": "Copied",
+      "copyFailed": "Could not copy"
+    }
   },
   "adminOrders": {
     "shownCount": "Showing: {count}",
@@ -2021,5 +2128,30 @@
     "inQuiz": "{count} in quiz",
     "selectTitle": "Select a question",
     "selectText": "Click a bank question in the structure on the left to edit its wording, answer key and check it here."
+  },
+  "math": {
+    "title": "Formula editor",
+    "editTitle": "Edit formula",
+    "description": "Type like in Word: / — fraction, ^ — power, _ — subscript, sqrt — root, pi, alpha… Tab jumps to the next slot.",
+    "fieldLabel": "Formula",
+    "latexSource": "Formula LaTeX source",
+    "mode": "Input mode",
+    "modeVisual": "Visual",
+    "modeLatex": "LaTeX",
+    "search": "Search: root, integral, Pythagoras…",
+    "searchEmpty": "Nothing found — try another word",
+    "section": "Section",
+    "tabs": {
+      "templates": "Templates",
+      "library": "Ready formulas",
+      "recent": "Recent"
+    },
+    "recentEmpty": "Formulas you insert will appear here",
+    "insert": "Insert",
+    "save": "Save",
+    "remove": "Remove formula",
+    "cancel": "Cancel",
+    "insertHint": "Insert formula (Alt+=)",
+    "openEditor": "Open formula editor"
   }
 }

@@ -2,6 +2,7 @@ import type { z } from 'zod';
 import {
   ApiProblem,
   HTTP_STATUS,
+  REQUEST_ID_HEADER,
   invalidResponseProblem,
   networkProblem,
   problemFromResponse,
@@ -39,6 +40,12 @@ export interface SessionAccess {
   clearSession(): void;
 }
 
+/** Where in the UI a request comes from (activity log): current page and browser-tab id. */
+export type ClientContext = { page?: string; sessionId?: string };
+
+export const CLIENT_PAGE_HEADER = 'X-Client-Page';
+export const CLIENT_SESSION_HEADER = 'X-Client-Session';
+
 export type ApiClientConfig = {
   baseUrl?: string;
   session: SessionAccess;
@@ -46,7 +53,11 @@ export type ApiClientConfig = {
   getLocale?: () => string | undefined;
   /** School chosen by the platform administrator; sent as `X-Tenant-Id` (ignored by the API for everyone else). */
   getTenantOverride?: () => string | undefined;
+  /** Page + tab id sent with every request so the admin activity log shows where an action happened. */
+  getClientContext?: () => ClientContext;
   onSessionExpired?: () => void;
+  /** Called when a 2xx body violates the contract schema (reported to the activity log as a client error). */
+  onContractMismatch?: (problem: ApiProblem) => void;
 };
 
 type Parsed<S> = S extends z.ZodTypeAny ? z.output<S> : void;
@@ -71,7 +82,9 @@ export class ApiClient {
   private readonly fetchImpl: typeof fetch;
   private readonly getLocale?: () => string | undefined;
   private readonly getTenantOverride?: () => string | undefined;
+  private readonly getClientContext?: () => ClientContext;
   private readonly onSessionExpired?: () => void;
+  private readonly onContractMismatch?: (problem: ApiProblem) => void;
   private refreshInFlight: Promise<RefreshOutcome> | null = null;
 
   constructor(config: ApiClientConfig) {
@@ -80,7 +93,9 @@ export class ApiClient {
     this.fetchImpl = config.fetchImpl ?? ((...args) => fetch(...args));
     this.getLocale = config.getLocale;
     this.getTenantOverride = config.getTenantOverride;
+    this.getClientContext = config.getClientContext;
     this.onSessionExpired = config.onSessionExpired;
+    this.onContractMismatch = config.onContractMismatch;
   }
 
   async request<S extends z.ZodTypeAny | undefined = undefined>(
@@ -209,6 +224,9 @@ export class ApiClient {
     if (locale) headers.set('Accept-Language', locale);
     const tenantId = this.getTenantOverride?.();
     if (tenantId) headers.set('X-Tenant-Id', tenantId);
+    const context = this.getClientContext?.();
+    if (context?.page) headers.set(CLIENT_PAGE_HEADER, context.page);
+    if (context?.sessionId) headers.set(CLIENT_SESSION_HEADER, context.sessionId);
     return headers;
   }
 
@@ -228,7 +246,9 @@ export class ApiClient {
       .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
       .join('; ');
     console.error(`[api] contract mismatch at ${path}: ${issues}`);
-    throw invalidResponseProblem(path, issues);
+    const problem = invalidResponseProblem(path, issues, response.headers.get(REQUEST_ID_HEADER));
+    this.onContractMismatch?.(problem);
+    throw problem;
   }
 }
 

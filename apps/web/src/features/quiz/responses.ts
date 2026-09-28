@@ -1,5 +1,6 @@
 import type { QuestionResponse, StudentQuestionView } from '@/lib/api/schemas/quiz';
 import { docToPlainText, docFromText } from '@/lib/blockdoc/doc';
+import { escapeMathText } from '@/lib/math/inline-math';
 
 /** Pure helpers for building/reading QuestionResponse values (contract §10). */
 export function isAnswered(response: QuestionResponse | null | undefined): boolean {
@@ -75,7 +76,8 @@ export function describeResponse(
   if ('optionId' in response) return optionText(response.optionId);
   if ('optionIds' in response) return response.optionIds.map(optionText).join(', ');
   if ('value' in response) return response.value ? labels.true : labels.false;
-  if ('text' in response) return response.text;
+  // Typed by the student in a plain input: a literal `$` must not turn into a formula.
+  if ('text' in response) return escapeMathText(response.text);
   if ('number' in response) return String(response.number);
   if ('essay' in response) return docToPlainText(response.essay);
   if ('matches' in response)

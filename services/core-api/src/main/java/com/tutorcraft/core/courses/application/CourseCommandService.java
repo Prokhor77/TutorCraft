@@ -4,6 +4,7 @@ import com.tutorcraft.core.access.AccessService;
 import com.tutorcraft.core.access.domain.AccessContext;
 import com.tutorcraft.core.access.domain.CourseRole;
 import com.tutorcraft.core.access.domain.Permission;
+import com.tutorcraft.core.billing.SubscriptionApi;
 import com.tutorcraft.core.courses.CourseEvents.ChangeKind;
 import com.tutorcraft.core.courses.Visibility;
 import com.tutorcraft.core.courses.application.CourseCommands.CoursePatch;
@@ -52,11 +53,13 @@ public class CourseCommandService {
     private final CourseChangeEvents events;
     private final CourseQueryService queries;
     private final TrashPolicy trash;
+    private final SubscriptionApi subscriptions;
     private final Clock clock;
 
     public CourseCommandService(CourseRepository courses, CourseWriter writer, AccessService access,
                                 CurrentUserProvider currentUser, EnrollmentApi enrollment, CourseContentFiles content,
-                                CourseChangeEvents events, CourseQueryService queries, AppProperties properties, Clock clock) {
+                                CourseChangeEvents events, CourseQueryService queries, SubscriptionApi subscriptions,
+                                AppProperties properties, Clock clock) {
         this.courses = courses;
         this.writer = writer;
         this.access = access;
@@ -66,6 +69,7 @@ public class CourseCommandService {
         this.events = events;
         this.queries = queries;
         this.trash = new TrashPolicy(properties.trash().retention());
+        this.subscriptions = subscriptions;
         this.clock = clock;
     }
 
@@ -74,6 +78,7 @@ public class CourseCommandService {
     public CourseView create(CreateCourse command) {
         CurrentUser user = currentUser.require();
         access.require(Permission.COURSE_CREATE, categoryContext(command.categoryId()));
+        subscriptions.requireActive(user.tenantId());
         CourseTexts.requireTitle(command.title(), FIELD_TITLE);
         Course course = Course.blank(Ids.newId(), user.tenantId(), user.userId(), clock.instant()).toBuilder()
                 .title(command.title()).shortName(command.shortName()).categoryId(command.categoryId())
@@ -93,6 +98,9 @@ public class CourseCommandService {
         Course current = courses.find(user.tenantId(), courseId).orElseThrow(CoursesErrors::courseNotFound);
         IfMatch.check(expectedVersion, current.version());
         Course updated = applyPatch(current, patch);
+        if (publishes(current, updated)) {
+            subscriptions.requireActive(user.tenantId());
+        }
         if (!Objects.equals(current.categoryId(), updated.categoryId())) {
             access.require(Permission.COURSE_CREATE, categoryContext(updated.categoryId()));
         }
@@ -155,6 +163,11 @@ public class CourseCommandService {
             throw new ForbiddenException(PermissionChecks.ACCESS_DENIED, "Missing permission course.delete",
                     Map.of("permission", Permission.COURSE_DELETE.key()));
         }
+    }
+
+    /** Скрытый курс становится видимым студентам (сразу или по расписанию) — нужна активная подписка школы. */
+    private static boolean publishes(Course current, Course updated) {
+        return current.visibility() == Visibility.HIDDEN && updated.visibility() != Visibility.HIDDEN;
     }
 
     private static void requirePatchPermissions(CoursePatch patch, Set<Permission> permissions) {

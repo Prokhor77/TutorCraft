@@ -93,6 +93,22 @@
     @apply max-w-full rounded;
   }
 
+  /* Inline formula atoms inside editors: one unit for the caret, click to edit. */
+  .math-atom {
+    @apply mx-px inline-block cursor-pointer rounded-xs px-0.5 align-middle transition-colors duration-fast;
+  }
+  .math-atom:hover {
+    @apply bg-primary-soft;
+  }
+  math-field {
+    @apply block w-full border-0 bg-transparent text-text outline-none;
+  }
+  /* MathLive attaches its keyboard/popover to <body>, which a modal dialog makes inert. */
+  .ML__keyboard,
+  .ML__popover {
+    pointer-events: auto;
+  }
+
   .editable-text:empty::before {
     content: attr(data-placeholder);
     @apply pointer-events-none text-placeholder;

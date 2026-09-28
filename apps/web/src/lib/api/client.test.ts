@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { ApiClient, buildQueryString, type SessionAccess } from './client';
-import { ApiProblem, fieldErrorsOf, PROBLEM_CODES } from './problem';
+import {
+  ApiClient,
+  buildQueryString,
+  CLIENT_PAGE_HEADER,
+  CLIENT_SESSION_HEADER,
+  type SessionAccess,
+} from './client';
+import { ApiProblem, fieldErrorsOf, PROBLEM_CODES, REQUEST_ID_HEADER } from './problem';
 import type { AuthResponse } from './schemas/auth';
 
 const ME = {
@@ -194,6 +200,40 @@ describe('ApiClient', () => {
     await expect(client.request('/x', { schema: okSchema })).rejects.toMatchObject({
       code: PROBLEM_CODES.invalidResponse,
     });
+  });
+
+  it('sends the page and tab context for the activity log', async () => {
+    const fetchImpl = vi.fn(async (_url: RequestInfo | URL, _init?: RequestInit) =>
+      json({ ok: true }),
+    );
+    const client = new ApiClient({
+      session: memorySession('tok'),
+      fetchImpl,
+      getClientContext: () => ({ page: '/courses/c1', sessionId: 'tab-12345678' }),
+    });
+    await client.request('/x', { schema: okSchema });
+    const headers = new Headers(fetchImpl.mock.calls[0]?.[1]?.headers);
+    expect(headers.get(CLIENT_PAGE_HEADER)).toBe('/courses/c1');
+    expect(headers.get(CLIENT_SESSION_HEADER)).toBe('tab-12345678');
+  });
+
+  it('exposes the request id of failures and reports contract mismatches', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const onContractMismatch = vi.fn();
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(problem(500, 'internal.error', { requestId: 'req-1' }))
+      .mockResolvedValueOnce(json({ ok: 'yes' }, 200, { [REQUEST_ID_HEADER]: 'req-2' }));
+    const client = new ApiClient({ session: memorySession(), fetchImpl, onContractMismatch });
+
+    const failure = (await client.request('/x').catch((caught: unknown) => caught)) as ApiProblem;
+    expect(failure.requestId).toBe('req-1');
+    await expect(client.request('/x', { schema: okSchema })).rejects.toMatchObject({
+      requestId: 'req-2',
+    });
+    expect(onContractMismatch).toHaveBeenCalledWith(
+      expect.objectContaining({ code: PROBLEM_CODES.invalidResponse }),
+    );
   });
 
   it('returns undefined for 204 responses', async () => {

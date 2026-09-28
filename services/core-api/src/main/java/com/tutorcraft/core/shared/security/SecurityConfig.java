@@ -2,6 +2,7 @@ package com.tutorcraft.core.shared.security;
 
 import com.tutorcraft.core.shared.api.ProblemWriter;
 import com.tutorcraft.core.shared.config.AppProperties;
+import com.tutorcraft.core.shared.web.RequestCorrelation;
 import java.util.List;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
@@ -83,8 +84,9 @@ public class SecurityConfig {
         config.setAllowedOrigins(List.of(properties.webOrigin()));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Idempotency-Key", "If-Match", "Accept-Language",
-                CurrentUser.TENANT_OVERRIDE_HEADER));
-        config.setExposedHeaders(List.of("ETag", "X-Unread-Count", "RateLimit-Limit", "RateLimit-Remaining", "RateLimit-Reset"));
+                CurrentUser.TENANT_OVERRIDE_HEADER, RequestCorrelation.CLIENT_PAGE_HEADER, RequestCorrelation.CLIENT_SESSION_HEADER));
+        config.setExposedHeaders(List.of("ETag", "X-Unread-Count", "RateLimit-Limit", "RateLimit-Remaining", "RateLimit-Reset",
+                RequestCorrelation.REQUEST_ID_HEADER));
         config.setAllowCredentials(true);
         config.setMaxAge(CORS_MAX_AGE_SECONDS);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

@@ -6,12 +6,12 @@ export type SavingsBreakdown = {
   messaging: number;
   /** Total hours saved per week. */
   hoursPerWeek: number;
-  /** ≈ rubles per month: hours × weeks per month × hourly rate. */
-  rublesPerMonth: number;
+  /** ≈ money per month (landing currency): hours × weeks per month × hourly rate. */
+  moneyPerMonth: number;
 };
 
 const HOURS_PRECISION = 10;
-const RUBLE_ROUNDING = 10;
+const MONEY_ROUNDING = 10;
 const FLOAT_DIGITS = 12;
 
 /** Rounds to one decimal to avoid float noise like 18.700000000000003. */
@@ -33,16 +33,16 @@ export function calculateSavings(
   const count = clampStudents(students, assumptions);
   const { grading, quizzes, messaging } = assumptions.hoursPerStudent;
   const hoursPerWeek = roundHours(count * (grading + quizzes + messaging));
-  const rublesPerMonth =
+  const moneyPerMonth =
     Math.round(
-      (hoursPerWeek * assumptions.weeksPerMonth * assumptions.hourlyRateRub) / RUBLE_ROUNDING,
-    ) * RUBLE_ROUNDING;
+      (hoursPerWeek * assumptions.weeksPerMonth * assumptions.hourlyRate) / MONEY_ROUNDING,
+    ) * MONEY_ROUNDING;
   return {
     grading: roundHours(count * grading),
     quizzes: roundHours(count * quizzes),
     messaging: roundHours(count * messaging),
     hoursPerWeek,
-    rublesPerMonth,
+    moneyPerMonth,
   };
 }
 

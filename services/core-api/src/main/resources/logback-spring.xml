@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Структурированные JSON-логи (NFR-OBS-01). MDC: traceId, spanId, tenantId, userId. Без ПДн и секретов (NFR-SEC-11). -->
+<!-- Структурированные JSON-логи (NFR-OBS-01). MDC: traceId, spanId, requestId, tenantId, userId. Без ПДн и секретов (NFR-SEC-11). -->
 <configuration>
   <springProfile name="dev,test">
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-      <encoder><pattern>%d{HH:mm:ss.SSS} %-5level [%X{traceId:-}] [t=%X{tenantId:-} u=%X{userId:-}] %logger{36} - %msg%n</pattern></encoder>
+      <encoder><pattern>%d{HH:mm:ss.SSS} %-5level [%X{traceId:-}] [r=%X{requestId:-}] [t=%X{tenantId:-} u=%X{userId:-}] %logger{36} - %msg%n</pattern></encoder>
     </appender>
     <root level="INFO"><appender-ref ref="CONSOLE"/></root>
   </springProfile>
@@ -13,6 +13,7 @@
       <encoder class="net.logstash.logback.encoder.LogstashEncoder">
         <includeMdcKeyName>traceId</includeMdcKeyName>
         <includeMdcKeyName>spanId</includeMdcKeyName>
+        <includeMdcKeyName>requestId</includeMdcKeyName>
         <includeMdcKeyName>tenantId</includeMdcKeyName>
         <includeMdcKeyName>userId</includeMdcKeyName>
       </encoder>

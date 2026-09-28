@@ -35,6 +35,11 @@ export function localize(text: LocalizedText, locale: string): string {
   return locale === 'ru' ? text.ru : text.en;
 }
 
+/** For the LaTeX source mode: templates without MathLive placeholders. */
+export function stripPlaceholders(template: string): string {
+  return template.replace(PLACEHOLDER_PATTERN, '');
+}
+
 /** KaTeX cannot render MathLive placeholders — show an empty box instead. */
 export function toPreviewLatex(template: string): string {
   return template.replace(PLACEHOLDER_PATTERN, PREVIEW_PLACEHOLDER);

@@ -1,8 +1,12 @@
+import { currentPagePath } from '@/lib/activity/page-path';
+import { getTabSessionId } from '@/lib/activity/tab-session';
 import { useAdminTenantStore } from '@/stores/admin-tenant-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { ApiClient } from './client';
 
 export const SESSION_EXPIRED_EVENT = 'tc:session-expired';
+/** A 2xx body violated the contract; `lib/activity/reporter.ts` reports it to the activity log. */
+export const CONTRACT_MISMATCH_EVENT = 'tc:contract-mismatch';
 
 function currentLocale(): string | undefined {
   if (typeof document === 'undefined') return undefined;
@@ -25,6 +29,11 @@ export const http = new ApiClient({
   },
   getLocale: currentLocale,
   getTenantOverride: adminTenantOverride,
+  getClientContext: () => ({ page: currentPagePath(), sessionId: getTabSessionId() }),
+  onContractMismatch: (problem) => {
+    if (typeof window !== 'undefined')
+      window.dispatchEvent(new CustomEvent(CONTRACT_MISMATCH_EVENT, { detail: problem }));
+  },
   onSessionExpired: () => {
     if (typeof window !== 'undefined') window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
   },

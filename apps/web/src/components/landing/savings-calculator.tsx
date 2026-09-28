@@ -3,6 +3,7 @@ import { Clock, FileQuestion, MessagesSquare, PiggyBank } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useId, useState } from 'react';
 import { LANDING } from '@/content/landing';
+import { formatLandingPrice } from '@/features/landing/money';
 import { calculateSavings, clampStudents, declension } from '@/features/landing/savings';
 
 const assumptions = LANDING.savings;
@@ -16,11 +17,6 @@ export function SavingsCalculator() {
   const result = calculateSavings(students, assumptions);
   const number = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
   const precise = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 });
-  const money = new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency: 'RUB',
-    maximumFractionDigits: 0,
-  });
   const forms = {
     one: t('studentForms.one'),
     few: t('studentForms.few'),
@@ -71,7 +67,9 @@ export function SavingsCalculator() {
             {t('hoursPerWeek', { hours: number.format(result.hoursPerWeek) })}
           </span>
           <span className="text-lg font-semibold">
-            {t('money', { amount: money.format(result.rublesPerMonth) })}
+            {t('money', {
+              amount: formatLandingPrice(result.moneyPerMonth, assumptions.currency, locale),
+            })}
           </span>
         </output>
         <ul className="flex flex-col gap-2">
@@ -93,7 +91,7 @@ export function SavingsCalculator() {
             grading: precise.format(grading),
             quizzes: precise.format(quizzes),
             messaging: precise.format(messaging),
-            rate: money.format(assumptions.hourlyRateRub),
+            rate: formatLandingPrice(assumptions.hourlyRate, assumptions.currency, locale),
           })}
         </p>
       </div>

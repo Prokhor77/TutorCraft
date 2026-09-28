@@ -105,3 +105,26 @@ describe('helpers', () => {
     expect(escapeHtml(`"'`)).toBe('&quot;&#39;');
   });
 });
+
+describe('inline formulas', () => {
+  it('seeds `$…$` as non-editable atoms carrying the LaTeX', () => {
+    const html = richTextToHtml([{ text: 'x = $\\frac{1}{2}$', marks: ['bold'] }]);
+    expect(html).toBe(
+      '<strong>x = <span class="math-atom" contenteditable="false" data-latex="\\frac{1}{2}">\\frac{1}{2}</span></strong>',
+    );
+  });
+
+  it('round-trips atoms through the DOM, ignoring rendered KaTeX markup', () => {
+    const value: RichText = [{ text: 'Найдите $x^2$, если \\$5' }];
+    const root = document.createElement('div');
+    root.innerHTML = richTextToHtml(value);
+    const atom = root.querySelector('.math-atom');
+    expect(atom).not.toBeNull();
+    if (atom) atom.innerHTML = '<span class="katex">x²</span>';
+    expect(domToRichText(root)).toEqual(value);
+  });
+
+  it('escapes literal dollars typed as text', () => {
+    expect(parse('Цена 5$ и 7$')).toEqual([{ text: 'Цена 5\\$ и 7\\$' }]);
+  });
+});

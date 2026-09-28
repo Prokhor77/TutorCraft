@@ -3,6 +3,7 @@ package com.tutorcraft.core.courses.application;
 import com.tutorcraft.core.access.AccessService;
 import com.tutorcraft.core.access.domain.AccessContext;
 import com.tutorcraft.core.access.domain.Permission;
+import com.tutorcraft.core.billing.SubscriptionApi;
 import com.tutorcraft.core.courses.CourseEvents.ChangeKind;
 import com.tutorcraft.core.courses.Visibility;
 import com.tutorcraft.core.courses.application.OutlineView.ModuleView;
@@ -48,12 +49,14 @@ public class DuplicationService {
     private final OutlineAssembler outlines;
     private final ItemViews itemViews;
     private final Messages messages;
+    private final SubscriptionApi subscriptions;
     private final Clock clock;
 
     public DuplicationService(CourseRepository courses, ModuleRepository modules, ItemRepository items, StructureCopier copier,
                               CourseWriter writer, AccessService access, CurrentUserProvider currentUser,
                               CourseChangeEvents events, CourseQueryService courseQueries, LearnerStateResolver structure,
-                              OutlineAssembler outlines, ItemViews itemViews, Messages messages, Clock clock) {
+                              OutlineAssembler outlines, ItemViews itemViews, Messages messages,
+                              SubscriptionApi subscriptions, Clock clock) {
         this.courses = courses;
         this.modules = modules;
         this.items = items;
@@ -67,6 +70,7 @@ public class DuplicationService {
         this.outlines = outlines;
         this.itemViews = itemViews;
         this.messages = messages;
+        this.subscriptions = subscriptions;
         this.clock = clock;
     }
 
@@ -76,6 +80,7 @@ public class DuplicationService {
         access.require(Permission.COURSE_EDIT, AccessContext.course(courseId));
         Course source = courses.find(user.tenantId(), courseId).orElseThrow(CoursesErrors::courseNotFound);
         access.require(Permission.COURSE_CREATE, CourseCommandService.categoryContext(source.categoryId()));
+        subscriptions.requireActive(user.tenantId());
         UUID newId = Ids.newId();
         Copy copy = copier.prepare(newId, modules.ofCourse(user.tenantId(), courseId), items.ofCourse(user.tenantId(), courseId));
         String title = copyTitle(source.title());

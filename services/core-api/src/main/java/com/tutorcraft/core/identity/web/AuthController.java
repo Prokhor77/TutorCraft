@@ -14,6 +14,7 @@ import com.tutorcraft.core.identity.application.PasswordLoginService.LoginComman
 import com.tutorcraft.core.identity.application.PasswordService;
 import com.tutorcraft.core.shared.api.ProblemFactory;
 import com.tutorcraft.core.shared.web.ClientIp;
+import com.tutorcraft.core.shared.web.RequestCorrelation;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -143,6 +144,7 @@ class AuthController {
     }
 
     private ResponseEntity<AuthResponse> withCookie(AuthResult result) {
+        RequestCorrelation.rememberActor(result.me().id(), result.me().tenant().id());
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, cookies.issue(result.session().refreshToken(), result.session().refreshTtl()))
                 .body(AuthResponse.of(result));

@@ -1,14 +1,20 @@
 'use client';
-import { Bell, UserRound } from 'lucide-react';
+import { Bell, CreditCard, UserRound } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { ROUTES } from '@/features/auth/routes';
+import { useMe } from '@/features/auth/use-auth';
+import { canCreateCoursesHint } from '@/lib/access/permissions';
 import { cn } from '@/lib/utils/cn';
 
 const TABS = [
   { href: ROUTES.profile, key: 'profile', icon: UserRound },
   { href: ROUTES.notificationSettings, key: 'notificationSettings', icon: Bell },
+] as const;
+/** Only school staff have a subscription screen (the server still authorizes it). */
+const STAFF_TABS = [
+  { href: ROUTES.subscriptionSettings, key: 'subscriptionSettings', icon: CreditCard },
 ] as const;
 
 /** Stitch pill-tab row switching between personal settings pages (links, not ARIA tabs). */
@@ -16,10 +22,12 @@ export function SettingsTabs() {
   const t = useTranslations('nav');
   const tProfile = useTranslations('profile');
   const pathname = usePathname();
+  const me = useMe();
+  const tabs = canCreateCoursesHint(me?.tenantRoles) ? [...TABS, ...STAFF_TABS] : TABS;
   return (
     <nav aria-label={tProfile('settingsNav')}>
       <ul className="scrollbar-none inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-full bg-surface-muted p-1 shadow-inner">
-        {TABS.map(({ href, key, icon: Icon }) => {
+        {tabs.map(({ href, key, icon: Icon }) => {
           const active = pathname === href;
           return (
             <li key={href}>

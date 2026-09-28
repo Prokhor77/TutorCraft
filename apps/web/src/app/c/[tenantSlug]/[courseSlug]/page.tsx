@@ -12,6 +12,7 @@ import { CoverPlaceholder } from '@/components/public/storefront-course-card';
 import { Avatar } from '@/components/ui/avatar';
 import { ROUTES } from '@/features/auth/routes';
 import { docToPlainText } from '@/lib/blockdoc/doc';
+import { mathTextToPlain } from '@/lib/math/inline-math';
 import { fetchPublicCourse } from '@/lib/server/public-api';
 import { formatMoney } from '@/lib/utils/money';
 
@@ -26,7 +27,10 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     () => null,
   );
   if (!course) return {};
-  const description = docToPlainText(course.description).slice(0, META_DESCRIPTION_MAX);
+  const description = mathTextToPlain(docToPlainText(course.description)).slice(
+    0,
+    META_DESCRIPTION_MAX,
+  );
   return {
     title: course.title,
     description,

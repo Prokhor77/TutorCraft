@@ -7,7 +7,10 @@ import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
-/** Кладёт tenantId/userId (только идентификаторы, без ПДн) в MDC для логов (NFR-OBS-01). */
+/**
+ * Кладёт tenantId/userId (только идентификаторы, без ПДн) в MDC для логов (NFR-OBS-01) и в атрибуты запроса —
+ * для журнала активности, который пишется после очистки SecurityContext.
+ */
 @Component
 class RequestContextInterceptor implements HandlerInterceptor {
 
@@ -25,6 +28,7 @@ class RequestContextInterceptor implements HandlerInterceptor {
         currentUser.find().ifPresent(user -> {
             MDC.put(TENANT_KEY, user.tenantId().toString());
             MDC.put(USER_KEY, user.userId().toString());
+            RequestCorrelation.rememberActor(request, user.userId(), user.tenantId());
         });
         return true;
     }

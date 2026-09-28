@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Checkbox, Radio, Switch } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/field';
+import { MathTextInput } from '@/components/math/math-text-input';
 import { Input, NativeSelect } from '@/components/ui/input';
 import { FULL_SCORE_PERCENT } from '@/features/qbank/question-data';
 import { MC_SCORING, type QuestionData } from '@/lib/api/schemas/quiz';
@@ -74,20 +75,18 @@ export function QuestionDataEditor({ value, onChange }: Props) {
                   )}
                   {t('correct')}
                 </label>
-                <Input
-                  aria-label={t('optionText', { index: index + 1 })}
+                <MathTextInput
+                  ariaLabel={t('optionText', { index: index + 1 })}
                   value={option.text}
-                  onChange={(event) => setOption(index, { text: event.target.value })}
-                  className="bg-surface sm:flex-1"
+                  onChange={(text) => setOption(index, { text })}
+                  className="sm:flex-1"
                 />
-                <Input
-                  aria-label={t('optionFeedback', { index: index + 1 })}
+                <MathTextInput
+                  ariaLabel={t('optionFeedback', { index: index + 1 })}
                   placeholder={t('feedbackOptional')}
                   value={option.feedback ?? ''}
-                  onChange={(event) =>
-                    setOption(index, { feedback: event.target.value || undefined })
-                  }
-                  className="sm:w-48"
+                  onChange={(feedback) => setOption(index, { feedback: feedback || undefined })}
+                  className="sm:w-56"
                 />
                 <Button
                   variant="ghost"
@@ -361,32 +360,30 @@ export function QuestionDataEditor({ value, onChange }: Props) {
         <div className="flex flex-col gap-3">
           {value.pairs.map((pair, index) => (
             <div key={pair.id} className="flex items-center gap-2">
-              <Input
-                aria-label={t('prompt', { index: index + 1 })}
+              <MathTextInput
+                ariaLabel={t('prompt', { index: index + 1 })}
                 placeholder={t('promptPlaceholder')}
                 value={pair.prompt}
-                onChange={(event) =>
+                onChange={(prompt) =>
                   onChange({
                     ...value,
-                    pairs: value.pairs.map((p, i) =>
-                      i === index ? { ...p, prompt: event.target.value } : p,
-                    ),
+                    pairs: value.pairs.map((p, i) => (i === index ? { ...p, prompt } : p)),
                   })
                 }
+                className="flex-1"
               />
               <span aria-hidden>→</span>
-              <Input
-                aria-label={t('answerFor', { index: index + 1 })}
+              <MathTextInput
+                ariaLabel={t('answerFor', { index: index + 1 })}
                 placeholder={t('answerPlaceholder')}
                 value={pair.answer}
-                onChange={(event) =>
+                onChange={(answer) =>
                   onChange({
                     ...value,
-                    pairs: value.pairs.map((p, i) =>
-                      i === index ? { ...p, answer: event.target.value } : p,
-                    ),
+                    pairs: value.pairs.map((p, i) => (i === index ? { ...p, answer } : p)),
                   })
                 }
+                className="flex-1"
               />
               <Button
                 variant="ghost"
@@ -428,17 +425,16 @@ export function QuestionDataEditor({ value, onChange }: Props) {
           {value.items.map((item, index) => (
             <div key={item.id} className="flex items-center gap-2">
               <span className="w-6 text-sm text-text-muted">{index + 1}.</span>
-              <Input
-                aria-label={t('itemText', { index: index + 1 })}
+              <MathTextInput
+                ariaLabel={t('itemText', { index: index + 1 })}
                 value={item.text}
-                onChange={(event) =>
+                onChange={(text) =>
                   onChange({
                     ...value,
-                    items: value.items.map((it, i) =>
-                      i === index ? { ...it, text: event.target.value } : it,
-                    ),
+                    items: value.items.map((it, i) => (i === index ? { ...it, text } : it)),
                   })
                 }
+                className="flex-1"
               />
               <Button
                 variant="ghost"

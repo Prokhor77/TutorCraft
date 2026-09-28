@@ -1,10 +1,18 @@
 'use client';
-import { ChevronRight } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, LayoutGrid } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Suspense, type ReactNode } from 'react';
+import { SubscriptionBanner } from '@/components/billing/subscription-banner';
 import { CountBadge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   activeCourseNavIndex,
   courseIdFromPath,
@@ -124,23 +132,65 @@ function GlobalTabs() {
   return <PillTabs links={links} label={t('primary')} />;
 }
 
-function CourseTabsNav({ course, itemType }: { course: Course; itemType?: ItemType }) {
+/** Course sections with the active one resolved (a quiz item page belongs to «Конструктор тестов»). */
+function useCourseSectionLinks(course: Course, itemType?: ItemType): PillLink[] {
   const t = useTranslations('shell');
-  const location = useLocationKey();
+  const pathname = useLocationKey().split('?')[0] ?? '';
   const tabs = courseTabs(course.id, course.permissions);
-  const pathname = location.split('?')[0] ?? '';
-  // A quiz item page belongs to «Конструктор тестов» (Stitch), when that tab exists.
   const quizOwner =
     itemType === 'quiz' && tabs.some((tab) => tab.labelKey === 'quizBuilder')
       ? 'quizBuilder'
       : null;
-  const links = tabs.map((tab) => ({
+  return tabs.map((tab) => ({
     href: tab.href,
     label: t(tab.labelKey),
     icon: tab.icon,
     active: quizOwner ? tab.labelKey === quizOwner : tab.match.test(pathname),
   }));
-  return <PillTabs links={links} label={t('courseSections')} />;
+}
+
+/**
+ * Course section switcher: one button with the current section that opens a menu of all sections,
+ * instead of a horizontally scrolling tab strip that did not fit next to the course actions.
+ */
+function CourseSectionMenu({ course, itemType }: { course: Course; itemType?: ItemType }) {
+  const t = useTranslations('shell');
+  const links = useCourseSectionLinks(course, itemType);
+  const current = links.find((link) => link.active);
+  const CurrentIcon = current?.icon ?? LayoutGrid;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label={current ? `${t('courseSections')}: ${current.label}` : t('courseSections')}
+        className="group flex h-10 min-w-0 max-w-full items-center gap-2 rounded-full bg-surface-muted py-1 pl-1 pr-3 text-label-lg transition-colors duration-fast hover:bg-surface-container focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus-ring/20 data-[state=open]:bg-surface-container"
+      >
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
+          <CurrentIcon className="size-4" aria-hidden />
+        </span>
+        <span className="truncate">{current?.label ?? t('courseSections')}</span>
+        <ChevronDown
+          className="size-4 shrink-0 text-text-muted transition-transform duration-fast group-data-[state=open]:rotate-180"
+          aria-hidden
+        />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="center" className="min-w-60">
+        <DropdownMenuLabel>{t('courseSections')}</DropdownMenuLabel>
+        {links.map((link) => (
+          <DropdownMenuItem
+            key={link.href}
+            asChild
+            className={cn(link.active && 'bg-accent/10 font-semibold text-primary')}
+          >
+            <Link href={link.href} aria-current={link.active ? 'page' : undefined}>
+              <link.icon aria-hidden className={cn(link.active && '!text-primary')} />
+              <span className="flex-1">{link.label}</span>
+              {link.active ? <Check aria-hidden className="!text-primary" /> : null}
+            </Link>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
 /** Label of the current section for the Stitch mobile header («TUTORCRAFT / Конструктор курса»). */
@@ -235,8 +285,8 @@ function MobileNav({ course }: { course: Course | undefined }) {
 }
 
 /**
- * App shell (Stitch): glass top header with logo, breadcrumbs and pill section tabs — global sections outside a
- * course, course sections inside one — plus «Предпросмотр» / «Опубликовать курс»; bottom navigation on mobile.
+ * App shell (Stitch): glass top header with logo, breadcrumbs, pill tabs for global sections outside a
+ * course and a section switcher menu inside one — plus «Предпросмотр» / «Опубликовать курс»; bottom navigation on mobile.
  */
 export function AppShell({ children }: { children: ReactNode }) {
   const t = useTranslations('nav');
@@ -265,7 +315,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         {course ? <Breadcrumbs course={course} itemTitle={itemTitle} /> : null}
         <div className="hidden min-w-0 flex-1 justify-center md:flex">
           <Suspense>
-            {course ? <CourseTabsNav course={course} itemType={itemData?.type} /> : <GlobalTabs />}
+            {course ? (
+              <CourseSectionMenu course={course} itemType={itemData?.type} />
+            ) : (
+              <GlobalTabs />
+            )}
           </Suspense>
         </div>
         <div className="ml-auto flex shrink-0 items-center gap-1">
@@ -290,6 +344,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         tabIndex={-1}
         className="pb-safe-nav mx-auto w-full max-w-content px-page-x py-page-y focus:outline-none md:pb-page-y"
       >
+        <SubscriptionBanner />
         {children}
       </main>
       <Suspense>

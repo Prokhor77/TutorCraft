@@ -1,7 +1,10 @@
 'use client';
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef } from 'react';
+import { isFormulaShortcut, useFormulaInsertion } from '@/components/math/use-formula-insertion';
 import type { RichText } from '@/lib/api/schemas/blockdoc';
 import { domToRichText, richTextToHtml } from '@/lib/blockdoc/richtext';
+import { hasMath, parseMathText } from '@/lib/math/inline-math';
+import { closestMathAtom, insertMathText, renderMathAtoms } from '@/lib/math/math-dom';
 import { cn } from '@/lib/utils/cn';
 
 export type RichTextEditableHandle = {
@@ -16,6 +19,9 @@ type Props = {
   placeholder?: string;
   className?: string;
   autoFocus?: boolean;
+  /** false = single line (Enter/Shift+Enter are ignored), e.g. answer options. */
+  multiline?: boolean;
+  disabled?: boolean;
   onKeyDown?: (event: React.KeyboardEvent<HTMLDivElement>) => void;
   onBlur?: () => void;
 };
@@ -32,14 +38,27 @@ function placeCaretAtEnd(element: HTMLElement): void {
 
 /**
  * Uncontrolled contenteditable bound to RichText. The DOM is re-seeded only when the value changes
- * from outside (keeps the caret stable while typing). Pasted content is inserted as plain text.
+ * from outside (keeps the caret stable while typing). Pasted content is inserted as plain text;
+ * `$…$` in pasted text becomes formulas. Inline formulas are atoms: Alt+= inserts one, a click edits it.
  */
 export const RichTextEditable = forwardRef<RichTextEditableHandle, Props>(function RichTextEditable(
-  { value, onChange, ariaLabel, placeholder, className, autoFocus, onKeyDown, onBlur },
+  {
+    value,
+    onChange,
+    ariaLabel,
+    placeholder,
+    className,
+    autoFocus,
+    multiline = true,
+    disabled = false,
+    onKeyDown,
+    onBlur,
+  },
   ref,
 ) {
   const elementRef = useRef<HTMLDivElement>(null);
   const lastEmitted = useRef<string | null>(null);
+  const { insertAt, editAtom } = useFormulaInsertion();
 
   useImperativeHandle(ref, () => ({
     focus: (atEnd = true) => {
@@ -57,6 +76,7 @@ export const RichTextEditable = forwardRef<RichTextEditableHandle, Props>(functi
     if (!element || serialized === lastEmitted.current) return;
     element.innerHTML = richTextToHtml(value);
     lastEmitted.current = serialized;
+    void renderMathAtoms(element);
   }, [value]);
 
   useEffect(() => {
@@ -72,13 +92,41 @@ export const RichTextEditable = forwardRef<RichTextEditableHandle, Props>(functi
     onChange(next);
   };
 
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (isFormulaShortcut(event)) {
+      event.preventDefault();
+      insertAt(event.currentTarget);
+      return;
+    }
+    if (event.key === 'Enter' && !multiline) {
+      event.preventDefault();
+      return;
+    }
+    if (event.key === 'Enter' && event.shiftKey) {
+      event.preventDefault();
+      document.execCommand('insertLineBreak');
+      return;
+    }
+    onKeyDown?.(event);
+  };
+
+  const handlePaste = (event: React.ClipboardEvent<HTMLDivElement>) => {
+    if (event.clipboardData.files.length > 0) return; // bubbles to the editor for upload
+    event.preventDefault();
+    const text = event.clipboardData.getData('text/plain');
+    const pasted = multiline ? text : text.replace(/\s*\n\s*/g, ' ');
+    if (hasMath(pasted)) insertMathText(event.currentTarget, parseMathText(pasted));
+    else document.execCommand('insertText', false, pasted);
+  };
+
   return (
     <div
       ref={elementRef}
       role="textbox"
-      aria-multiline="true"
+      aria-multiline={multiline}
       aria-label={ariaLabel}
-      contentEditable
+      aria-disabled={disabled || undefined}
+      contentEditable={!disabled}
       suppressContentEditableWarning
       data-placeholder={placeholder}
       className={cn(
@@ -87,18 +135,11 @@ export const RichTextEditable = forwardRef<RichTextEditableHandle, Props>(functi
       )}
       onInput={emit}
       onBlur={onBlur}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' && event.shiftKey) {
-          event.preventDefault();
-          document.execCommand('insertLineBreak');
-          return;
-        }
-        onKeyDown?.(event);
-      }}
-      onPaste={(event) => {
-        if (event.clipboardData.files.length > 0) return; // bubbles to the editor for upload
-        event.preventDefault();
-        document.execCommand('insertText', false, event.clipboardData.getData('text/plain'));
+      onKeyDown={handleKeyDown}
+      onPaste={handlePaste}
+      onClick={(event) => {
+        const atom = closestMathAtom(event.target, event.currentTarget);
+        if (atom && !disabled) editAtom(event.currentTarget, atom);
       }}
     />
   );

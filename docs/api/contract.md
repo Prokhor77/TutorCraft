@@ -11,8 +11,12 @@
   type Problem = { type: string; title: string; status: number; detail?: string;
                    code: string;               // машинный код, напр. "auth.invalid_credentials"
                    errors?: { field: string; code: string; message: string }[];
-                   traceId: string }
+                   traceId: string;
+                   requestId?: string }        // id запроса в журнале активности («код ошибки» для пользователя)
   ```
+- Корреляция (журнал активности): каждый ответ несёт `X-Request-Id`. Веб-клиент отправляет `X-Client-Page` (путь страницы
+  без query, секретные сегменты замаскированы) и `X-Client-Session` (случайный id вкладки) — по ним журнал показывает, где
+  произошло действие, и связывает действия одной вкладки (в том числе до входа).
 - Пагинация (API-04): `?cursor=&limit=` (по умолчанию 25, максимум 100). Ответ: `{ items: T[], nextCursor: string | null }` → тип `Page<T>`.
 - Идемпотентность (API-05): заголовок `Idempotency-Key: <uuid>` обязателен для `POST /items/{id}/submissions/submit`, `POST /attempts/{id}/finish`, `POST /courses/{id}/orders`. Повтор с тем же ключом возвращает сохранённый ответ.
 - Оптимистичная блокировка (API-06): ресурсы с полем `version: number`; `PATCH` принимает `If-Match: "<version>"`, при конфликте — 412 `code: "conflict.version"`.
@@ -544,6 +548,34 @@ type Post = { id: Id; parentId: Id | null; authorId: Id; authorName: string; bod
 - `POST/DELETE /items/{id}/complete` — только для `mode: 'manual'` (иначе 422 `progress.not_manual`); элемент должен быть открыт студенту (403 `progress.item_locked`).
 - Условия доступа (`ConditionGroup`): оценка — по опубликованной оценке, `minPercent` включительно, `maxPercent` не включительно; дата — `[from, until)`. Недоступность модуля делает недоступными вложенные модули и элементы. `Availability.reasons` — первая строка «Откроется, когда: …» (условия через «; » для `all`, « или » для `any`), истёкший срок — отдельной строкой «Доступ закрыт …».
 
+Журнал активности (`activity`, право `audit.view`, работает в школе из `X-Tenant-Id` главного администратора):
+
+| Метод | Путь | Ответ |
+|---|---|---|
+| GET | `/activity-log?actor&kind&outcome&status&route&requestId&sessionId&from&to&includeAnonymous&cursor&limit` | `Page<ActivityEntry>` |
+| GET | `/activity-log/summary?from&to&includeAnonymous` | `ActivitySummary` (по умолчанию последние 24 ч, окно ≤ 31 дня) |
+| GET | `/activity-log/{id}/trail` | `ActivityTrail` |
+| POST | `/activity/events` `{ events: ClientEvent[] }` (1–20) | 204 |
+
+- `kind`: `request` (запрос к API) · `page_view` · `client_error`; `outcome`: `all` · `failed` (≥ 400 и ошибки браузера) · `errors` (≥ 500 и ошибки браузера).
+- `actor` — подстрока e-mail/имени или точный IP; `route` — подстрока шаблона маршрута, пути или страницы.
+- `includeAnonymous=true` добавляет записи без школы (вход, регистрация, публичные страницы) — только `platform.manage`, иначе 403 `activity.anonymous_forbidden`.
+- Трассировка: запись ± окно (`trail-before` 30 мин / `trail-after` 5 мин) по тому же пользователю или вкладке; для анонимных — вкладка, иначе IP. Чужая школа → 404 `activity.not_found`.
+- Не хранятся тела запросов, query-строки, пароли и токены; секретные переменные пути (`token`, `code`, `key`…) и e-mail/токены в текстах ошибок маскируются.
+- `ClientEvent.kind` — только `page_view` или `client_error` (иначе 400); `occurredAt` старше часа или из будущего заменяется временем приёма.
+
+```ts
+type ActivityEntry = { id: Id; at: Instant; kind: 'request' | 'page_view' | 'client_error'; tenantId: Id | null; userId: Id | null;
+  actorName: string | null; actorEmail: string | null; ip: string | null; userAgent: string | null; requestId: string | null;
+  sessionId: string | null; page: string | null; method: string | null; route: string | null; path: string | null;
+  pathParams: Record<string, string> | null; handler: string | null; status: number | null; durationMs: number | null;
+  errorCode: string | null; errorType: string | null; errorMessage: string | null; errorStack: string | null /* только в trail */ }
+type ActivityTrail = { focus: ActivityEntry; anchor: 'user' | 'session' | 'ip' | 'none'; from: Instant; to: Instant; events: ActivityEntry[]; truncated: boolean }
+type ActivitySummary = { from: Instant; to: Instant; requests: number; failedRequests: number; serverErrors: number; clientErrors: number;
+  activeUsers: number; p95DurationMs: number | null; topErrorRoutes: { method: string | null; route: string | null; count: number }[] }
+type ClientEvent = { kind: 'page_view' | 'client_error'; page?: string; name?: string; message?: string; stack?: string; requestId?: string; occurredAt?: Instant }
+```
+
 ```ts
 type AuditEntry = { id: Id; at: Instant; actorId: Id | null; actorName: string | null; action: string; objectType: string; objectId: string; ip: string | null; diff: object | null }
 ```
@@ -569,6 +601,25 @@ type PublicCourse = { id: Id; slug: string; title: string; description: BlockDoc
 - `POST /courses/{id}/orders` → 201; покупатель — текущий пользователь. `returnUrl` — только адреса `WEB_ORIGIN`/`PUBLIC_BASE_URL` (иначе 400 `returnUrl`/`not_allowed`). Курс не опубликован или без цены → 422 `billing.course_not_for_sale`; уже записан → 422 `billing.already_enrolled`; провайдер недоступен → 422 `billing.provider_unavailable` (заказ не создаётся, запрос можно повторить с тем же ключом).
 - `GET /orders/{id}`: покупатель или `billing.manage` в курсе (иначе 404 `billing.order_not_found`). `GET /billing/orders`: с `courseId` — `billing.manage` в курсе, без — в tenant.
 - Вебхуки: `provider` ≠ настроенному → 404 `billing.provider_not_found`; неверная подпись/тело → 401 `billing.webhook_invalid`. Stripe — проверка `Stripe-Signature` (HMAC-SHA256, допуск 5 мин); ЮKassa — статус платежа перепроверяется запросом к API. Повторное событие игнорируется. Оплата: `pending → paid` один раз → запись на курс (`method: 'payment'`), вебхук `order.paid`, уведомление `sale` преподавателям курса и автору («Новая продажа курса «…» на 5 000,00 ₽!»).
+
+### 13.2. Подписка школы на платформу
+
+| GET | `/billing/subscription` | `Subscription` (`billing.manage` или `course.create` в tenant; иначе 403) |
+|---|---|---|
+| POST | `/billing/subscription/purchases` | `Idempotency-Key`, `{ term: 'month' \| 'quarter' \| 'year' }` → `Subscription` (`billing.manage`) |
+
+```ts
+type Subscription = { status: 'trial' | 'active' | 'expired'; trialEndsAt: Instant; paidUntil: Instant | null; accessUntil: Instant;
+                      canManage: boolean; terms: { term: 'month' | 'quarter' | 'year'; months: number; price: Money }[];
+                      payments: { id: Id; term: string; amount: Money; periodStart: Instant; periodEnd: Instant; createdAt: Instant }[] }
+```
+
+Детали (подписка):
+- Все сроки открывают одинаковый функционал; цены: месяц — 40 USD, 3 месяца — 120 USD, год — 240 USD.
+- Пробный период 14 дней начинается при первом обращении к подписке (обычно сразу после регистрации школы).
+- Без активной подписки школа работает только на чтение: создание, копирование и публикация курса (скрытый → опубликован/по расписанию) → 422 `billing.subscription_inactive`. Ученики продолжают учиться, преподаватели — проверять работы.
+- Покупка продлевает доступ от его текущего конца (срок во время пробного периода или действующей подписки не теряется). Повтор с тем же `Idempotency-Key` не продлевает второй раз. `payments` — последние 20 оплат, только при `canManage`.
+- Пока подключён только `PAYMENT_PROVIDER=fake`: срок активируется сразу, без страницы оплаты. С другим провайдером → 422 `billing.subscription_checkout_unavailable`.
 
 ## 14. Интеграции (`integrations`)
 

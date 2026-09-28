@@ -16,6 +16,20 @@ export function formatTime(iso: string, locale: string, timeZone?: string): stri
   return new Intl.DateTimeFormat(locale, { timeStyle: 'short', timeZone }).format(new Date(iso));
 }
 
+/** Time with seconds: ordering of events inside one minute matters in logs. */
+export function formatTimePrecise(iso: string, locale: string, timeZone?: string): string {
+  return new Intl.DateTimeFormat(locale, { timeStyle: 'medium', timeZone }).format(new Date(iso));
+}
+
+/** Date + time with seconds (activity log). */
+export function formatDateTimePrecise(iso: string, locale: string, timeZone?: string): string {
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: 'medium',
+    timeStyle: 'medium',
+    timeZone,
+  }).format(new Date(iso));
+}
+
 /** "через 3 часа" / "2 days ago" — NFR-I18N-02. */
 export function formatRelative(iso: string, locale: string, now: Date = new Date()): string {
   const diff = new Date(iso).getTime() - now.getTime();
