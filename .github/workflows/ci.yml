@@ -30,11 +30,26 @@ jobs:
       # Интеграционные тесты (Testcontainers) перенесены в .github/workflows/integration.yml —
       # по той же причине, что и e2e: они поднимают Postgres/Mongo/Redis/Kafka в контейнерах,
       # зависят от версии докера на раннере и не должны блокировать выкладку проверенного кода.
+      # Официальный образ вместо aquasecurity/trivy-action.
+      #
+      # История: у action теги идут с префиксом v, и `@0.28.0` без него ронял весь job за 2
+      # секунды на этапе разрешения action — Maven не запускался ни разу. После `@v0.33.1`
+      # шаг дошёл до дела и упал уже внутри: вложенный setup-trivy нашёл релиз v0.65.0, но не
+      # смог поставить бинарник (он тянет его через GitHub API, где раннеры упираются в лимит).
+      #
+      # Образ с ghcr.io убирает обе точки отказа: ни разрешения action, ни скачивания релиза
+      # через GitHub API. ghcr, а не Docker Hub — там лимит на анонимные pull'ы с общих
+      # IP раннеров жёстче.
+      #
+      # Версия закреплена: плавающий latest менял бы результат сканирования без единого
+      # изменения в коде, и CI однажды покраснел бы сам по себе. На актуальность проверки
+      # это не влияет — базу уязвимостей trivy скачивает свежую при каждом запуске,
+      # закреплён только сам сканер. Поднимать версию образа — отдельное осознанное
+      # действие: новый сканер может найти больше, и это нужно чинить, а не ловить внезапно.
       - name: Dependency vulnerability scan (NFR-SEC-10)
-        # Теги этого action идут с префиксом v (v0.28.0, v0.33.1, …). Без него job падал
-        # за 2 секунды на разрешении action, так и не дойдя до Maven.
-        uses: aquasecurity/trivy-action@v0.33.1
-        with: { scan-type: fs, scan-ref: services/core-api, severity: 'HIGH,CRITICAL', exit-code: '1', ignore-unfixed: true }
+        run: |
+          docker run --rm -v "$PWD:/scan" -w /scan ghcr.io/aquasecurity/trivy:0.65.0 \
+            fs --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 .
 
   go-workers:
     runs-on: ubuntu-latest
