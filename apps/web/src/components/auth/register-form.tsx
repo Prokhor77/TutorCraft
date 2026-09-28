@@ -1,7 +1,7 @@
 'use client';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { AtSign, Lock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
@@ -19,12 +19,15 @@ import { AuthHeading } from './auth-heading';
 
 const REGISTER_FIELDS = ['email', 'password', 'firstName', 'lastName', 'schoolName'] as const;
 export const PASSWORD_MIN_LENGTH_HINT = 8;
+const EMAIL_PARAM = 'email';
 
 /** Tutor sign-up: creates a personal school (tenant) with the user as tenant_admin (ADR-002). */
 export function RegisterForm() {
   const t = useTranslations('auth');
   const tErrors = useTranslations('errors');
   const router = useRouter();
+  // Landing «Начать» form sends ?email=… — prefill it (validated by the schema on submit).
+  const prefilledEmail = useSearchParams().get(EMAIL_PARAM) ?? '';
   const register = useRegister();
   const [error, setError] = useState<string | null>(null);
   const schema = z.object({
@@ -42,7 +45,13 @@ export function RegisterForm() {
   type Values = z.infer<typeof schema>;
   const form = useForm<Values>({
     resolver: zodResolver(schema),
-    defaultValues: { firstName: '', lastName: '', email: '', password: '', schoolName: '' },
+    defaultValues: {
+      firstName: '',
+      lastName: '',
+      email: prefilledEmail,
+      password: '',
+      schoolName: '',
+    },
   });
   const errors = form.formState.errors;
 

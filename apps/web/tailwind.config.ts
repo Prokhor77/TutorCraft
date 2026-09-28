@@ -95,6 +95,7 @@ const config: Config = {
         gutter: 'var(--space-gutter)',
         sidebar: 'var(--size-sidebar)',
         header: 'var(--size-header)',
+        'header-public': 'var(--size-header-public)',
         'bottom-nav': 'var(--size-bottom-nav)',
         tree: 'var(--size-tree)',
         inspector: 'var(--size-inspector)',

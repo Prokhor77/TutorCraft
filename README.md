@@ -21,7 +21,7 @@ docker compose up --build      # первый запуск ~5–10 минут: �
 | Веб-приложение | http://localhost:3000 |
 | Core API + Swagger UI | http://localhost:8080/api/docs |
 | Почта (Mailpit) | http://localhost:8025 |
-| MinIO (консоль) | http://localhost:9001 |
+| S3 (SeaweedFS) | http://localhost:9000 |
 
 ### Демо-данные
 При `SEED_DEMO_DATA=true` (по умолчанию в dev) создаются: школа `demo`, преподаватель `teacher@demo.local`

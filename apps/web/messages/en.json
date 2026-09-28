@@ -130,88 +130,202 @@
     "due": "Due {when}"
   },
   "landing": {
-    "badge": "Moodle alternative without the pain",
-    "heroTitle": "A course in 15 minutes. Grading in one window.",
-    "heroSubtitle": "TutorCraft is a platform for tutors and online schools: build courses from blocks, collect assignments and quizzes, sell courses and get Telegram notifications.",
-    "ctaPrimary": "Create a course for free",
-    "ctaSecondary": "Log in",
-    "login": "Log in",
-    "startFree": "Get started",
-    "metaTitle": "TutorCraft — a course in 15 minutes",
-    "stepsTitle": "Your first course in 15 minutes",
-    "steps": {
-      "create": {
-        "title": "Create a course",
-        "text": "Only a title is required — configure the rest later."
-      },
-      "fill": {
-        "title": "Add materials",
-        "text": "Pages, videos, assignments and quizzes — via “+” between items."
-      },
-      "invite": {
-        "title": "Invite students",
-        "text": "One invite link, or sell the course on its landing page."
-      },
-      "grade": {
-        "title": "Grade quickly",
-        "text": "All submissions from all courses in one queue with shortcuts."
-      }
+    "metaTitle": "TutorCraft Studio — courses, assignments and quizzes for tutors",
+    "metaDescription": "The tutor's studio: course builder with access conditions, 8 question types, a unified grading queue, HLS video, Telegram notifications and paid courses.",
+    "product": "TutorCraft Studio",
+    "nav": {
+      "label": "Page sections",
+      "features": "Features",
+      "benefits": "Benefits",
+      "pricing": "Pricing",
+      "testimonials": "Testimonials",
+      "login": "Sign in",
+      "tryFree": "Try for free",
+      "loginShort": "Sign in",
+      "tryShort": "Start"
     },
-    "featuresTitle": "Everything you need, nothing you don't",
-    "features": {
+    "hero": {
+      "badge": "A new-generation LMS for tutors",
+      "badgeNote": "No complex setup",
+      "titleStart": "Create your own courses, grade assignments and ",
+      "titleAccent": "help every student reach their best",
+      "subtitle": "One studio for tutors: a course tree with access conditions, LaTeX formulas, grading in a single queue and streaming video with a media library.",
+      "ctaPrimary": "Create a course for free",
+      "ctaDemo": "See the interface",
+      "socialProof": "{count}+ tutors already work in TutorCraft",
+      "rating": "{rating} of 5 · {source}"
+    },
+    "mockup": {
+      "label": "TutorCraft interface example: course modules, assignment review and grading queue",
+      "caption": "Interface example with demo data",
+      "address": "tutorcraft.app/courses/oge",
+      "synced": "Autosave",
+      "modules": "Course modules",
+      "module1": "Algebra",
+      "module2": "Geometry",
+      "module3": "Mock exam",
+      "lessons": "8 lessons",
+      "homework": "14 assignments",
+      "savedAt": "Saved at 14:28",
+      "review": "Assignment review",
+      "student": "Maria Kuznetsova",
+      "score": "Score 18/20",
+      "task": "Problem 3. Solve the equation",
+      "formula": "x² − 5x + 6 = 0",
+      "answer": "x₁ = 2, x₂ = 3",
+      "comment": "Correct! Remember to list the roots in ascending order.",
+      "accept": "Save and next",
+      "sent": "The student will be notified in Telegram",
+      "progress": "Cohort progress",
+      "ring": "Completed the module",
+      "queue": "Grading queue",
+      "queue1": "Ivan Petrov",
+      "queue2": "Anna Sokolova",
+      "queue3": "Oleg Sidorov",
+      "new": "New",
+      "ago10": "10 min",
+      "ago1h": "1 h ago"
+    },
+    "trust": {
+      "eyebrow": "Exam preparation",
+      "title": "Fits state exams and language certificates",
+      "telegram": "Telegram notifications",
+      "latex": "LaTeX formulas",
+      "video": "HLS video",
+      "quiz": "8 question types",
+      "payments": "Online course payments",
+      "mobile": "Works on phones"
+    },
+    "tools": {
+      "eyebrow": "Features",
+      "title": "4 tools for tutors",
+      "subtitle": "Everything a course needs: from structure and materials to quizzes and grading.",
       "builder": {
-        "title": "Block editor",
-        "text": "Like Notion: text, formulas, code, tables, video and pasted images."
+        "tag": "Builder",
+        "title": "Course builder",
+        "text": "A tree of modules and lessons, drag and drop and access conditions: a lesson opens after an assignment is submitted or a score is reached.",
+        "check1": "Drag and drop modules and items",
+        "check2": "Access conditions and deadlines",
+        "mini1": "Course introduction",
+        "mini2": "Linear equations",
+        "mini3": "Homework 1",
+        "mini4": "Final quiz",
+        "locked": "Opens after Homework 1"
       },
-      "tasks": {
-        "title": "“My tasks”",
-        "text": "Students always see what is due and when."
+      "quiz": {
+        "tag": "Quizzes",
+        "title": "Question bank and quizzes",
+        "text": "8 question types, random picks from the bank, a server-side timer and answer autosave on a poor connection.",
+        "check1": "Question versions in the bank",
+        "check2": "Auto grading and manual essay review",
+        "question": "Root of 2x + 3 = 7:",
+        "a": "x = 1",
+        "b": "x = 2",
+        "c": "x = 5",
+        "d": "x = −2",
+        "timer": "12:40"
       },
       "grading": {
-        "title": "Unified grading",
-        "text": "Three panels, comment templates, J/K and Ctrl+Enter."
+        "tag": "Grading",
+        "title": "Homework review",
+        "text": "Work from every course in one queue: score, formatted feedback, return for revision, J/K and Ctrl+Enter shortcuts.",
+        "check1": "Comment templates",
+        "check2": "Grades go straight to the gradebook",
+        "student": "Ivan Petrov",
+        "work": "Homework 1",
+        "feedback": "The solution is correct, write the answer in full."
       },
-      "quizzes": {
-        "title": "Quizzes",
-        "text": "8 question types, server timer, autosave on flaky networks."
+      "media": {
+        "tag": "Media",
+        "title": "Video and PDF library",
+        "text": "Upload video, PDFs and documents straight into a module; video is transcoded to HLS and plays on any device.",
+        "check1": "Streaming HLS video",
+        "check2": "Files and folders in lessons",
+        "dropzone": "Drop lesson files here",
+        "browse": "Choose files"
+      }
+    },
+    "calculator": {
+      "eyebrow": "Calculator",
+      "title": "How much time you will save",
+      "subtitle": "Auto-graded quizzes, a single grading queue and automatic reminders free up hours every week.",
+      "studentsLabel": "Active students",
+      "studentForms": {
+        "one": "student",
+        "other": "students",
+        "few": "students",
+        "many": "students"
       },
-      "sales": {
-        "title": "Course sales",
-        "text": "Price, payment and automatic enrolment after payment."
-      },
-      "telegram": {
-        "title": "Telegram notifications",
-        "text": "New submissions, grades and sales — right in your messenger."
-      },
+      "resultTitle": "Your net gain",
+      "hoursPerWeek": "{hours} h per week",
+      "grading": "Homework review",
+      "quizzes": "Auto-graded quizzes",
+      "messaging": "Messages and reminders",
+      "hours": "{hours} h",
+      "money": "≈ {amount} per month",
+      "note": "Estimate based on assumptions: {grading} h of grading, {quizzes} h of quizzes and {messaging} h of messaging per student per week, hourly rate {rate}. A guide, not a guarantee.",
+      "cta": "Free up my time"
+    },
+    "students": {
+      "eyebrow": "Benefits",
+      "title": "Why students will love it",
+      "subtitle": "The student area is as tidy as the teacher's studio.",
       "mobile": {
-        "title": "Mobile-friendly",
-        "text": "Every student flow works on a 360px screen and offline."
+        "title": "Works on a phone",
+        "text": "A responsive interface that installs like an app: lessons, assignments and quizzes on the go."
       },
-      "gradebook": {
-        "title": "Clear gradebook",
-        "text": "Category weights and a plain-language final grade formula."
+      "progress": {
+        "title": "Clear progress",
+        "text": "Students see what is done, their grades and what is due next in “My tasks”."
+      },
+      "reminders": {
+        "title": "Deadline reminders",
+        "text": "Notifications about new materials, deadlines and grades in Telegram, by email and in the app."
       }
     },
-    "pricingTitle": "Pricing",
-    "pricingSubtitle": "Start free — pay when your school grows.",
-    "plans": {
-      "starter": {
-        "name": "Starter",
-        "price": "Free",
-        "text": "1 teacher, up to 20 students, all core features."
-      },
-      "pro": {
-        "name": "Tutor Pro",
-        "price": "soon",
-        "text": "Unlimited students, course sales, your own branding."
-      },
-      "school": {
-        "name": "School",
-        "price": "on request",
-        "text": "Multiple teachers, categories, API and webhooks."
-      }
+    "testimonials": {
+      "eyebrow": "Testimonials",
+      "title": "What tutors say",
+      "stars": "Rated {stars} of 5"
     },
-    "finalTitle": "Try it — your first course takes 15 minutes"
+    "pricing": {
+      "eyebrow": "Pricing",
+      "title": "Simple pricing",
+      "subtitle": "Start for free and upgrade when your student base grows.",
+      "free": "0 ₽",
+      "ctaFree": "Start for free",
+      "cta": "Choose plan",
+      "included": "Included",
+      "notIncluded": "Not included"
+    },
+    "finalCta": {
+      "badge": "Quick start",
+      "title": "Build your first course today",
+      "text": "All you need to start is a course title — lessons, assignments and quizzes can be added as you go.",
+      "emailLabel": "Your email",
+      "emailPlaceholder": "teacher@example.com",
+      "submit": "Start"
+    },
+    "footer": {
+      "description": "A studio for tutors and online schools: courses, assignments, quizzes and grading in one place.",
+      "label": "Site navigation",
+      "product": "Product",
+      "teachers": "For teachers",
+      "students": "For students",
+      "company": "Company",
+      "features": "Features",
+      "calculator": "Savings calculator",
+      "pricing": "Pricing",
+      "register": "Create a course",
+      "login": "Sign in",
+      "forgot": "Reset password",
+      "tasks": "My tasks",
+      "grades": "My grades",
+      "calendar": "Calendar",
+      "email": "Contact us",
+      "telegram": "Telegram",
+      "rights": "© {year} TutorCraft Studio"
+    }
   },
   "auth": {
     "loginTitle": "Log in",

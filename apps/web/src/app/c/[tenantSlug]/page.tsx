@@ -3,7 +3,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
-import { PublicHeader } from '@/components/public/public-header';
+import { SiteFooter } from '@/components/landing/site-footer';
+import { SiteHeader } from '@/components/landing/site-header';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ROUTES } from '@/features/auth/routes';
@@ -36,7 +37,7 @@ export default async function CatalogPage({ params }: Params) {
 
   return (
     <>
-      <PublicHeader brandName={tenantName} brandHref={ROUTES.catalog(tenantSlug)} />
+      <SiteHeader brandName={tenantName} brandHref={ROUTES.catalog(tenantSlug)} />
       <main id="main-content" className="mx-auto max-w-content px-page-x py-page-y">
         <h1 className="mb-6 text-3xl">{t('catalogTitle', { school: tenantName })}</h1>
         {courses.length === 0 ? (
@@ -83,6 +84,7 @@ export default async function CatalogPage({ params }: Params) {
           </ul>
         )}
       </main>
+      <SiteFooter />
     </>
   );
 }

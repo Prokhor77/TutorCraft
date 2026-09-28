@@ -1,5 +1,5 @@
 /*
- * TutorCraft Studio design tokens — source: Google Stitch design system (design/stitch-design-system.md).
+ * TutorCraft Studio design tokens — documented in docs/design-system.md (the design system lives in this app).
  * «Boutique tactile minimalism»: violet = focus & actions, emerald = done/published, amber = draft/needs review,
  * slate = neutral borders & metadata.
  *
@@ -117,6 +117,7 @@
   --space-gutter: 1.25rem;
   --size-sidebar: 16rem;
   --size-header: 4rem;
+  --size-header-public: 5rem; /* landing & public pages header (Stitch h-20) */
   --size-bottom-nav: 4.25rem;
   --size-content: 90rem;
   --size-prose: 46rem;

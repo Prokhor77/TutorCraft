@@ -4,7 +4,8 @@ import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { BlockRenderer } from '@/components/blockdoc/block-renderer';
 import { CourseCta } from '@/components/public/course-cta';
-import { PublicHeader } from '@/components/public/public-header';
+import { SiteFooter } from '@/components/landing/site-footer';
+import { SiteHeader } from '@/components/landing/site-header';
 import { Avatar } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { ROUTES } from '@/features/auth/routes';
@@ -49,7 +50,7 @@ export default async function CourseLandingPage({ params }: Params) {
 
   return (
     <>
-      <PublicHeader brandName={course.tenantName} brandHref={ROUTES.catalog(tenantSlug)} />
+      <SiteHeader brandName={course.tenantName} brandHref={ROUTES.catalog(tenantSlug)} />
       <main id="main-content" className="mx-auto max-w-content px-page-x py-page-y">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
           <article className="flex min-w-0 flex-col gap-6">
@@ -99,6 +100,7 @@ export default async function CourseLandingPage({ params }: Params) {
           </aside>
         </div>
       </main>
+      <SiteFooter />
     </>
   );
 }

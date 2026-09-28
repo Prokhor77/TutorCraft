@@ -70,50 +70,43 @@ messages/{ru,en}.json     all UI strings (next-intl, default ru)
   `form-action`), `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options`.
   Script CSP still needs `'unsafe-inline'` for Next's inline bootstrap (nonce-based CSP is a TODO).
 
-### Design system (Google Stitch «TutorCraft Studio»)
+### Design system
 
-Source of truth: `design/stitch/DESIGN.md` (full Stitch export; per-screen references in `design/stitch/*/screen.png`,
-used for layout and hierarchy — not pixel-copied). Every visual decision is a role token in
-`src/styles/tokens.css` (`R G B` channels so Tailwind can apply alpha); `tailwind.config.ts` only maps utilities
-to those variables and all screens are built from `components/ui/*`.
+The full spec is **[`docs/design-system.md`](docs/design-system.md)** (tokens, typography, shape, layout,
+components, logo, content and accessibility rules). The essentials:
 
-- **Palette** — Material roles from Stitch: violet primary `#4648d4` / accent `#6366f1` (actions, focus), emerald
-  `#006c49` (done / published / saved), amber `#825100` (draft / needs review), slate neutrals, surfaces
-  `#f8f9ff` → `#dce9ff`. Two Stitch values fail WCAG AA and are replaced by their role colors: placeholder
-  `#94a3b8` → slate-500, amber chip text `#d97706` → `#825100`.
-- **Dark theme** is derived from the same hues (navy surfaces, lighter roles with dark “on” colors); system
-  preference + manual toggle via `data-theme`. `npm run contrast:check` verifies ~26 text/fill pairs in both
-  themes (AA 4.5:1 for text, 3:1 for UI).
-- **Radii** sm .5rem · DEFAULT 1rem (inputs) · md 1.5rem (cards) · lg 2rem (question cards, dropzone, dialogs) ·
-  xl 3rem · full (buttons, chips, tree nodes). **Elevation** L1/L2/L3 violet-tinted shadows + `shadow-glow`;
-  `.glass` for sticky bars (blur 12px, 82% surface). Motion tokens honour `prefers-reduced-motion`.
-- **Typography** — Bricolage Grotesque (headings, `font-heading`, headline xl…sm incl. mobile 30/38 and 24/32)
-  and Work Sans (body, `label-lg/md/sm`, uppercase label-sm for badges and shortcuts). Both are self-hosted from
-  npm (`@fontsource-variable/*`, no Google Fonts access needed). Neither has Cyrillic glyphs, so the stacks fall
-  back per glyph to **Geologica** (headings) and **Onest** (body), which match their metrics and character.
-- **Components** — pill primary buttons with lift + glow, ghost-pill secondary, emerald `success`; inputs with
-  1.5px border and 4px violet focus ring; custom `Radio`/`Checkbox` with bounce; dashed violet `FileDropzone`;
-  question cards (`QuestionTypeTag`, `PointsPill`, drag grip); pill course tree (`CourseTree`).
-- **Layout** — glass top header with logo, breadcrumbs (2xl), pill section tabs (global sections, or inside a
-  course: Конструктор курса · Конструктор тестов · Медиатека · Аналитика · Участники), «Предпросмотр» and
-  «Опубликовать курс». Course builder is 3 panes on ≥1280px (tree 18.5rem · canvas ≤860px · inspector 20rem,
-  selection in `?item=`); the canvas shows the selected item's workspace (header card, content editor, type blocks, glass
-  quick-add bar) and the tree card shows readiness + search; on tablets the tree collapses to an icon rail and
-  the inspector moves under the canvas; on mobile a segmented control (Конструктор / Структура / Предпросмотр). Inside a course the mobile bottom nav is
-  Курс · Тесты · Проверка (teachers; «Прогресс» for learners) · Медиа · Профиль; elsewhere the global nav stays.
-  The mobile header shows the logo with the school name as an eyebrow over the current section.
-- **Logo & icons** — the Stitch logo (`design/stitch/logo/logo.svg`) is `LogoMark` in the header and
-  `public/icons/icon.svg`; PNG/maskable PWA icons are rendered from the same geometry by
-  `scripts/generate-icons.py` (Pillow). UI icons stay on Lucide (tree-shaken SVG): Material Symbols can be
-  self-hosted from npm, but it is a multi-MB ligature font and the Lucide rounded set is visually equivalent.
-- **Stitch patterns, real data only** — `StatCard`/`StatGrid` (uppercase label, tinted icon, headline value),
-  `StatusChip` (Опубликовано · Черновик · Запланировано), `PageHeader` with eyebrow + status meta,
-  `QueueCard` (grading), glass action bars, the header «Сохранено N мин назад» indicator (`SavedIndicator`,
-  fed by successful mutations/autosaves in this tab). Metrics come from the contract only (outline, quiz slots
-  and settings, gradebook, grading queue, progress report, `/me/*`); Stitch-only ideas without API data
-  (storage/CDN, AI subtitles, webinars, parent contacts, voice notes, Face ID / Госуслуги login) are omitted.
-- **Tenant branding** — `buildBrandCss()` injects `<style id="tc-brand">` overriding `--primary*`, `--accent` and
-  `--focus-ring` for light and (lightened) dark themes (FR-ADMIN-01).
+- **Tokens only.** Every colour, radius, shadow, size and motion value is a role token in `src/styles/tokens.css`
+  (`R G B` channels for Tailwind alpha); `tailwind.config.ts` only maps utilities to them. Violet = actions/focus,
+  emerald = done/published, amber = draft/needs review, slate = neutral. Light + derived dark theme (system
+  preference or `data-theme`); `npm run contrast:check` enforces WCAG AA for ~26 pairs in both themes.
+- **Type & shape.** Bricolage Grotesque headings / Work Sans body and labels (self-hosted from npm, Cyrillic via
+  Geologica / Onest fallbacks). Radii: inputs 1rem, cards 1.5rem, question cards / dropzones / landing cards 2rem,
+  hero & CTA 3rem, pills for buttons, chips, tabs and tree nodes. Elevation L1/L2/L3 + glow, `.glass` sticky bars.
+- **Components.** Build screens from `src/components/ui` (Button, Field, IconInput/PasswordInput, Card, StatCard,
+  PageHeader, Tabs/Segmented, Badge, FileDropzone, …) and the domain pieces documented in the spec; public pages
+  use `SiteHeader` / `SiteFooter` from `src/components/landing`.
+- **Layout.** App shell with glass header + pill tabs and a mobile bottom nav; three-pane workbenches (builder,
+  quiz builder, media, grading) collapsing to rail/sheet on tablets and a single column with a segmented control on
+  phones.
+- **Logo** is inline (`LogoMark`) and in `public/icons/`; PNG/maskable PWA icons come from
+  `scripts/generate-icons.py`. UI icons: Lucide.
+- **Honesty.** Screens show only real data from the API; illustrative mockups are captioned as examples.
+
+### Landing content (`src/content/landing.ts`)
+
+The landing page (`/`) takes its business data from `src/content/landing.ts`, typed and localised (`{ ru, en }`):
+
+| Field          | Default                                            | Effect                                                          |
+| -------------- | -------------------------------------------------- | --------------------------------------------------------------- |
+| `socialProof`  | `null`                                             | hero strip «N+ репетиторов…» and rating — hidden while `null`   |
+| `testimonials` | `[]`                                               | «Отзывы» section and its header anchor — hidden while empty     |
+| `plans`        | Старт 0 ₽ · Профи 1 490 ₽ · Студия 3 990 ₽         | pricing cards; features must describe real product capabilities |
+| `savings`      | 0.42 + 0.25 + 0.18 h per student, 750 ₽/h, 4 weeks | calculator assumptions (shown to visitors as an estimate)       |
+| `contacts`     | `email: null`, `telegram: null`                    | footer «Компания» column — hidden while empty                   |
+
+Only put **real, verifiable** numbers and quotes from real customers (with consent) into `socialProof` and
+`testimonials`; they are rendered as facts. Calculator math and Russian declension live in
+`src/features/landing/savings.ts` (unit-tested).
 
 ### Block editor
 
@@ -127,8 +120,8 @@ searchable block picker; paste and drag-and-drop upload files via the presigned 
 
 | Route                                                                      | Screen                                                                                                                                                                                                                                                                                                         |
 | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/`                                                                        | tutor marketing landing («Курс за 15 минут», features, pricing placeholder, CTA)                                                                                                                                                                                                                               |
-| `/login` `/register` `/forgot-password` `/reset-password` `/accept-invite` | auth: Stitch card with «Вход · Регистрация» tabs, icon inputs, password toggle (Google / Telegram tiles appear when `/auth/providers` enables them; tenant chooser on `auth.tenant_required`)                                                                                                                  |
+| `/`                                                                        | landing: hero + product mockup, trust strip, 4 tools, savings calculator, student benefits, testimonials (only real ones), pricing from `src/content/landing.ts`, final CTA (email → `/register?email=`)                                                                                                       |
+| `/login` `/register` `/forgot-password` `/reset-password` `/accept-invite` | auth: card with «Вход · Регистрация» tabs, icon inputs, password toggle (Google / Telegram tiles appear when `/auth/providers` enables them; tenant chooser on `auth.tenant_required`)                                                                                                                         |
 | `/join/[token]`                                                            | accept a course invite link                                                                                                                                                                                                                                                                                    |
 | `/c/[tenantSlug]` · `/c/[tenantSlug]/[courseSlug]`                         | SSR catalog and course landing (SEO metadata, OpenGraph) with Buy / Enroll CTA                                                                                                                                                                                                                                 |
 | `/checkout/fake/[orderId]` · `/checkout/return`                            | dev fake payment page, return page polling the order                                                                                                                                                                                                                                                           |
@@ -136,7 +129,7 @@ searchable block picker; paste and drag-and-drop upload files via the presigned 
 | `/courses`                                                                 | course cards, search, create dialog (title only)                                                                                                                                                                                                                                                               |
 | `/courses/[id]`                                                            | 3-pane builder: course tree, outline canvas, item inspector (`?item=`, `?type=quiz` filter); collapsible modules, status/lock reasons; teacher inline editing, DnD, `+` type picker → quick create, visibility, duplicate, delete+undo, bulk hide/show/move/shift dates, settings sheet, «Как студент» preview |
 | `/courses/[id]/trash`                                                      | restore deleted items/modules                                                                                                                                                                                                                                                                                  |
-| `/courses/[id]/items/[itemId]`                                             | page / file / url / folder / video / assignment / quiz / forum (teacher tabs: content, submissions, questions = Stitch quiz builder with stat cards / question structure / inline question editor / «Параметры теста», attempts, discussions, settings)                                                        |
+| `/courses/[id]/items/[itemId]`                                             | page / file / url / folder / video / assignment / quiz / forum (teacher tabs: content, submissions, questions = quiz builder with stat cards / question structure / inline question editor / «Параметры теста», attempts, discussions, settings)                                                               |
 | `/courses/[id]/items/[itemId]/attempts/[attemptId]` (+ `/result`)          | quiz attempt (focus mode) and results                                                                                                                                                                                                                                                                          |
 | `/courses/[id]/items/[itemId]/discussions/[discussionId]`                  | forum thread                                                                                                                                                                                                                                                                                                   |
 | `/courses/[id]/question-bank`                                              | «Конструктор тестов»: stat cards, course quizzes (→ quiz builder), bank categories, filters, editor for 8 question types, versions, preview-check                                                                                                                                                              |
@@ -197,4 +190,4 @@ rewrites: rewrites are frozen at build time in standalone output, so compose's r
 - P1 items not in scope: PDF annotations, rubrics, “Explain access”, nested condition groups, scales UI
   (API hooks exist), web push.
 - Queue text-draft saves offline (today: submit, quiz answers and finish are queued; drafts are kept locally).
-- Run the Playwright scenario in CI against the compose stack; add visual regression once Stitch mockups land.
+- Run the Playwright scenario in CI against the compose stack; add visual regression screenshots (see `docs/design-system.md`).

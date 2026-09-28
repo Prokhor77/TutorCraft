@@ -56,7 +56,7 @@ tc.media.video-uploaded.v1 ─► download from S3 ─► ffprobe ─► ffmpeg 
 | `KAFKA_BROKERS` | — (required) | comma-separated, e.g. `kafka:9092` |
 | `KAFKA_GROUP_ID` | `media-worker` | |
 | `KAFKA_TOPIC_PREFIX` | `tc` | topics `<prefix>.media.video-uploaded.v1` / `…video-processed.v1` |
-| `S3_ENDPOINT` | — (required) | e.g. `http://minio:9000`; path-style requests |
+| `S3_ENDPOINT` | — (required) | e.g. `http://s3:8333`; path-style requests |
 | `S3_ACCESS_KEY`, `S3_SECRET_KEY` | — (required) | |
 | `S3_BUCKET` | — (required) | the only bucket read and written |
 | `S3_REGION` | `us-east-1` | SigV4 region |

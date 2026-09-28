@@ -32,6 +32,8 @@ const ratio = (a, b) => {
 
 const TEXT = 4.5;
 const UI = 3;
+/** WCAG large text (≥ 24px, or ≥ 18.66px bold). */
+const LARGE_TEXT = 3;
 const PAIRS = [
   ['text', 'background', TEXT],
   ['text', 'surface', TEXT],
@@ -45,6 +47,9 @@ const PAIRS = [
   ['primary', 'primary-soft', TEXT],
   ['primary', 'surface-muted', TEXT],
   ['primary-foreground', 'primary', TEXT],
+  // Landing: gradient headline accent and large text on the violet CTA gradient (≥ 24px bold → 3:1).
+  ['accent', 'background', LARGE_TEXT],
+  ['primary-foreground', 'accent', LARGE_TEXT],
   ['success', 'surface', TEXT],
   ['success', 'success-soft', TEXT],
   ['success-foreground', 'success', TEXT],

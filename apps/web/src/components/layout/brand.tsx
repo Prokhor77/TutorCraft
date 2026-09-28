@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils/cn';
 
 export const PRODUCT_NAME = 'TutorCraft';
 
-/** TutorCraft logo mark (Stitch export, design/stitch/logo/logo.svg). Same artwork as public/icons/icon.svg. */
+/** TutorCraft logo mark (40×40 grid); same artwork as public/icons/icon.svg — see docs/design-system.md «Logo». */
 export function LogoMark({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 40 40" fill="none" aria-hidden className={cn('size-9 shrink-0', className)}>

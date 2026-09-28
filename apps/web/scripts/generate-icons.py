@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Renders PNG app icons (PWA, NFR-COMP-02) from the Stitch logo (public/icons/logo.svg, 40×40 grid). Requires Pillow."""
+"""Renders PNG app icons (PWA, NFR-COMP-02) from the logo geometry in public/icons/icon.svg (40×40 grid). Requires Pillow."""
 from pathlib import Path
 from PIL import Image, ImageDraw
 
