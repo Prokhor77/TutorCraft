@@ -85,7 +85,8 @@
     "primary": "Main navigation",
     "profile": "Profile",
     "skipToContent": "Skip to content",
-    "sections": "Sections"
+    "sections": "Sections",
+    "students": "Students"
   },
   "roles": {
     "teacher": "Teacher",
@@ -1563,7 +1564,22 @@
     "progressTitle": "Progress by course item",
     "progressHint": "{students, plural, one {# student} other {# students}} × {items, plural, one {# item} other {# items}}",
     "groupsTitle": "Course groups",
-    "groupsHint": "Click a name to rename the group"
+    "groupsHint": "Click a name to rename the group",
+    "inviteByEmail": "Invite by email",
+    "inviteByEmailTitle": "Invite to the course by email",
+    "inviteByEmailHint": "If the person has no account in your school yet, we create one and give you an activation link to forward via a messenger. An email is sent too when the server has mail configured.",
+    "email": "Email",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "sendInvitation": "Invite",
+    "invitedNew": "{email} is enrolled. The account still needs to be activated via the link.",
+    "invitedExisting": "The user already exists in the school and has been enrolled",
+    "inviteAnother": "Invite another",
+    "activationShownOnce": "Send this link to the student: it lets them set a password. A new link cancels the previous one.",
+    "activationUrl": "Activation link",
+    "resume": "Restore access",
+    "resumePerson": "Restore access: {name}",
+    "suspendPerson": "Suspend: {name}"
   },
   "calendar": {
     "title": "Calendar",
@@ -1659,7 +1675,8 @@
       "audit": "Audit log",
       "activity": "Activity",
       "orders": "Sales",
-      "integrations": "Integrations"
+      "integrations": "Integrations",
+      "accounts": "All accounts"
     },
     "tenant": {
       "label": "School",
@@ -2153,5 +2170,75 @@
     "cancel": "Cancel",
     "insertHint": "Insert formula (Alt+=)",
     "openEditor": "Open formula editor"
+  },
+  "members": {
+    "schoolTitle": "School students",
+    "schoolDescription": "Everyone you or your teachers invited to the school: status, who invited them, blocking.",
+    "schoolPanel": "Students",
+    "schoolPanelHint": "Blocking in the school closes access to all your courses; the student's data is kept.",
+    "schoolEmptyText": "Invite students from a course's participants page — they will appear here.",
+    "platformPanelHint": "Users of every school: which school, who created the account and how. A platform block overrides a school block — tutors cannot lift it.",
+    "platformEmptyText": "Try changing the filters.",
+    "forbiddenTitle": "For school owners",
+    "forbiddenText": "A school's students are managed by its owner.",
+    "shownCount": "Shown: {count}",
+    "search": "Search by name or email",
+    "status": "Status",
+    "allStatuses": "All",
+    "statusFilters": {
+      "active": "Active",
+      "suspended": "Blocked by school",
+      "invited": "Not activated",
+      "blocked": "Blocked by platform"
+    },
+    "statuses": {
+      "active": "Active",
+      "suspended": "Blocked by school",
+      "invited": "Not activated"
+    },
+    "platformBlocked": "Blocked by platform",
+    "origins": {
+      "unknown": "Unknown",
+      "self_signup": "Signed up",
+      "school_owner": "School owner",
+      "tutor_invite": "Invited by a teacher",
+      "admin": "Created by admin",
+      "import": "CSV import",
+      "system": "System"
+    },
+    "createdBy": "created by {name}",
+    "user": "User",
+    "school": "School",
+    "allSchools": "All schools",
+    "origin": "Account origin",
+    "allOrigins": "Any origin",
+    "lastLogin": "Last sign-in",
+    "never": "Never",
+    "actions": "Actions",
+    "actionsFor": "Actions: {name}",
+    "loadError": "Could not load users",
+    "emptyTitle": "No one found",
+    "roleOwner": "School owner",
+    "rolePlatformAdmin": "Platform administrator",
+    "blockInSchool": "Block in school",
+    "unblockInSchool": "Unblock",
+    "newActivationLink": "New activation link",
+    "activationTitle": "Activation link",
+    "activationHint": "The previous link no longer works.",
+    "blockedToast": "{name}: access blocked",
+    "unblockedToast": "{name}: access restored",
+    "blockOnPlatform": "Block on the platform",
+    "unblockOnPlatform": "Lift platform block",
+    "blockTitle": "Block {name}?",
+    "blockHint": "The user immediately loses access to the whole platform and all sessions end. Data is kept; the block can be lifted.",
+    "blockReason": "Reason",
+    "blockReasonHint": "Optional; visible to the administrator only",
+    "erase": "Delete from platform",
+    "eraseOwnerDisabled": "Cannot delete a school owner",
+    "eraseTitle": "Delete {name} permanently?",
+    "eraseWarningTitle": "This cannot be undone",
+    "eraseWarning": "Enrollments, submissions, quiz attempts, grades, progress, notifications and tokens are deleted, forum post text is wiped. The account is anonymized; grades the user gave to others and paid orders stay without personal data.",
+    "eraseConfirm": "To confirm, type the email: {email}",
+    "erasedToast": "{email} deleted from the platform"
   }
 }

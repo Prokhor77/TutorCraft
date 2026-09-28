@@ -24,6 +24,8 @@ export const queryKeys = {
   enrollmentsRoot: (courseId: string) => ['courses', courseId, 'enrollments'] as const,
   groups: (courseId: string) => ['courses', courseId, 'groups'] as const,
   inviteLinks: (courseId: string) => ['courses', courseId, 'invite-links'] as const,
+  enrollmentCandidates: (courseId: string, q: string) =>
+    ['courses', courseId, 'enrollment-candidates', q] as const,
 
   mySubmission: (itemId: string) => ['items', itemId, 'my-submission'] as const,
   submissions: (itemId: string, params: object) =>
@@ -58,6 +60,10 @@ export const queryKeys = {
   platformTenants: ['platform', 'tenants'] as const,
   users: (params: object) => ['users', params] as const,
   usersRoot: ['users'] as const,
+  schoolMembers: (params: object) => ['school-members', params] as const,
+  schoolMembersRoot: ['school-members'] as const,
+  platformUsers: (params: object) => ['platform', 'users', params] as const,
+  platformUsersRoot: ['platform', 'users'] as const,
   auditLog: (params: object) => ['audit-log', params] as const,
   activityLog: (params: object) => ['activity-log', params] as const,
   activityTrail: (entryId: string) => ['activity-log', 'trail', entryId] as const,

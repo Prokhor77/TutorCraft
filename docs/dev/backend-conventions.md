@@ -58,6 +58,7 @@ com.tutorcraft.core.<module>/
 | V16 | activity | activity_log |
 | V16 | activity | activity_log |
 | V17 | billing | tenant_subscriptions, subscription_payments |
+| V18 | identity | users: created_by, created_via, platform_blocked_at, platform_block_reason |
 
 ## MongoDB
 - `MongoTemplate`, коллекции: `modules`, `items` (courses); `question_categories`, `questions`, `question_versions`, `quiz_layouts` (assessment.quiz).

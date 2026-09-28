@@ -3,6 +3,7 @@ package com.tutorcraft.core.identity.application;
 import com.tutorcraft.core.identity.UsersApi;
 import com.tutorcraft.core.identity.domain.EmailAddress;
 import com.tutorcraft.core.identity.domain.UserAccount;
+import com.tutorcraft.core.identity.domain.UserStatus;
 import com.tutorcraft.core.shared.domain.NotFoundException;
 import java.util.Collection;
 import java.util.Map;
@@ -57,6 +58,11 @@ class UsersApiAdapter implements UsersApi {
 
     private static UserRef toRef(UserAccount user) {
         return new UserRef(user.id(), user.tenantId(), user.email(), user.firstName(), user.lastName(), user.locale(),
-                user.timezone(), user.status().key(), user.telegramChatId(), user.avatarFileId());
+                user.timezone(), effectiveStatus(user).key(), user.telegramChatId(), user.avatarFileId());
+    }
+
+    /** Для других модулей блокировка платформой неотличима от приостановки: пользователь не действует. */
+    private static UserStatus effectiveStatus(UserAccount user) {
+        return user.isPlatformBlocked() ? UserStatus.SUSPENDED : user.status();
     }
 }

@@ -8,6 +8,7 @@ import com.tutorcraft.core.audit.AuditLog;
 import com.tutorcraft.core.audit.AuditRecord;
 import com.tutorcraft.core.identity.application.UserRepository.UserFilter;
 import com.tutorcraft.core.identity.application.UserRepository.UserSummaryView;
+import com.tutorcraft.core.identity.domain.AccountOrigin;
 import com.tutorcraft.core.identity.domain.EmailAddress;
 import com.tutorcraft.core.identity.domain.UserAccount;
 import com.tutorcraft.core.identity.domain.UserStatus;
@@ -22,7 +23,6 @@ import com.tutorcraft.core.shared.security.CurrentUser;
 import com.tutorcraft.core.shared.security.CurrentUserProvider;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -42,18 +42,18 @@ public class UserAdminService {
     private final AccessService access;
     private final CurrentUserProvider currentUser;
     private final InvitationService invitations;
-    private final SessionService sessions;
+    private final UserStatusChanger statusChanger;
     private final InvitedUsers invitedUsers;
     private final AuditLog audit;
 
     public UserAdminService(UserRepository users, AccessService access, CurrentUserProvider currentUser,
-                            InvitationService invitations, SessionService sessions, InvitedUsers invitedUsers,
+                            InvitationService invitations, UserStatusChanger statusChanger, InvitedUsers invitedUsers,
                             AuditLog audit) {
         this.users = users;
         this.access = access;
         this.currentUser = currentUser;
         this.invitations = invitations;
-        this.sessions = sessions;
+        this.statusChanger = statusChanger;
         this.invitedUsers = invitedUsers;
         this.audit = audit;
     }
@@ -82,7 +82,8 @@ public class UserAdminService {
         if (users.findByEmail(actor.tenantId(), email).isPresent()) {
             throw new ConflictException(IdentityErrors.EMAIL_TAKEN, "User with this email already exists");
         }
-        UserAccount user = invitedUsers.create(actor.tenantId(), email, command.firstName().trim(), command.lastName().trim());
+        UserAccount user = invitedUsers.create(actor.tenantId(), email, command.firstName().trim(), command.lastName().trim(),
+                actor.userId(), AccountOrigin.ADMIN);
         applyRoles(actor, user, roles);
         audit.record(AuditRecord.of(actor.tenantId(), actor.userId(), "user.created", "user", user.id().toString()));
         if (command.sendInvite()) {
@@ -102,7 +103,7 @@ public class UserAdminService {
                     trimOr(command.lastName(), user.lastName()));
         }
         if (command.status() != null) {
-            changeStatus(actor, user, parseStatus(command.status()));
+            statusChanger.change(actor, user, parseStatus(command.status()));
         }
         if (command.tenantRoles() != null) {
             changeRoles(actor, user, parseRoles(command.tenantRoles()));
@@ -120,24 +121,6 @@ public class UserAdminService {
             throw new BusinessRuleException(IdentityErrors.NOT_INVITED, "User has already accepted the invitation");
         }
         invitations.sendInvitation(user, actor.userId());
-    }
-
-    private void changeStatus(CurrentUser actor, UserAccount user, UserStatus status) {
-        if (status == user.status()) {
-            return;
-        }
-        if (user.isInvited()) {
-            throw ValidationException.single("status", "invalid_transition", "Invited user must accept the invitation first");
-        }
-        if (status == UserStatus.SUSPENDED && user.id().equals(actor.userId())) {
-            throw new BusinessRuleException(IdentityErrors.CANNOT_SUSPEND_SELF, "You cannot suspend yourself");
-        }
-        users.updateStatus(user.tenantId(), user.id(), status);
-        if (status == UserStatus.SUSPENDED) {
-            sessions.revokeAll(user.tenantId(), user.id());
-        }
-        audit.record(AuditRecord.of(actor.tenantId(), actor.userId(), "user.status_changed", "user", user.id().toString())
-                .withDiff(Map.of("before", user.status().key(), "after", status.key())));
     }
 
     private void changeRoles(CurrentUser actor, UserAccount user, Set<TenantRole> roles) {

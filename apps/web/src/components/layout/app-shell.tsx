@@ -26,7 +26,7 @@ import { CourseProvider } from '@/features/courses/course-context';
 import { useCourse } from '@/features/courses/use-courses';
 import { roleHints, useMyCourses } from '@/features/courses/use-my-courses';
 import { useItem } from '@/features/items/use-item';
-import { isPlatformAdminHint } from '@/lib/access/permissions';
+import { isPlatformAdminHint, isSchoolOwnerHint } from '@/lib/access/permissions';
 import type { ItemType } from '@/lib/api/schemas/common';
 import type { Course } from '@/lib/api/schemas/courses';
 import { cn } from '@/lib/utils/cn';
@@ -115,7 +115,11 @@ function useLocationKey(): string {
 function useGlobalNavigation(): NavItem[] {
   const me = useMe();
   const { data: courses } = useMyCourses();
-  return buildNavigation({ ...roleHints(courses), isAdmin: isPlatformAdminHint(me?.tenantRoles) });
+  return buildNavigation({
+    ...roleHints(courses),
+    isAdmin: isPlatformAdminHint(me?.tenantRoles),
+    ownsSchool: isSchoolOwnerHint(me?.tenantRoles),
+  });
 }
 
 function GlobalTabs() {

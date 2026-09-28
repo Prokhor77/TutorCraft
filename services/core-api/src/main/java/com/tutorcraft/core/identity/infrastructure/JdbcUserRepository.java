@@ -27,7 +27,7 @@ class JdbcUserRepository implements UserRepository {
 
     private static final String COLUMNS = """
             id, tenant_id, email, password_hash, first_name, last_name, avatar_file_id, timezone, locale, status,
-            google_sub, telegram_user_id, telegram_chat_id, last_login_at, created_at, version
+            google_sub, telegram_user_id, telegram_chat_id, last_login_at, created_at, version, platform_blocked_at
             """;
     private static final String SELECT_ACTIVE = "SELECT " + COLUMNS + " FROM users WHERE deleted_at IS NULL ";
     private static final String SUMMARY_SELECT = """
@@ -35,6 +35,16 @@ class JdbcUserRepository implements UserRepository {
                    ARRAY(SELECT DISTINCT r.key FROM role_assignments ra JOIN roles r ON r.id = ra.role_id
                          WHERE ra.tenant_id = u.tenant_id AND ra.user_id = u.id ORDER BY r.key) AS role_keys
             FROM users u
+            """;
+    private static final String MEMBER_SELECT = """
+            SELECT u.id, u.tenant_id, u.email, u.first_name, u.last_name, u.status, u.platform_blocked_at,
+                   u.platform_block_reason, u.created_via, u.last_login_at, u.created_at,
+                   c.id AS creator_id, c.email AS creator_email, c.first_name AS creator_first_name,
+                   c.last_name AS creator_last_name,
+                   ARRAY(SELECT DISTINCT r.key FROM role_assignments ra JOIN roles r ON r.id = ra.role_id
+                         WHERE ra.tenant_id = u.tenant_id AND ra.user_id = u.id ORDER BY r.key) AS role_keys
+            FROM users u
+            LEFT JOIN users c ON c.id = u.created_by
             """;
     private static final String LIKE_WILDCARD = "%";
 
@@ -122,14 +132,15 @@ class JdbcUserRepository implements UserRepository {
     public void insert(NewUser user) {
         jdbc.sql("""
                 INSERT INTO users (id, tenant_id, email, password_hash, first_name, last_name, timezone, locale, status,
-                                   google_sub, telegram_user_id, created_at, updated_at)
+                                   google_sub, telegram_user_id, created_by, created_via, created_at, updated_at)
                 VALUES (:id, :tenantId, :email, :hash, :firstName, :lastName, :timezone, :locale, :status,
-                        :googleSub, :telegramUserId, :now, :now)
+                        :googleSub, :telegramUserId, :createdBy, :createdVia, :now, :now)
                 """)
             .param("id", user.id()).param("tenantId", user.tenantId()).param("email", user.email())
             .param("hash", user.passwordHash()).param("firstName", user.firstName()).param("lastName", user.lastName())
             .param("timezone", user.timezone()).param("locale", user.locale()).param("status", user.status().key())
             .param("googleSub", user.googleSub()).param("telegramUserId", user.telegramUserId())
+            .param("createdBy", user.createdBy()).param("createdVia", user.origin().key())
             .param("now", Timestamps.of(clock.instant()))
             .update();
     }
@@ -210,6 +221,7 @@ class JdbcUserRepository implements UserRepository {
         return jdbc.sql(SUMMARY_SELECT + """
                 WHERE u.tenant_id = :tenantId AND u.deleted_at IS NULL
                   AND (CAST(:status AS text) IS NULL OR u.status = :status)
+                  AND (NOT :usableOnly OR u.platform_blocked_at IS NULL)
                   AND (CAST(:q AS text) IS NULL OR u.email ILIKE :q OR u.first_name ILIKE :q OR u.last_name ILIKE :q
                        OR (u.first_name || ' ' || u.last_name) ILIKE :q)
                   AND (CAST(:role AS text) IS NULL OR EXISTS (
@@ -223,6 +235,7 @@ class JdbcUserRepository implements UserRepository {
             .param("status", filter.status())
             .param("q", likePattern(filter.query()))
             .param("role", filter.roleKey())
+            .param("usableOnly", filter.usableOnly())
             .param("afterAt", after == null ? null : Timestamps.of(after.sortKey()))
             .param("afterId", after == null ? null : after.id())
             .param("limit", page.fetchSize())
@@ -235,6 +248,78 @@ class JdbcUserRepository implements UserRepository {
         return jdbc.sql(SUMMARY_SELECT + "WHERE u.tenant_id = :tenantId AND u.id = :id AND u.deleted_at IS NULL")
                 .param("tenantId", tenantId).param("id", userId)
                 .query((rs, n) -> toSummary(rs)).optional();
+    }
+
+    @Override
+    public Optional<UserAccount> findAnyById(UUID userId) {
+        return jdbc.sql(SELECT_ACTIVE + "AND id = :id")
+                .param("id", userId)
+                .query((rs, n) -> toAccount(rs)).optional();
+    }
+
+    @Override
+    public List<MemberView> searchMembers(MemberFilter filter, PageQuery page) {
+        CursorCodec.Position after = page.after().orElse(null);
+        return jdbc.sql(MEMBER_SELECT + """
+                WHERE u.deleted_at IS NULL
+                  AND (CAST(:tenantId AS uuid) IS NULL OR u.tenant_id = :tenantId)
+                  AND (CAST(:status AS text) IS NULL
+                       OR (:status = 'blocked' AND u.platform_blocked_at IS NOT NULL)
+                       OR (:status <> 'blocked' AND u.status = :status
+                           AND (u.status <> 'active' OR u.platform_blocked_at IS NULL)))
+                  AND (CAST(:origin AS text) IS NULL OR u.created_via = :origin)
+                  AND (CAST(:q AS text) IS NULL OR u.email ILIKE :q OR u.first_name ILIKE :q OR u.last_name ILIKE :q
+                       OR (u.first_name || ' ' || u.last_name) ILIKE :q)
+                  AND (CAST(:afterAt AS timestamptz) IS NULL OR (u.created_at, u.id) < (:afterAt, :afterId))
+                ORDER BY u.created_at DESC, u.id DESC
+                LIMIT :limit
+                """)
+            .param("tenantId", filter.tenantId())
+            .param("status", filter.status())
+            .param("origin", filter.origin())
+            .param("q", likePattern(filter.query()))
+            .param("afterAt", after == null ? null : Timestamps.of(after.sortKey()))
+            .param("afterId", after == null ? null : after.id())
+            .param("limit", page.fetchSize())
+            .query((rs, n) -> toMember(rs))
+            .list();
+    }
+
+    @Override
+    public Optional<MemberView> member(UUID tenantId, UUID userId) {
+        return jdbc.sql(MEMBER_SELECT + """
+                WHERE u.id = :id AND u.deleted_at IS NULL
+                  AND (CAST(:tenantId AS uuid) IS NULL OR u.tenant_id = :tenantId)
+                """)
+            .param("tenantId", tenantId).param("id", userId)
+            .query((rs, n) -> toMember(rs)).optional();
+    }
+
+    @Override
+    public void updatePlatformBlock(UUID tenantId, UUID userId, Instant at, String reason) {
+        jdbc.sql("""
+                UPDATE users SET platform_blocked_at = :at, platform_block_reason = :reason,
+                       version = version + 1, updated_at = :now
+                WHERE tenant_id = :tenantId AND id = :id AND deleted_at IS NULL
+                """)
+            .param("at", at == null ? null : Timestamps.of(at)).param("reason", reason)
+            .param("now", Timestamps.of(clock.instant())).param("tenantId", tenantId).param("id", userId)
+            .update();
+    }
+
+    @Override
+    public void anonymize(UUID tenantId, UUID userId, Anonymized replacement, Instant at) {
+        jdbc.sql("""
+                UPDATE users SET email = :email, first_name = :firstName, last_name = :lastName, password_hash = NULL,
+                       avatar_file_id = NULL, google_sub = NULL, telegram_user_id = NULL, telegram_chat_id = NULL,
+                       last_login_at = NULL, status = 'suspended', platform_block_reason = NULL,
+                       deleted_at = :at, updated_at = :at, version = version + 1
+                WHERE tenant_id = :tenantId AND id = :id AND deleted_at IS NULL
+                """)
+            .param("email", replacement.email()).param("firstName", replacement.firstName())
+            .param("lastName", replacement.lastName()).param("at", Timestamps.of(at))
+            .param("tenantId", tenantId).param("id", userId)
+            .update();
     }
 
     private void update(String assignment, UUID tenantId, UUID userId, Object value) {
@@ -259,7 +344,19 @@ class JdbcUserRepository implements UserRepository {
                 rs.getObject("avatar_file_id", UUID.class), rs.getString("timezone"), rs.getString("locale"),
                 UserStatus.fromKey(rs.getString("status")), rs.getString("google_sub"),
                 rs.getObject("telegram_user_id", Long.class), rs.getObject("telegram_chat_id", Long.class),
-                Timestamps.read(rs, "last_login_at"), Timestamps.read(rs, "created_at"), rs.getLong("version"));
+                Timestamps.read(rs, "last_login_at"), Timestamps.read(rs, "created_at"), rs.getLong("version"),
+                Timestamps.read(rs, "platform_blocked_at"));
+    }
+
+    private static MemberView toMember(ResultSet rs) throws SQLException {
+        UUID creatorId = rs.getObject("creator_id", UUID.class);
+        CreatorView creator = creatorId == null ? null : new CreatorView(creatorId, rs.getString("creator_email"),
+                rs.getString("creator_first_name"), rs.getString("creator_last_name"));
+        return new MemberView(rs.getObject("id", UUID.class), rs.getObject("tenant_id", UUID.class), rs.getString("email"),
+                rs.getString("first_name"), rs.getString("last_name"), rs.getString("status"),
+                Timestamps.read(rs, "platform_blocked_at"), rs.getString("platform_block_reason"),
+                rs.getString("created_via"), creator, tenantRoles(rs.getArray("role_keys")),
+                Timestamps.read(rs, "last_login_at"), Timestamps.read(rs, "created_at"));
     }
 
     private static UserSummaryView toSummary(ResultSet rs) throws SQLException {

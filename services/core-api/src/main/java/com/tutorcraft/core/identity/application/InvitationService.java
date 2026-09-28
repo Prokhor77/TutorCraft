@@ -55,9 +55,14 @@ public class InvitationService {
         this.invitationTtl = properties.security().invitationTtl();
     }
 
-    /** Новая ссылка-приглашение (предыдущие аннулируются). Вызывать в транзакции операции над пользователем. */
+    /**
+     * Новая ссылка-приглашение (предыдущие аннулируются) и письмо со ссылкой. Вызывать в транзакции операции над
+     * пользователем.
+     *
+     * @return ссылка активации — показывается только пригласившему (письмо может не дойти, если SMTP не настроен)
+     */
     @Transactional
-    public void sendInvitation(UserAccount user, UUID actorId) {
+    public String sendInvitation(UserAccount user, UUID actorId) {
         IssuedToken token = tokens.issue(Kind.INVITATION, user.tenantId(), user.id(), invitationTtl);
         String link = publicBaseUrl + ACCEPT_PATH + token.value();
         String tenantName = org.require(user.tenantId()).name();
@@ -65,6 +70,7 @@ public class InvitationService {
                 INVITATION_MESSAGE, List.<Object>of(tenantName, link), link, INVITATION_MESSAGE + ":" + token.id(), true,
                 user.email()));
         audit.record(AuditRecord.of(user.tenantId(), actorId, "user.invited", "user", user.id().toString()));
+        return link;
     }
 
     @Transactional
@@ -73,6 +79,7 @@ public class InvitationService {
         OneTimeToken token = tokens.requireValid(Kind.INVITATION, command.token());
         UserAccount user = users.findById(token.tenantId(), token.userId())
                 .filter(UserAccount::isInvited)
+                .filter(candidate -> !candidate.isPlatformBlocked())
                 .orElseThrow(() -> new BusinessRuleException(IdentityErrors.TOKEN_INVALID, "Invitation is invalid or expired"));
         String hash = policy.validateAndHash(user.tenantId(), command.password(), PASSWORD_FIELD);
         tokens.consume(Kind.INVITATION, token);

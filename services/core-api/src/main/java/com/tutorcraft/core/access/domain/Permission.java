@@ -16,6 +16,8 @@ public enum Permission {
     USER_IMPORT("user.import"),
     USER_IMPERSONATE("user.impersonate"),
     ROLE_MANAGE("role.manage"),
+    MEMBER_VIEW("member.view"),
+    MEMBER_MANAGE("member.manage"),
     CATEGORY_MANAGE("category.manage"),
     COURSE_CREATE("course.create"),
     COURSE_VIEW("course.view"),

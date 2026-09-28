@@ -49,7 +49,7 @@ class AuthServiceRefreshTest {
         auth = new AuthService(mock(AccountProvisioner.class), sessions, refreshTokens, users, signInGuard, meAssembler,
                 mock(CurrentUserProvider.class), audit, Clock.fixed(NOW, ZoneOffset.UTC));
         user = new UserAccount(userId, tenantId, "u@school.ru", "hash", "U", "Ser", null, "Europe/Moscow", "ru",
-                UserStatus.ACTIVE, null, null, null, null, NOW, 0);
+                UserStatus.ACTIVE, null, null, null, null, NOW, 0, null);
         when(users.findById(tenantId, userId)).thenReturn(Optional.of(user));
     }
 

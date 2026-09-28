@@ -11,6 +11,7 @@ import com.tutorcraft.core.courses.CoursesApi;
 import com.tutorcraft.core.enrollment.EnrollmentApi;
 import com.tutorcraft.core.enrollment.EnrollmentApi.EnrolCommand;
 import com.tutorcraft.core.identity.application.ImportPreviewRepository.PreviewRow;
+import com.tutorcraft.core.identity.domain.AccountOrigin;
 import com.tutorcraft.core.identity.domain.EmailAddress;
 import com.tutorcraft.core.identity.domain.ImportRow;
 import com.tutorcraft.core.identity.domain.ImportRowError;
@@ -133,7 +134,8 @@ public class UserImportService {
         if (existing.isPresent()) {
             return existing.get();
         }
-        UserAccount created = invitedUsers.create(actor.tenantId(), row.email(), row.firstName(), row.lastName());
+        UserAccount created = invitedUsers.create(actor.tenantId(), row.email(), row.firstName(), row.lastName(),
+                actor.userId(), AccountOrigin.IMPORT);
         invitations.sendInvitation(created, actor.userId());
         tally.created++;
         return created;

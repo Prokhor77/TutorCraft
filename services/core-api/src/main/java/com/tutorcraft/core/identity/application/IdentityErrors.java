@@ -6,6 +6,7 @@ public final class IdentityErrors {
     public static final String INVALID_CREDENTIALS = "auth.invalid_credentials";
     public static final String TENANT_REQUIRED = "auth.tenant_required";
     public static final String ACCOUNT_SUSPENDED = "auth.account_suspended";
+    public static final String ACCOUNT_BLOCKED = "auth.account_blocked";
     public static final String TOO_MANY_ATTEMPTS = "auth.too_many_attempts";
     public static final String REFRESH_INVALID = "auth.refresh_invalid";
     public static final String ORIGIN_MISMATCH = "auth.origin_mismatch";
@@ -19,6 +20,10 @@ public final class IdentityErrors {
     public static final String NOT_INVITED = "user.not_invited";
     public static final String CANNOT_SUSPEND_SELF = "user.cannot_suspend_self";
     public static final String CANNOT_DEMOTE_SELF = "user.cannot_demote_self";
+    public static final String USER_BLOCKED = "user.blocked";
+    public static final String USER_PROTECTED = "user.protected";
+    public static final String CANNOT_ERASE_SCHOOL_OWNER = "user.cannot_erase_school_owner";
+    public static final String CANNOT_MANAGE_SELF = "user.cannot_manage_self";
     public static final String IMPORT_PREVIEW_NOT_FOUND = "user.import_preview_not_found";
     public static final String IMPORT_FILE_TOO_LARGE = "user.import_file_too_large";
     public static final String IMPORT_TOO_MANY_ROWS = "user.import_too_many_rows";

@@ -10,7 +10,7 @@ import java.util.Set;
 /**
  * Системные неизменяемые роли (ТЗ 3.2, docs/permissions.md). Администрирование — только у {@code platform_admin}
  * (единственный главный администратор из env, см. PlatformAdminBootstrapper); {@code tenant_admin} — владелец школы
- * (репетитор): ведёт свои курсы, но админ-разделы ему недоступны.
+ * (репетитор): ведёт свои курсы и учеников своей школы ({@code member.view/manage}), но админ-разделы ему недоступны.
  */
 public enum SystemRole {
     PLATFORM_ADMIN("platform_admin", RoleScope.PLATFORM, EnumSet.allOf(Permission.class)),

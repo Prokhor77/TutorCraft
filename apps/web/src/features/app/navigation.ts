@@ -5,6 +5,7 @@ import {
   GraduationCap,
   Home,
   Settings2,
+  Users,
   type LucideIcon,
 } from 'lucide-react';
 import { ROUTES } from '../auth/routes';
@@ -21,6 +22,7 @@ export function buildNavigation(hints: {
   teaches: boolean;
   learns: boolean;
   isAdmin: boolean;
+  ownsSchool?: boolean;
 }): NavItem[] {
   const items: NavItem[] = [
     { href: ROUTES.home, labelKey: 'home', icon: Home, mobile: true },
@@ -42,6 +44,8 @@ export function buildNavigation(hints: {
       mobile: !hints.teaches,
     });
   items.push({ href: ROUTES.calendar, labelKey: 'calendar', icon: CalendarDays, mobile: true });
+  if (hints.ownsSchool)
+    items.push({ href: ROUTES.schoolStudents, labelKey: 'students', icon: Users, mobile: false });
   if (hints.isAdmin)
     items.push({ href: ROUTES.admin, labelKey: 'admin', icon: Settings2, mobile: false });
   return items;

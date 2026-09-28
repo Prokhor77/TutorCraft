@@ -2,6 +2,7 @@ package com.tutorcraft.core.identity.application;
 
 import com.tutorcraft.core.access.AccessService;
 import com.tutorcraft.core.identity.application.UserRepository.NewUser;
+import com.tutorcraft.core.identity.domain.AccountOrigin;
 import com.tutorcraft.core.identity.domain.EmailAddress;
 import com.tutorcraft.core.identity.domain.UserAccount;
 import com.tutorcraft.core.identity.domain.UserStatus;
@@ -77,7 +78,7 @@ class PlatformAdminBootstrapper {
         String hash = passwords.validateAndHash(tenant.id(), admin.password(), PASSWORD_FIELD);
         UUID id = Ids.newId();
         users.insert(new NewUser(id, tenant.id(), email, hash, admin.firstName(), admin.lastName(),
-                tenant.defaultTimezone(), tenant.defaultLocale(), UserStatus.ACTIVE, null, null));
+                tenant.defaultTimezone(), tenant.defaultLocale(), UserStatus.ACTIVE, null, null, null, AccountOrigin.SYSTEM));
         return users.findById(tenant.id(), id).orElseThrow(() -> new IllegalStateException("Admin was not persisted"));
     }
 

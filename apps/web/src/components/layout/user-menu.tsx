@@ -19,7 +19,7 @@ import { useLogout, useMe, useUpdateMe } from '@/features/auth/use-auth';
 import { roleHints, useMyCourses } from '@/features/courses/use-my-courses';
 import { LOCALES } from '@/i18n/config';
 import { THEMES, useUiStore } from '@/stores/ui-store';
-import { isPlatformAdminHint } from '@/lib/access/permissions';
+import { isPlatformAdminHint, isSchoolOwnerHint } from '@/lib/access/permissions';
 import { fullName } from '@/lib/utils/format';
 
 export function UserMenu() {
@@ -36,6 +36,7 @@ export function UserMenu() {
   const navigation = buildNavigation({
     ...roleHints(courses),
     isAdmin: isPlatformAdminHint(me?.tenantRoles),
+    ownsSchool: isSchoolOwnerHint(me?.tenantRoles),
   });
   if (!me) return null;
   const name = fullName(me);

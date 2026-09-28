@@ -1,10 +1,11 @@
 'use client';
-import { Search, UserMinus, UserX, Users } from 'lucide-react';
+import { Search, UserCheck, UserMinus, UserX, Users } from 'lucide-react';
 import { ProgressReport } from '@/components/participants/progress-report';
 import { useLocale, useTranslations } from 'next-intl';
 import { useDeferredValue, useState } from 'react';
 import { GroupsPanel } from '@/components/participants/groups-panel';
 import { EnrolUsersDialog } from '@/components/participants/enrol-users-dialog';
+import { InviteByEmailDialog } from '@/components/participants/invite-by-email-dialog';
 import { InviteDialog } from '@/components/participants/invite-dialog';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -110,6 +111,7 @@ export default function ParticipantsPage() {
           manage ? (
             <>
               <EnrolUsersDialog courseId={course.id} />
+              <InviteByEmailDialog courseId={course.id} />
               <InviteDialog courseId={course.id} />
             </>
           ) : null
@@ -219,6 +221,17 @@ export default function ParticipantsPage() {
               <Button
                 size="sm"
                 variant="secondary"
+                onClick={() =>
+                  void bulk((row) =>
+                    mutations.update.mutateAsync({ id: row.id, patch: { status: 'active' } }),
+                  )
+                }
+              >
+                <UserCheck aria-hidden /> {t('resume')}
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
                 onClick={() => void bulk((row) => mutations.remove.mutateAsync(row.id))}
               >
                 <UserMinus aria-hidden /> {t('remove')}
@@ -246,7 +259,7 @@ export default function ParticipantsPage() {
                 <THead>
                   <tr>
                     {manage ? (
-                      <TH className="w-10">
+                      <TH className="w-20">
                         <Checkbox
                           aria-label={t('selectAll')}
                           checked={
@@ -269,7 +282,7 @@ export default function ParticipantsPage() {
                     <TH className="hidden md:table-cell">{t('status')}</TH>
                     <TH className="hidden md:table-cell">{t('lastAccess')}</TH>
                     {manage ? (
-                      <TH className="w-10">
+                      <TH className="w-20">
                         <span className="sr-only">{t('actions')}</span>
                       </TH>
                     ) : null}
@@ -386,14 +399,48 @@ export default function ParticipantsPage() {
                         </TD>
                         {manage ? (
                           <TD>
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              aria-label={t('removePerson', { name })}
-                              onClick={() => removeWithUndo(row)}
-                            >
-                              <UserMinus aria-hidden />
-                            </Button>
+                            <span className="flex items-center gap-0.5">
+                              {row.status === 'suspended' ? (
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  aria-label={t('resumePerson', { name })}
+                                  title={t('resume')}
+                                  onClick={() =>
+                                    mutations.update.mutate({
+                                      id: row.id,
+                                      patch: { status: 'active' },
+                                    })
+                                  }
+                                >
+                                  <UserCheck aria-hidden />
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  aria-label={t('suspendPerson', { name })}
+                                  title={t('suspend')}
+                                  onClick={() =>
+                                    mutations.update.mutate({
+                                      id: row.id,
+                                      patch: { status: 'suspended' },
+                                    })
+                                  }
+                                >
+                                  <UserX aria-hidden />
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label={t('removePerson', { name })}
+                                title={t('remove')}
+                                onClick={() => removeWithUndo(row)}
+                              >
+                                <UserMinus aria-hidden />
+                              </Button>
+                            </span>
                           </TD>
                         ) : null}
                       </TR>

@@ -11,12 +11,12 @@ import { Field } from '@/components/ui/field';
 import { Input, NativeSelect } from '@/components/ui/input';
 import { toast } from '@/components/ui/toast';
 import { describeProblem } from '@/features/app/use-problem-toast';
-import { useUsers } from '@/features/admin/use-admin';
 import { useEnrollmentMutations } from '@/features/enrollment/use-enrollment';
+import { useEnrollmentCandidates } from '@/features/members/use-members';
 import { flattenPages } from '@/lib/api/pagination';
 import { COURSE_ROLES, type CourseRole } from '@/lib/api/schemas/common';
 
-/** FR-ENROL-01: search school users, pick several, choose a role, enrol. */
+/** FR-ENROL-01: search active school users (course-scoped, no admin rights needed), pick several, enrol. */
 export function EnrolUsersDialog({ courseId }: { courseId: string }) {
   const t = useTranslations('participants');
   const tRoles = useTranslations('roles');
@@ -27,7 +27,7 @@ export function EnrolUsersDialog({ courseId }: { courseId: string }) {
   const [role, setRole] = useState<CourseRole>('student');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const deferredQuery = useDeferredValue(query.trim());
-  const users = useUsers({ q: deferredQuery || undefined, status: 'active' }, open);
+  const users = useEnrollmentCandidates(courseId, deferredQuery, open);
   const { enrol } = useEnrollmentMutations(courseId);
   const list = flattenPages(users.data?.pages);
 

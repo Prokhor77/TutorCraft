@@ -17,6 +17,7 @@ public interface UsersApi {
 
     Optional<UserRef> findByEmail(UUID tenantId, String email);
 
+    /** @param status действующий статус: заблокированный платформой пользователь отдаётся как {@code suspended} */
     record UserRef(UUID id, UUID tenantId, String email, String firstName, String lastName, String locale,
                    String timezone, String status, Long telegramChatId, UUID avatarFileId) {
 

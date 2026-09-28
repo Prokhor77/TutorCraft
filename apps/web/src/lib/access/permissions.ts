@@ -7,6 +7,8 @@ export const PERMISSIONS = {
   userView: 'user.view',
   userManage: 'user.manage',
   userImport: 'user.import',
+  memberView: 'member.view',
+  memberManage: 'member.manage',
   categoryManage: 'category.manage',
   courseCreate: 'course.create',
   courseView: 'course.view',
@@ -64,6 +66,11 @@ export function canAny(
  */
 export function isPlatformAdminHint(tenantRoles: readonly TenantRole[] | undefined): boolean {
   return !!tenantRoles?.includes('platform_admin');
+}
+
+/** School owner (`tenant_admin`): manages the students of their own school (member.view / member.manage). */
+export function isSchoolOwnerHint(tenantRoles: readonly TenantRole[] | undefined): boolean {
+  return !!tenantRoles?.includes('tenant_admin');
 }
 
 export function canCreateCoursesHint(tenantRoles: readonly TenantRole[] | undefined): boolean {

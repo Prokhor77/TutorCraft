@@ -178,6 +178,57 @@ type ImportPreview = { previewId: Id; valid: number; invalid: number; rows: { ro
 Детали (users): права — `user.view` (GET), `user.manage` (POST/PATCH/invite), `user.import` (импорт), назначение `tenantRoles` дополнительно требует `role.manage`; назначать здесь можно только `tenant_admin` (category_manager — через категории). `role` в фильтре — ключ роли уровня tenant. Созданный пользователь имеет статус `invited` до принятия приглашения (`sendInvite: false` — письмо не отправляется, его можно выслать позже `POST /users/{id}/invite`). Приостановка отзывает все сессии пользователя; себя приостановить или лишить `tenant_admin` нельзя (422 `user.cannot_suspend_self` / `user.cannot_demote_self`). Email занят → 409 `user.email_taken`.
 Импорт: CSV UTF-8 (BOM допускается), ≤ 5 МБ и ≤ 5000 строк; `row` — номер строки файла (заголовок — 1). Коды ошибок строк: `required`, `invalid_email`, `duplicate_in_file`, `too_long`, `unknown_course`, `invalid_role`, `course_required`, `already_exists`. Существующий пользователь только записывается на курс. Предпросмотр живёт сутки и доступен только автору; повторный commit → 404 `user.import_preview_not_found`.
 
+### 4.1. Ученики своей школы (`identity`, владелец школы)
+
+Репетитор-владелец (`tenant_admin`) ведёт учеников сам, без администратора платформы. Права `member.view` (GET) и
+`member.manage` (PATCH, ссылка активации); у `tenant_admin` они есть, в отличие от админских `user.*`.
+
+| GET | `/school/members?q&status&origin&cursor` | `Page<SchoolMember>` |
+|---|---|---|
+| PATCH | `/school/members/{id}` | `{ status: 'active'|'suspended' }` → `SchoolMember` (блокировка/разблокировка в школе) |
+| POST | `/school/members/{id}/activation-link` | → `{ activationUrl }` (новая ссылка, прежняя аннулируется) |
+
+```ts
+type AccountOrigin = 'unknown' | 'self_signup' | 'school_owner' | 'tutor_invite' | 'admin' | 'import' | 'system'
+type AccountCreator = { id: Id; email: string; firstName: string; lastName: string }
+type SchoolMember = { id: Id; email: string; firstName: string; lastName: string; status: 'active'|'suspended'|'invited';
+                      platformBlocked: boolean; origin: AccountOrigin; createdBy: AccountCreator | null;
+                      tenantRoles: TenantRole[]; lastLoginAt: Instant | null; createdAt: Instant }
+```
+
+Детали: `status` фильтра — `active | suspended | invited | blocked` (`blocked` — заблокированные платформой; `active` их
+не включает). Блокировка в школе (`users.status = suspended`) отзывает сессии и закрывает вход; владельца школы
+блокировать здесь нельзя (422 `user.protected`), себя — 422 `user.cannot_suspend_self`. Блокировку платформой
+репетитор видит (`platformBlocked`), но снять не может. Ссылка активации — только для `invited` (иначе 422
+`user.not_invited`; заблокированному платформой — 422 `user.blocked`). `origin = unknown` — аккаунты, созданные до V18.
+
+### 4.2. Пользователи платформы (`identity`, главный администратор)
+
+Право `platform.manage`. Работает по всем школам сразу (заголовок `X-Tenant-Id` не нужен).
+
+| GET | `/platform/users?tenantId&q&status&origin&cursor` | `Page<PlatformUser>` (новые первыми) |
+|---|---|---|
+| POST | `/platform/users/{id}/block` | `{ reason?: string (≤ 500) }` → `PlatformUser` |
+| POST | `/platform/users/{id}/unblock` | → `PlatformUser` |
+| DELETE | `/platform/users/{id}` | 204 — полное удаление (FR-USER-05) |
+
+```ts
+type PlatformUser = { id: Id; email: string; firstName: string; lastName: string; status: 'active'|'suspended'|'invited';
+                      platformBlock: { at: Instant; reason: string | null } | null; origin: AccountOrigin;
+                      createdBy: AccountCreator | null; school: { id: Id; slug: string; name: string };
+                      tenantRoles: TenantRole[]; lastLoginAt: Instant | null; createdAt: Instant }
+```
+
+Детали: блокировка платформой не зависит от блокировки школой, отзывает все сессии; вход → 403
+`auth.account_blocked`, API-токены перестают действовать, в других модулях пользователь виден как `suspended`.
+Нельзя действовать над собой (422 `user.cannot_manage_self`) и над главным администратором (422 `user.protected`).
+Удаление: владельца школы — 422 `user.cannot_erase_school_owner` (только блокировка). Каждый модуль стирает данные
+пользователя (SPI `identity.spi.UserDataEraser`): записи и группы, индивидуальные сдачи с файлами и отзывами, попытки
+тестов, оценки с историей, прогресс, уведомления и календарь, API-токены, журнал активности; текст постов форума
+стирается, посты скрываются. Учётная запись обезличивается (`deleted-<id>@deleted.invalid`, «Удалённый пользователь»)
+и помечается удалённой — на неё продолжают ссылаться чужие данные: выставленные им оценки и отзывы, групповые сдачи,
+заказы, созданные им ссылки. email снова свободен. Файлы сдач в S3 пока не удаляются (только ссылки на них).
+
 ## 5. Курсы и структура (`courses`)
 
 | GET | `/courses?q&categoryId&cursor&mine` | `Page<CourseCard>` |
@@ -329,6 +380,19 @@ type InviteLink = { id: Id; role: CourseRole; expiresAt: Instant | null; maxUses
   (400 `userIds: not_enrolled`); `groups/auto` распределяет **активных студентов** случайно: `by_count` — N групп
   (не больше числа студентов), `by_size` — группы по ≤ N человек; `value` 1..1000; имена «<prefix> N» (по умолчанию
   «Группа»/«Group»), занятые номера пропускаются.
+
+### 6.1. Приглашение преподавателем (`identity`)
+
+| POST | `/courses/{id}/invitations` | `{ email, firstName, lastName, role: CourseRole }` → 201 `{ userId, accountCreated, activationUrl }` |
+|---|---|---|
+| GET | `/courses/{id}/enrollment-candidates?q&cursor` | `Page<UserSummary>` — активные пользователи школы для «Записать пользователей» |
+
+Право `enrollment.manage` на курсе (преподаватель курса или владелец школы). Пользователь ищется по email в школе;
+нет — создаётся приглашённый (`origin = tutor_invite`, `createdBy` = пригласивший). Затем запись на курс с ролью
+(`method = manual`, повторная — реактивирует). `activationUrl` — одноразовая ссылка установки пароля, пока аккаунт не
+активирован (письмо с ней уходит через notifier, если настроен SMTP); для активного аккаунта — `null`.
+Заблокированного в школе или платформой пригласить нельзя — 422 `user.blocked`. Кандидаты не включают
+заблокированных платформой.
 
 ## 7. Файлы (`files`)
 

@@ -10,6 +10,7 @@ import {
   Receipt,
   ScrollText,
   ShieldCheck,
+  UserCog,
   Users,
   type LucideIcon,
 } from 'lucide-react';
@@ -32,6 +33,7 @@ import { selectMe, useAuthStore } from '@/stores/auth-store';
 
 const SECTIONS: readonly { href: string; key: string; icon: LucideIcon }[] = [
   { href: ROUTES.adminUsers, key: 'users', icon: Users },
+  { href: ROUTES.adminAccounts, key: 'accounts', icon: UserCog },
   { href: ROUTES.adminCategories, key: 'categories', icon: FolderTree },
   { href: ROUTES.adminBranding, key: 'branding', icon: Palette },
   { href: ROUTES.adminAudit, key: 'audit', icon: ScrollText },
