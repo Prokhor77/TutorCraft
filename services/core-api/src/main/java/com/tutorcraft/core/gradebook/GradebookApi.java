@@ -1,7 +1,9 @@
 package com.tutorcraft.core.gradebook;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -26,6 +28,13 @@ public interface GradebookApi {
     Map<UUID, GradeView> gradesOf(UUID tenantId, UUID userId, Collection<UUID> sourceItemIds);
 
     Optional<BigDecimal> finalPercent(UUID tenantId, UUID courseId, UUID userId);
+
+    /** Недавно опубликованные оценки студента по элементам курсов, новые первыми («Недавно проверенное», FR-DASH-01). */
+    List<PublishedGrade> recentlyPublished(UUID tenantId, UUID userId, int limit);
+
+    record PublishedGrade(UUID courseId, UUID sourceItemId, String itemName, BigDecimal score, BigDecimal maxScore,
+                          Instant publishedAt) {
+    }
 
     record GradeUpdate(UUID tenantId, UUID courseId, UUID sourceItemId, UUID userId, BigDecimal score,
                        UUID graderId, boolean publish) {

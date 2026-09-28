@@ -1,0 +1,5 @@
+# Build context of the Go workers is ./services (docker-compose.yml).
+core-api
+**/bin
+**/.idea
+**/.vscode

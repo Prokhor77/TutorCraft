@@ -1,6 +1,8 @@
 tutorcraft:
   security:
     cookie-secure: false
+  webhooks:
+    allow-localhost: true
 logging:
   level:
     com.tutorcraft: DEBUG

@@ -125,3 +125,11 @@ tutorcraft:
   seed:
     enabled: ${SEED_DEMO_DATA:false}
     demo-password: ${SEED_DEMO_PASSWORD:}
+  # Исходящие вебхуки (integrations): не входят в AppProperties, читаются через @Value с умолчаниями.
+  webhooks:
+    poll-interval: PT5S
+    allow-localhost: false
+  # Курсы (courses): не входят в AppProperties, читаются через @Value с умолчаниями.
+  courses:
+    public-catalog-ttl: PT60S
+    trash-purge-cron: "0 17 3 * * *"

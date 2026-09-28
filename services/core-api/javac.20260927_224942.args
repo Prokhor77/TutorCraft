@@ -1,0 +1,9 @@
+-proc:none
+-Xmaxerrs
+100000
+-XDshould-stop.ifError=FLOW
+-cp
+/opt/gradle-8.14.3/lib/jackson-annotations-2.16.1.jar:/opt/gradle-8.14.3/lib/jackson-core-2.16.1.jar:/opt/gradle-8.14.3/lib/jackson-databind-2.16.1.jar:/opt/gradle-8.14.3/lib/slf4j-api-1.7.36.jar
+-d
+/tmp/claude-0/qc/out
+@/tmp/claude-0/qc/files.txt

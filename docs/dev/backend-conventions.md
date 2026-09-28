@@ -49,13 +49,13 @@ com.tutorcraft.core.<module>/
 | V9 | gradebook | grade_categories, grade_items, grades, grade_history, scales, gradebook_settings |
 | V10 | communication.notifications | notifications, notification_preferences, calendar_personal_events, ical_tokens |
 | V11 | billing | orders, payment_events |
-| V12 | assessment.quiz | quiz_attempts, attempt_answers |
+| V12 | assessment.quiz | quiz_attempts, attempt_answers, quiz_overrides, quiz_grade_releases |
 | V13 | progress | completion_states, course_completions, item_views |
 | V14 | communication.forum | forum_discussions, forum_posts, forum_subscriptions, forum_reads |
 | V15 | integrations | api_tokens, webhooks, webhook_deliveries |
 
 ## MongoDB
-- `MongoTemplate`, коллекции: `modules`, `items` (courses); `question_categories`, `questions`, `question_versions` (assessment.quiz).
+- `MongoTemplate`, коллекции: `modules`, `items` (courses); `question_categories`, `questions`, `question_versions`, `quiz_layouts` (assessment.quiz).
 - Поле `tenantId` в каждом документе; все запросы с `Criteria.where("tenantId").is(tenantId)`. UUID хранятся в стандартном представлении (`uuid-representation: standard`).
 - Индексы создаются при старте в `infrastructure/<Module>MongoIndexes` (`@EventListener(ApplicationReadyEvent.class)`).
 - Транзакций Mongo нет: операции идемпотентны (ADR-004).
@@ -91,7 +91,7 @@ return idempotency.execute(new IdempotencyScope(tenantId, userId, "submission.su
 | `EnrollmentApi`, `CourseMembershipResolver` | enrollment |
 | `GradebookApi` | gradebook |
 | `ActivityType(assignment)`, `ItemStatusProvider(assignment)`, `GradingQueueSource(submission)`, `FileOwnerAccess('submission','feedback')` | assessment.assignment |
-| `ActivityType(quiz)`, `ItemStatusProvider(quiz)`, `GradingQueueSource(essay)` | assessment.quiz |
+| `ActivityType(quiz)`, `ItemStatusProvider(quiz)`, `GradingQueueSource(essay)`, `FileOwnerAccess('attempt','question')` | assessment.quiz |
 | `NotificationsApi` | communication.notifications |
-| `ActivityType(forum)`, `FileOwnerAccess('post')` | communication.forum |
-| `LearnerStateProvider`, `ProgressApi` | progress |
+| `ActivityType(forum)`, `FileOwnerAccess('post')`, `dashboard.spi.RecentPostsSource` | communication.forum |
+| `LearnerStateProvider`, `ProgressApi`, `LearnerAccess`, `ConditionSchema` (статическая валидация условий) | progress |

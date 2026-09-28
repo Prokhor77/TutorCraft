@@ -1,5 +1,6 @@
 package com.tutorcraft.core.courses;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -35,4 +36,14 @@ public interface CoursesApi {
 
     /** Элемент виден студенту: курс, модуль (и родитель) и элемент опубликованы (без условий доступа). */
     boolean isVisibleToLearners(UUID tenantId, ItemRef item);
+
+    /** Настройки самозаписи курса (FR-ENROL-02); пусто — курса нет. Код доступа — для проверки модулем enrollment. */
+    Optional<SelfEnrolment> selfEnrolment(UUID tenantId, UUID courseId);
+
+    /**
+     * Самозапись: {@code code != null} — требуется код; {@code maxStudents}/{@code until} — лимит мест и срок записи.
+     * Правило гибрида: у платного курса самозапись без кода не включается; бесплатная самозапись в платный курс — только по коду.
+     */
+    record SelfEnrolment(boolean enabled, String code, Integer maxStudents, Instant until) {
+    }
 }

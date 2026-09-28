@@ -1,0 +1,150 @@
+/*
+ * TutorCraft design tokens (UX-10, ARCH-07).
+ * Every visual decision lives here; components only reference roles.
+ * Colors are "R G B" channel triplets so Tailwind can apply alpha (`bg-primary/10`).
+ * Tenant branding overrides --primary / --primary-foreground / --primary-soft at runtime (FR-ADMIN-01).
+ * To re-skin from design mockups, edit this file only.
+ */
+:root {
+  /* ---- color roles: light ---- */
+  --background: 248 249 252;
+  --surface: 255 255 255;
+  --surface-muted: 241 243 248;
+  --border: 222 226 235;
+  --text: 22 27 45;
+  --text-muted: 88 96 118;
+  --primary: 79 70 229;
+  --primary-foreground: 255 255 255;
+  --primary-soft: 238 237 253;
+  --success: 21 128 61;
+  --success-soft: 222 247 232;
+  --warning: 161 98 7;
+  --warning-soft: 254 243 214;
+  --danger: 200 30 30;
+  --danger-foreground: 255 255 255;
+  --danger-soft: 254 228 228;
+  --info: 3 105 161;
+  --info-soft: 224 242 254;
+  --focus-ring: 79 70 229;
+  --overlay: 15 18 30;
+
+  /* ---- radius ---- */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  /* ---- elevation ---- */
+  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.06);
+  --shadow-md: 0 4px 12px -2px rgb(16 24 40 / 0.08), 0 2px 4px -2px rgb(16 24 40 / 0.04);
+  --shadow-lg: 0 16px 40px -8px rgb(16 24 40 / 0.18);
+
+  /* ---- typography (fluid-free, 4px grid line-heights) ---- */
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  --text-xs: 0.75rem;
+  --leading-xs: 1rem;
+  --text-sm: 0.875rem;
+  --leading-sm: 1.25rem;
+  --text-base: 1rem;
+  --leading-base: 1.5rem;
+  --text-lg: 1.125rem;
+  --leading-lg: 1.75rem;
+  --text-xl: 1.25rem;
+  --leading-xl: 1.75rem;
+  --text-2xl: 1.5rem;
+  --leading-2xl: 2rem;
+  --text-3xl: 1.875rem;
+  --leading-3xl: 2.25rem;
+  --text-4xl: 2.5rem;
+  --leading-4xl: 3rem;
+
+  /* ---- layout & spacing ---- */
+  --space-page-x: 1rem;
+  --space-page-y: 1.5rem;
+  --size-sidebar: 16rem;
+  --size-header: 3.75rem;
+  --size-bottom-nav: 4rem;
+  --size-content: 72rem;
+  --size-prose: 46rem;
+
+  /* ---- motion ---- */
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+
+  color-scheme: light;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --space-page-x: 2rem;
+    --space-page-y: 2rem;
+  }
+}
+
+/* ---- dark theme: explicit toggle ---- */
+:root[data-theme='dark'] {
+  --background: 13 16 26;
+  --surface: 22 26 40;
+  --surface-muted: 30 35 52;
+  --border: 46 53 75;
+  --text: 235 238 247;
+  --text-muted: 160 168 190;
+  --primary: 139 132 255;
+  --primary-foreground: 15 15 35;
+  --primary-soft: 40 38 80;
+  --success: 74 222 128;
+  --success-soft: 20 55 38;
+  --warning: 250 204 21;
+  --warning-soft: 66 52 14;
+  --danger: 248 113 113;
+  --danger-foreground: 15 15 35;
+  --danger-soft: 70 26 30;
+  --info: 56 189 248;
+  --info-soft: 16 48 70;
+  --focus-ring: 165 160 255;
+  --overlay: 0 0 0;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.5);
+  --shadow-lg: 0 16px 40px -8px rgb(0 0 0 / 0.6);
+  color-scheme: dark;
+}
+
+/* ---- dark theme: system preference when no explicit choice ---- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --background: 13 16 26;
+    --surface: 22 26 40;
+    --surface-muted: 30 35 52;
+    --border: 46 53 75;
+    --text: 235 238 247;
+    --text-muted: 160 168 190;
+    --primary: 139 132 255;
+    --primary-foreground: 15 15 35;
+    --primary-soft: 40 38 80;
+    --success: 74 222 128;
+    --success-soft: 20 55 38;
+    --warning: 250 204 21;
+    --warning-soft: 66 52 14;
+    --danger: 248 113 113;
+    --danger-foreground: 15 15 35;
+    --danger-soft: 70 26 30;
+    --info: 56 189 248;
+    --info-soft: 16 48 70;
+    --focus-ring: 165 160 255;
+    --overlay: 0 0 0;
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.5);
+    --shadow-lg: 0 16px 40px -8px rgb(0 0 0 / 0.6);
+    color-scheme: dark;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+    --motion-base: 0ms;
+  }
+}

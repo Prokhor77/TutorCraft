@@ -1,0 +1,6 @@
+-proc:none
+-Xmaxerrs
+100000
+-d
+/tmp/claude-0/qc/out
+@/tmp/claude-0/qc/files.txt

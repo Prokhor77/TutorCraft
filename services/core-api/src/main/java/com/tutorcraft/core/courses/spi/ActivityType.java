@@ -4,6 +4,8 @@ import com.tutorcraft.core.courses.ItemType;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * Контракт типа элемента (FR-EXT-01, DATA-04): схема настроек, умолчания, валидация, ключевые даты.
@@ -38,5 +40,13 @@ public interface ActivityType {
     /** Поля настроек, скрываемые от студента (например, ключи). */
     default Map<String, Object> learnerView(Map<String, Object> settings) {
         return settings;
+    }
+
+    /**
+     * Файлы, на которые ссылаются нормализованные настройки. Модуль courses проверяет их готовность
+     * ({@code FilesApi.requireAllReady}) и связывает с элементом (FileLink 'item') — чтение файла разрешается правами на элемент.
+     */
+    default Set<UUID> referencedFileIds(Map<String, Object> settings) {
+        return Set.of();
     }
 }

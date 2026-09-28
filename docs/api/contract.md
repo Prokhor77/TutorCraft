@@ -46,6 +46,15 @@ type Block =
 type RichText = { text: string; marks?: ('bold'|'italic'|'code'|'strike'|'underline')[]; href?: string }[]
 ```
 
+Санитизация BlockDoc на сервере — `com.tutorcraft.core.shared.content.BlockDocs.sanitize(doc, embedWhitelist, fieldPrefix)`
+(все модули, принимающие BlockDoc): `schemaVersion` = 1; неизвестные блоки → 400 `invalid_block_type`, неизвестные поля
+отбрасываются; `href` — только `http`/`https`/`mailto` (`invalid_href`); `embed.url` и `video.embedUrl` — `http(s)` и хост из
+`TenantSettings.embedWhitelist`, точное совпадение без учёта регистра (`embed_not_allowed`); у `image` обязателен непустой `alt`
+(`alt_required`); `fileId` — UUID готового файла tenant (`invalid_uuid` / `file_not_ready`); у `video` ровно один из
+`fileId`/`embedUrl`; `id` блоков уникальны (`duplicate_id`). Лимиты: ≤ 2000 блоков, ≤ 1000 фрагментов в RichText, ≤ 20 000
+символов во фрагменте, ≤ 1 000 000 символов текста в документе (`document_too_large`), таблица ≤ 500×50, список ≤ 1000
+пунктов, `code` ≤ 100 000, `latex` ≤ 10 000. Пути ошибок: `<поле>.blocks[3].text[0].href`.
+
 ## 1. Аутентификация (`identity`)
 
 | Метод | Путь | Тело → Ответ |
@@ -71,13 +80,21 @@ type Me = { id: Id; email: string; firstName: string; lastName: string; avatarUr
 type Branding = { logoUrl: string | null; primaryColor: string | null }
 ```
 
+Детали (identity):
+- Все ответы с `AuthResponse` (register, login, oauth/*, refresh, invitations/accept) ставят cookie `tc_refresh` (httpOnly, SameSite=Strict, `Path=/api/v1/auth`, Secure по `COOKIE_SECURE`, Max-Age = 30 дней). `/auth/refresh` и `/auth/logout` отклоняют запрос с заголовком `Origin`, отличным от `WEB_ORIGIN` → 403 `auth.origin_mismatch`.
+- Вход без `tenantSlug`: email ищется во всех школах; если пароль подошёл к нескольким аккаунтам → 409 `auth.tenant_required`, `args.tenants: { slug: string; name: string }[]` (только школы, где пароль подошёл); клиент повторяет запрос с `tenantSlug`. То же для Google/Telegram, если аккаунт найден в нескольких школах.
+- Ошибки входа: 401 `auth.invalid_credentials` (не раскрывает существование email), 403 `auth.account_suspended`, 429 `auth.too_many_attempts` + заголовок `Retry-After: <сек>` (прогрессивная задержка по аккаунту, блокировка по IP).
+- Повторное использование уже ротированного refresh-токена отзывает все сессии этого входа → 401 `auth.refresh_invalid`.
+- `/auth/oauth/*` для выключенного провайдера → 404 `auth.provider_disabled`; неверные данные → 401 `auth.oauth_invalid` / `auth.oauth_email_unverified`; неизвестный `tenantSlug` → 404 `auth.tenant_not_found`. Без `tenantSlug` новый пользователь становится владельцем новой школы (репетитор); с `tenantSlug` — участником этой школы без ролей. Пользователь Telegram получает служебный email `tg-<id>@telegram.invalid`.
+- `/auth/password/reset` и `/auth/invitations/accept` с неверным/истёкшим/использованным токеном → 422 `auth.token_invalid`. Ошибки политики пароля — 400 `validation.failed` с `errors[].code` из `password_too_short | password_too_long | password_digit_required | password_letter_required`.
+
 ## 2. Профиль и «я» (`/me`)
 
 | GET | `/me` | → `Me` |
 |---|---|---|
 | PATCH | `/me` | `{ firstName?, lastName?, timezone?, locale?, avatarFileId? }` → `Me` |
-| POST | `/me/password` | `{ currentPassword, newPassword }` → 204 |
-| POST | `/me/telegram/link` | → `{ deepLink: string }` (t.me/<bot>?start=<одноразовый код>) |
+| POST | `/me/password` | `{ currentPassword, newPassword }` → 204 + новая cookie `tc_refresh` (все остальные сессии отозваны; для аккаунта без пароля — Google/Telegram — `currentPassword` не требуется) |
+| POST | `/me/telegram/link` | → `{ deepLink: string }` (t.me/<bot>?start=<одноразовый код, 15 мин>); бот не настроен → 404 `auth.provider_disabled` |
 | GET | `/me/tasks` | → `MyTasks` (FR-DASH-01) |
 | GET | `/me/teaching` | → `TeacherHome` (FR-DASH-02) |
 | GET | `/me/grades` | → `MyGradesOverview` |
@@ -86,6 +103,9 @@ type Branding = { logoUrl: string | null; primaryColor: string | null }
 | POST | `/me/notifications/read` | `{ ids?: Id[]; all?: boolean }` → 204 |
 | GET/PUT | `/me/notification-preferences` | `NotificationPreferences` |
 | GET | `/me/calendar?from&to` | → `CalendarEvent[]` |
+| POST | `/me/calendar/events` | `{ title, startsAt, endsAt? }` → 201 `CalendarEvent` (`kind: 'personal'`) |
+| PATCH | `/me/calendar/events/{id}` | `{ title?, startsAt?, endsAt?, clearEnd?: boolean }` → `CalendarEvent` |
+| DELETE | `/me/calendar/events/{id}` | 204 |
 | POST | `/me/calendar/ical-token` | → `{ url }` (перевыпуск, старый отзывается) |
 | GET | `/calendar/ical/{token}.ics` | публичный iCal |
 
@@ -105,7 +125,18 @@ type NotificationCategory = 'new_item' | 'deadline' | 'grade_published' | 'forum
 type NotificationChannel = 'web' | 'email' | 'telegram'
 type NotificationPreferences = { matrix: Record<NotificationCategory, Record<NotificationChannel, boolean>> }
 type CalendarEvent = { id: Id; title: string; startsAt: Instant; endsAt: Instant | null; courseId: Id | null; itemId: Id | null; kind: 'due' | 'open' | 'close' | 'personal' }
+type MyGradesOverview = { courses: { courseId: Id; courseTitle: string; finalPercent: number | null; finalLabel: string | null }[] }
 ```
+
+Детали (dashboard, уведомления, календарь):
+- `/me/tasks`: активности (`assignment`, `quiz`, `forum`) со сроком в курсах, где пользователь — студент; только видимые студентам, не сданные (`submitted`, `submitted_late`, `graded` исключаются) и не закрытые окончательно (`closeAt` в прошлом). Группы — в часовом поясе пользователя (`Me.timezone`): `overdue` — срок прошёл; `today` — до конца текущих суток; `thisWeek` — следующие 6 календарных дней (скользящая неделя); `later` — позже. Внутри групп — по возрастанию срока. `recentlyGraded` — 5 последних опубликованных оценок; `continueLearning` — пусто, пока модуль progress не подключён.
+- `/me/teaching`: `toGrade` — непроверенные работы (сдачи + эссе) по курсам, где пользователь — teacher/assistant с правом `submission.grade`, по убыванию количества; `upcomingDeadlines` — до 10 сроков в ближайшие 14 дней, `status: null`; `recentPosts` — до 10 последних постов форумов.
+- `/me/courses`: курсы с активной записью; `role` — старшая роль (teacher > assistant > student > observer > guest); студенту/наблюдателю — только опубликованные курсы; `progressPercent` — только для роли student. `coverUrl` пока `null` (нужен `coverFileId` в `CourseRef`).
+- `/me/notifications`: новые первыми; `type` — категория. Категория `account` (сброс пароля, приглашение) в центр уведомлений не попадает — только письмо. `/me/notifications/read`: `ids` — от 1 до 500, либо `all: true`.
+- `/me/notification-preferences`: матрица по всем категориям, кроме `account` (не отключается), и всем каналам; PUT принимает полную или частичную матрицу (неизвестная категория/канал → 400). Умолчания: web — везде; email — `deadline`, `grade_published`, `announcement`, `sale`; telegram — `deadline`, `grade_published`, `announcement`, `sale`, `video_ready`, `new_item` (доставляется, только если Telegram привязан). `submission_received` по умолчанию только web.
+- Напоминания о сроке (`deadline`) — за 24 ч и за 1 ч, только студентам, не сдавшим работу; новый элемент (`new_item`) — один раз на элемент, когда он становится видимым студентам.
+- `/me/calendar`: `from < to`, диапазон ≤ 366 дней (иначе 400). События курсов — `due`/`open`/`close` активностей (преподавателю — все элементы его курсов, студенту — только видимые); `id` события курса стабилен. Личное событие чужого пользователя → 404 `calendar.event_not_found`.
+- iCal: `url` = `${PUBLIC_BASE_URL}/api/v1/calendar/ical/<token>.ics`; в БД — только SHA-256 токена. Окно: 30 дней назад — 365 дней вперёд, время в UTC, `SUMMARY` локализован по языку пользователя. Неизвестный/перевыпущенный токен → 404 `calendar.ical_not_found`.
 
 ## 3. Организация (`org`)
 
@@ -140,6 +171,9 @@ type ImportRowError = { row: number; field: string; code: string; message: strin
 type ImportPreview = { previewId: Id; valid: number; invalid: number; rows: { row: number; email: string; firstName: string; lastName: string; courseShortName?: string; errors: ImportRowError[] }[] }
 ```
 
+Детали (users): права — `user.view` (GET), `user.manage` (POST/PATCH/invite), `user.import` (импорт), назначение `tenantRoles` дополнительно требует `role.manage`; назначать здесь можно только `tenant_admin` (category_manager — через категории). `role` в фильтре — ключ роли уровня tenant. Созданный пользователь имеет статус `invited` до принятия приглашения (`sendInvite: false` — письмо не отправляется, его можно выслать позже `POST /users/{id}/invite`). Приостановка отзывает все сессии пользователя; себя приостановить или лишить `tenant_admin` нельзя (422 `user.cannot_suspend_self` / `user.cannot_demote_self`). Email занят → 409 `user.email_taken`.
+Импорт: CSV UTF-8 (BOM допускается), ≤ 5 МБ и ≤ 5000 строк; `row` — номер строки файла (заголовок — 1). Коды ошибок строк: `required`, `invalid_email`, `duplicate_in_file`, `too_long`, `unknown_course`, `invalid_role`, `course_required`, `already_exists`. Существующий пользователь только записывается на курс. Предпросмотр живёт сутки и доступен только автору; повторный commit → 404 `user.import_preview_not_found`.
+
 ## 5. Курсы и структура (`courses`)
 
 | GET | `/courses?q&categoryId&cursor&mine` | `Page<CourseCard>` |
@@ -152,15 +186,17 @@ type ImportPreview = { previewId: Id; valid: number; invalid: number; rows: { ro
 | POST | `/courses/{id}/duplicate` | → `Course` |
 | GET | `/courses/{id}/outline` | → `CourseOutline` (с учётом прав: студент получает только доступное/видимое + причины блокировки) |
 | POST | `/courses/{id}/modules` | `{ title, parentId? }` → `Module` |
-| PATCH | `/modules/{id}` | `{ title?, visibility?, publishAt?, conditions?, version }` |
-| DELETE | `/modules/{id}` | 204 |
-| POST | `/modules/{id}/move` | `{ position, parentId? }` |
+| PATCH | `/modules/{id}` | `{ title?, visibility?, publishAt?, conditions?, version }` → `Module` |
+| DELETE | `/modules/{id}` | 204 (в корзину вместе с подмодулями и элементами) |
+| POST | `/modules/{id}/restore` | 204 (восстанавливает и всё, что удалено вместе с модулем) |
+| POST | `/modules/{id}/duplicate` | → `Module` (201) |
+| POST | `/modules/{id}/move` | `{ position, parentId? }` → 204 |
 | POST | `/modules/{id}/items` | `{ type: ItemType, title, settings?: object }` → `Item` |
 | GET | `/items/{id}` | `ItemDetail` (для студента — без скрытых полей и ключей) |
 | PATCH | `/items/{id}` | `{ title?, visibility?, publishAt?, settings?, content?: BlockDoc, completionRule?, conditions?, version }` |
 | DELETE | `/items/{id}` | 204 |
 | POST | `/items/{id}/restore` | 204 |
-| POST | `/items/{id}/move` | `{ moduleId, position }` |
+| POST | `/items/{id}/move` | `{ moduleId, position }` → 204 |
 | POST | `/items/{id}/duplicate` | → `Item` |
 | POST | `/items/{id}/complete` | 204 (ручная отметка студентом) · DELETE — снять |
 | GET | `/trash?courseId` | → `TrashEntry[]` |
@@ -213,7 +249,36 @@ type AssignmentSettings = { kind: 'assignment'; submissionType: 'file' | 'text' 
   maxFileSizeMb: number; maxAttempts: number | null; groupSubmission: boolean; requireSubmitButton: boolean;
   gradeCategoryId: Id | null; autoPublishGrades: boolean }
 // Умолчания AC-2: submissionType 'file', maxScore 100, dueAt null, maxFiles 5, maxFileSizeMb 50, requireSubmitButton true, autoPublishGrades true
+type Module = OutlineModule   // ответ POST /courses/{id}/modules, PATCH /modules/{id}, POST /modules/{id}/duplicate
+type TrashEntry = { kind: 'course' | 'module' | 'item'; id: Id; courseId: Id; title: string; itemType: ItemType | null;
+                    deletedAt: Instant; purgeAt: Instant }
 ```
+
+Детали (courses):
+- Права: создание курса — `course.create` в категории (или tenant, если `categoryId` не задан); автор записывается `teacher`
+  (method `manual`). Курс создаётся **скрытым** (`visibility: 'hidden'`), slug генерируется из названия (транслитерация,
+  уникален в tenant, не меняется при переименовании). `PATCH /courses/{id}`: `course.edit`; `visibility`/`publishAt`/`price` —
+  дополнительно `course.publish`; `selfEnrol` — `enrollment.manage`; `groupMode` — `group.manage`; смена `categoryId` —
+  `course.create` в целевой категории. `PUT /courses/{id}/price` (`course.publish`) → `Course`.
+  `Course.selfEnrol.code` отдаётся только имеющим `enrollment.manage` (иначе `null`). `shortName` занят → 409 `course.short_name_taken`.
+- Платный курс (`price != null`) не может иметь включённую самозапись без кода → 400 `selfEnrol.code: paid_course_requires_code`.
+- Модули: один уровень вложенности (→ 422 `module.depth_exceeded`); модуль верхнего уровня создаётся `published`, подмодуль и
+  новый элемент наследуют видимость родителя (AC-2). Правка структуры (модули/элементы, их видимость, корзина) — `course.edit`.
+  `move`: `position` — индекс среди соседей (обрезается в допустимый диапазон), `parentId: null` — верхний уровень.
+- `GET /courses?mine=true` — только курсы с активной записью; без `mine` — все курсы tenant для `tenant_admin`, курсы своих
+  категорий для `category_manager`, иначе курсы с записью. Скрытые курсы учащимся (student/observer/guest) не показываются.
+- Учащемуся скрытый/ещё не опубликованный курс → 403 `course.hidden`; скрытый элемент → 404 `item.not_found`; недоступный
+  по условиям → 403 `item.locked`, `args.reasons: string[]`. Открытие доступного элемента учащимся фиксирует просмотр
+  (выполнение «просмотрено»). Для видео `settings` дополнены `videoStatus` и `hlsUrl` (только чтение).
+- Корзина: удалённое восстанавливается в течение `tutorcraft.trash.retention` (по умолчанию 30 дней), затем очищается ежедневно;
+  после срока → 422 `trash.expired`. Элемент удалённого модуля → 422 `item.module_deleted`, подмодуль удалённого модуля →
+  422 `module.parent_deleted`. `GET /trash` без `courseId` — удалённые курсы, которые пользователь может восстановить
+  (`course.delete` на уровне tenant/категории или преподаватель курса); с `courseId` — модули/элементы курса (`course.edit`).
+- Дублирование: копия встаёт сразу после оригинала с суффиксом « (копия)»/« (copy)» (по `Accept-Language`); копия курса —
+  скрытая, без краткого имени и самозаписи, автор — преподаватель; ссылки на элементы в условиях доступа и правиле
+  завершения переносятся на копии.
+- Публичная витрина (без авторизации): только опубликованные курсы активного tenant; неизвестный tenant/курс → 404
+  `course.not_found`; ответы кэшируются до 60 с и сбрасываются при изменении курсов tenant.
 
 ## 6. Записи и группы (`enrollment`)
 
@@ -236,7 +301,30 @@ type Enrollment = { id: Id; user: { id: Id; firstName: string; lastName: string;
                     role: CourseRole; status: 'active'|'suspended'|'completed'; method: 'manual'|'self'|'invite_link'|'payment'|'import';
                     startsAt: Instant | null; endsAt: Instant | null; groupIds: Id[]; lastAccessAt: Instant | null }
 type Group = { id: Id; name: string; memberIds: Id[] }
+type InviteLink = { id: Id; role: CourseRole; expiresAt: Instant | null; maxUses: number | null; uses: number;
+                    revokedAt: Instant | null; createdAt: Instant; active: boolean }
 ```
+
+Детали (enrollment):
+- Права: список участников и групп — `enrollment.view`; запись, изменение, удаление, ссылки-приглашения — `enrollment.manage`;
+  группы — `group.manage`. `POST /courses/{id}/enrollments` (≤ 500 пользователей tenant, иначе 400 `userIds`) → 201
+  `{ created }`; повторная запись перезаписывает роль/даты и реактивирует. Доступ даёт только `status = active` и
+  текущее время в `[startsAt, endsAt)`. `DELETE /enrollments/{id}` удаляет запись и членство в группах курса, сдачи и
+  оценки сохраняются. Нельзя удалить/приостановить/понизить последнего активного преподавателя → 422 `enrollment.last_teacher`.
+- `?q` — подстрока имени, фамилии или email; `?role` — ключ роли; `?groupId` — участники группы.
+- Самозапись (`POST /courses/{id}/self-enrol`, только опубликованный курс своего tenant, иначе 404 `course.not_found`), по
+  порядку проверки: платный курс без самозаписи по коду → 422 `enrollment.payment_required` (путь — покупка);
+  выключена → `enrollment.self_enrol_disabled`; срок `until` прошёл → `enrollment.self_enrol_closed`; неверный код →
+  `enrollment.invalid_code`; мест нет (активных студентов ≥ `maxStudents`) → `enrollment.course_full`. Уже активная запись
+  возвращается как есть; приостановленная/завершённая → 422 `enrollment.not_active`.
+- Ссылка-приглашение: `url = ${PUBLIC_BASE_URL}/join/{token}` (токен 256 бит, хранится хеш). `expiresAt` — в будущем,
+  `maxUses` — 1..10000 (оба необязательны). `DELETE /invite-links/{id}` — отзыв. `accept`: неизвестный токен или ссылка
+  другого tenant → 404 `enrollment.invite_not_found`; истекла/отозвана/исчерпана → 422 `enrollment.invite_invalid`
+  (`args.reason: expired|revoked|exhausted|valid`); уже участник → `{ courseId }` без расхода использования.
+- Группы: имя уникально в курсе (409 `group.name_taken`); `PUT /groups/{id}/members` — только записанные на курс
+  (400 `userIds: not_enrolled`); `groups/auto` распределяет **активных студентов** случайно: `by_count` — N групп
+  (не больше числа студентов), `by_size` — группы по ≤ N человек; `value` 1..1000; имена «<prefix> N» (по умолчанию
+  «Группа»/«Group»), занятые номера пропускаются.
 
 ## 7. Файлы (`files`)
 
@@ -251,6 +339,12 @@ type FileMeta = { id: Id; name: string; size: number; mime: string; status: 'pen
                   video?: { status: 'processing'|'ready'|'failed'; hlsUrl: string | null; durationSec: number | null } }
 ```
 
+Детали (files):
+- `POST /files/uploads` → 201. Лимиты: `avatar`, `cover` — 5 МБ, изображения (png, jpeg, gif, webp); `content`, `submission` — 100 МБ, документы/изображения/аудио/видео; `import` — 100 МБ, csv/txt/xlsx; `video` — `S3_MAX_FILE_SIZE` (mp4, mov, webm, mkv). Клиент обязан выполнить PUT с заголовками из `headers` (подписан `Content-Type`). Квота школы → 422 `files.quota_exceeded`.
+- `POST /files/{id}/complete` — только загрузивший. Ошибки: 422 `files.not_uploaded` (объекта нет, можно повторить), `files.size_mismatch`, `files.type_mismatch` (содержимое не совпало с типом — файл переводится в `rejected`), `files.rejected`. Повторный вызов для `ready` идемпотентен.
+- `GET /files/{id}` и `/download`: загрузивший или пользователь с правом на владельца файла (элемент курса, сдача, пост, профиль…); иначе 404 `files.not_found`. `url` — pre-signed GET (TTL 10 мин), небезопасные типы отдаются с `Content-Disposition: attachment`. `/download` для неготового файла → 422 `files.not_ready`.
+- `video.hlsUrl` — публичный URL мастер-плейлиста (ADR-008). Готовность видео приходит уведомлением категории `video_ready`.
+
 ## 8. Задания и проверка (`assessment`, `gradebook`)
 
 | GET | `/items/{id}/my-submission` | `Submission` (текущая попытка студента, создаётся черновик при первом обращении) |
@@ -261,8 +355,10 @@ type FileMeta = { id: Id; name: string; size: number; mime: string; status: 'pen
 | GET | `/submissions/{id}` | `Submission` |
 | POST | `/submissions/{id}/grade` | `{ score: number | null, feedback?: BlockDoc, feedbackFileIds?: Id[], returnForRevision?: boolean }` → `Submission` |
 | POST | `/items/{id}/grades/publish` | → `{ published: number }` (FR-ASSIGN-07) |
-| POST | `/items/{id}/extensions` | `{ userId?: Id, groupId?: Id, dueAt: Instant, closeAt?: Instant }` (FR-ASSIGN-03) |
-| GET | `/grading-queue?courseId&type&cursor` | `Page<QueueEntry>` (FR-GRADE-06, отсортировано по сроку) |
+| POST | `/items/{id}/extensions` | `{ userId?: Id, groupId?: Id, dueAt: Instant, closeAt?: Instant }` → `Extension` (FR-ASSIGN-03; повтор для того же студента/группы заменяет продление) |
+| GET | `/items/{id}/extensions` | `Extension[]` |
+| DELETE | `/extensions/{id}` | 204 |
+| GET | `/grading-queue?courseId&type&cursor&limit` | `Page<QueueEntry>` (FR-GRADE-06, отсортировано по сроку) |
 
 ```ts
 type SubmissionStatus = 'draft' | 'submitted' | 'submitted_late' | 'graded' | 'returned'
@@ -274,8 +370,17 @@ type Submission = { id: Id; itemId: Id; userId: Id; userName: string; attemptNo:
 type SubmissionSummary = { id: Id; userId: Id; userName: string; status: SubmissionStatus; submittedAt: Instant | null; late: boolean; score: number | null }
 type QueueEntry = { kind: 'submission' | 'essay'; id: Id; courseId: Id; courseTitle: string; itemId: Id; itemTitle: string;
                     userId: Id; userName: string; submittedAt: Instant; dueAt: Instant | null; late: boolean }
+type Extension = { id: Id; itemId: Id; userId: Id | null; groupId: Id | null; dueAt: Instant; closeAt: Instant | null }
 ```
 Для `kind: 'essay'` `id` = `attemptId:slot`, оценка — `POST /attempts/{attemptId}/answers/{slot}/grade { score, comment? }`.
+
+Детали (задания):
+- Права: студент — `submission.submit` (и элемент виден студентам, иначе 404 `assignment.not_found`); список/просмотр чужих — `submission.viewAll`; оценка и продления — `submission.grade`; публикация — `grade.publish`. Ассистент в курсе с `groupMode: 'separate'` видит и проверяет только работы участников своих групп (чужие → 404 `submission.not_found`).
+- `PUT .../draft`: отсутствующее поле не меняет сохранённое значение (`text: {schemaVersion:1,blocks:[]}` / `fileIds: []` — очистить). Файлы — готовые (`status: ready`) и загруженные самим студентом (иначе 400 `fileIds`/`file_not_owned`); ограничения настроек → 400 с `errors[].code` из `files_not_allowed | text_not_allowed | too_many_files | file_too_large | extension_not_allowed`. Текст санитизируется (embed запрещены). До `openAt` → 422 `assignment.not_open`, после действующего `closeAt` → 422 `assignment.closed`; отправленную работу менять нельзя → 422 `assignment.not_editable` (кроме `requireSubmitButton: false`: тогда сохранение с содержимым сразу считается сдачей, правка возможна до проверки).
+- `POST .../submit` (AC-3): время сдачи — время первой успешной обработки; повтор с тем же ключом возвращает ту же сдачу. Ошибки 422: `assignment.empty_submission`, `assignment.already_submitted`, `assignment.offline` (`submissionType: 'none'`), `assignment.not_open`, `assignment.closed`. `late` — сдача позже действующего срока (продление ⊕ настройки). После возврата на доработку (`returned`) следующий PUT/submit начинает новую попытку с копией содержимого; лимит `maxAttempts` → 422 `assignment.attempts_exhausted`.
+- Групповая сдача (`groupSubmission: true`): одна попытка на группу (первая по id группа студента), оценка записывается каждому участнику.
+- `status` в списке сдач: любой `SubmissionStatus`, а также `not_graded` (submitted + submitted_late) и `late`; пагинация по времени сдачи (черновики — по времени создания), по возрастанию.
+- `POST /submissions/{id}/grade`: только текущая попытка (иначе 422 `assignment.not_latest_attempt`); `score` — от 0 до `maxScore`, не более 2 знаков (иначе 400 `score`/`out_of_range`); `returnForRevision` → статус `returned`, иначе при наличии `score` → `graded`. Оценка публикуется сразу при `autoPublishGrades` (или если уже была опубликована), иначе — через `POST /items/{id}/grades/publish`. Студент видит `grade` после публикации; при возврате на доработку — отзыв сразу, балл — после публикации.
 
 ## 9. Журнал оценок (`gradebook`)
 
@@ -302,8 +407,19 @@ type Gradebook = { columns: { gradeItemId: Id; name: string; maxScore: number; c
                    rows: { userId: Id; userName: string; cells: Record<Id, GradeCell>; finalPercent: number | null; finalLabel: string | null }[] }
 type GradeHistoryEntry = { at: Instant; actorName: string; oldScore: number | null; newScore: number | null }
 type MyCourseGrades = { courseId: Id; items: { gradeItemId: Id; name: string; score: number | null; maxScore: number; feedback: BlockDoc | null }[]; finalPercent: number | null; finalLabel: string | null }
-type Scale = { id: Id; name: string; levels: { name: string; minPercent: number }[] }
+type Scale = { id: Id; name: string; levels: { name: string; minPercent: number }[]; courseId: Id | null }
 ```
+
+Детали (журнал):
+- Права: просмотр журнала, настройки и истории — `grade.viewAll`; изменение настройки и ручные столбцы — `gradebook.configure`; ячейки и `PATCH /grades/{id}` — `grade.edit`; экспорт — `grade.export`; «Мои оценки» — `grade.viewOwn`.
+- `weight` категории — проценты 0..100. Итог (`weighted_mean`): внутри категории — сумма баллов / сумма максимумов оценённых элементов, затем среднее по категориям с весами, нормированное на сумму весов категорий, где есть оценки; элементы без категории в этом режиме не учитываются; без категорий и в режиме `sum` — сумма баллов / сумма максимумов. Элементы без оценки и с максимумом 0 не учитываются. Проценты округляются до 2 знаков. `finalLabel` — по шкале курса (`scaleId`). В журнале преподавателя итог считается по всем оценкам, в «Моих оценках» и `GradebookApi.finalPercent` — только по опубликованным.
+- `PUT .../setup`: категории без `id` создаются, отсутствующие в списке — удаляются (их элементы остаются без категории); `items` — только перепривязка категорий. `formula`/`warnings` локализуются по `Accept-Language`.
+- `POST .../manual-items` → 201 `GradebookSetup.items[]`-элемент. Значения ручных столбцов публикуются сразу.
+- `PUT .../cells`: `userId` — студент курса (иначе 400 `userId`/`not_student`); для столбца элемента курса значение становится переопределением (`overridden: true`) и больше не перезаписывается источником. `PATCH /grades/{id}` → `GradeCell`; конфликт версии → 412 `conflict.version`. Каждое изменение балла пишется в историю (append-only) и в аудит.
+- Экспорт: CSV (UTF-8 с BOM, разделитель `;`, защита от формул) или XLSX; столбцы: студент, элементы («название / максимум»), итог %, оценка.
+- `GET /me/grades` → `MyGradesOverview` (курсы, где пользователь — студент). `MyCourseGrades.items[].score` — только опубликованные оценки, `feedback` — опубликованный отзыв задания.
+- `/scales?courseId`: шкалы tenant (+ курса). При первом обращении tenant получает шкалы «Пятибалльная» (отлично ≥ 85, хорошо ≥ 70, удовлетворительно ≥ 50, неудовлетворительно ≥ 0) и «Зачёт/незачёт» (зачёт ≥ 60). `POST /scales` `{ name, levels, courseId? }`: без `courseId` — шкала tenant (`tenant.manage`), с `courseId` — шкала курса (`gradebook.configure`); повтор имени шкалы tenant → 400 `name`/`duplicate`.
+- `/grading-queue`: курсы, где пользователь — teacher/assistant с `submission.grade` (или указанный `courseId`); `type`: `submission | essay`; сортировка: срок (без срока — в конце), время сдачи; `cursor` — непрозрачный keyset-курсор.
 
 ## 10. Банк вопросов и тесты (`assessment`)
 
@@ -317,16 +433,18 @@ type Scale = { id: Id; name: string; levels: { name: string; minPercent: number 
 | GET | `/questions/{id}/versions` | `{ version: number; createdAt: Instant; id: Id }[]` |
 | POST | `/questions/{id}/preview-check` | `{ response: QuestionResponse }` → `{ score: number; maxScore: number; correct: boolean }` |
 | PUT | `/items/{id}/quiz/slots` | `{ slots: ({ questionId: Id; points?: number; page: number } | { random: { categoryId?: Id; tag?: string; count: number }; points?: number; page: number })[] }` |
-| GET | `/items/{id}/quiz/slots` | то же + разрешённые вопросы |
+| GET | `/items/{id}/quiz/slots` | `{ slots: QuizSlot[]; questions: QuestionSummary[] }` (слоты + фиксированные вопросы) |
 | POST | `/items/{id}/attempts` | → `Attempt` (начать/продолжить) |
 | GET | `/attempts/{id}` | `Attempt` (для студента — без ключей, NFR-SEC-08) |
-| PUT | `/attempts/{id}/answers/{slot}` | `{ response: QuestionResponse, flagged?: boolean }` → `{ savedAt: Instant }` (409 `quiz.time_expired` после `timeDue` + допуск) |
+| PUT | `/attempts/{id}/answers/{slot}` | `{ response: QuestionResponse \| null, flagged?: boolean }` → `{ savedAt: Instant }` (409 `quiz.time_expired` после `timeDue` + допуск; `response: null` — только пометка) |
 | POST | `/attempts/{id}/finish` | `Idempotency-Key` → `AttemptResult` |
 | GET | `/attempts/{id}/result` | `AttemptResult` (по правилам показа FR-QUIZ-05) |
 | GET | `/items/{id}/attempts?cursor` | `Page<AttemptSummary>` (teacher, FR-QUIZ-07) |
 | POST | `/items/{id}/regrade` | → `{ regraded: number }` (AC-5) |
-| POST | `/items/{id}/overrides` | `{ userId?: Id; groupId?: Id; openAt?; closeAt?; timeLimitSec?; maxAttempts? }` (FR-QUIZ-06) |
-| POST | `/attempts/{id}/answers/{slot}/grade` | `{ score, comment? }` (эссе) |
+| POST | `/items/{id}/overrides` | `{ userId?: Id; groupId?: Id; openAt?; closeAt?; timeLimitSec?; maxAttempts? }` → 201 `QuizOverride` (FR-QUIZ-06; заменяет исключение того же пользователя/группы) |
+| GET | `/items/{id}/overrides` | `QuizOverride[]` |
+| DELETE | `/items/{id}/overrides/{overrideId}` | 204 |
+| POST | `/attempts/{id}/answers/{slot}/grade` | `{ score, comment? }` → `AttemptResult` (эссе, право `submission.grade`) |
 
 ```ts
 type QuestionType = 'single_choice' | 'multiple_choice' | 'true_false' | 'short_answer' | 'numerical' | 'essay' | 'matching' | 'ordering'
@@ -363,21 +481,37 @@ type Attempt = { id: Id; itemId: Id; number: number; state: 'in_progress' | 'fin
 type AttemptResult = { id: Id; state: 'finished'; score: number | null; maxScore: number; percent: number | null; passed: boolean | null;
                        needsManualGrading: boolean;
                        questions: { slot: number; title: string; score: number | null; points: number; correct: boolean | null;
-                                    response: QuestionResponse | null; correctResponse?: QuestionResponse; feedback?: string }[] }
+                                    response: QuestionResponse | null; correctResponse?: QuestionResponse; feedback?: string;
+                                    comment?: string }[] }   // comment — комментарий проверяющего к эссе
 type AttemptSummary = { id: Id; userId: Id; userName: string; number: number; state: string; startedAt: Instant; finishedAt: Instant | null; score: number | null; maxScore: number }
+type QuizSlot = { questionId?: Id; random?: { categoryId: Id | null; tag: string | null; count: number }; points: number | null; page: number | null }
+type QuizOverride = { id: Id; userId: Id | null; groupId: Id | null; openAt: Instant | null; closeAt: Instant | null; timeLimitSec: number | null; maxAttempts: number | null }
 ```
+
+Детали (тесты, `assessment.quiz`):
+- Права: банк вопросов — `qbank.manage`; состав, исключения, переоценка — `quiz.manage`; прохождение — `quiz.attempt` + доступность элемента студенту (видимость и условия; скрытый → 404 `item.not_found`, закрытый условиями → 403 `quiz.unavailable`); отчёт и чужие попытки — `quiz.viewReports`; проверка эссе — `submission.grade`. Чужой tenant → 404.
+- Умолчания `QuizSettings`: без окна и лимита, попытки не ограничены, `gradingMethod: 'highest'`, `questionsPerPage: 5`, `maxScore: 10`, `shuffleAnswers: true`, `review`: балл/правильность/отзыв — `immediately`, правильные ответы — `after_close` (без `closeAt` «после закрытия» не наступает).
+- Слоты: `page` необязателен (по умолчанию — по `questionsPerPage`), `points` — по умолчанию `defaultScore` вопроса; случайные вопросы тянутся при старте попытки без повторов; удалённые вопросы пропускаются. Порядок вариантов фиксируется в попытке (перезагрузка его не меняет); варианты ответов matching и элементы ordering перемешиваются всегда (ordering — никогда не в правильном порядке).
+- Старт: незавершённая попытка продолжается; просроченная завершается сервером и начинается новая. 422 `quiz.not_open` / `quiz.closed` / `quiz.no_attempts_left` / `quiz.no_questions`. `timeDue = min(startedAt + timeLimitSec, closeAt)` с учётом исключений (исключение пользователя важнее групповых; из групповых берётся самое мягкое).
+- Сохранение ответа после `timeDue` + `tutorcraft.quiz.time-grace` (5 с) → 409 `quiz.time_expired`; в завершённую попытку → 409 `quiz.attempt_finished`; чужая попытка → 404 `quiz.attempt_not_found`; нет слота → 404 `quiz.slot_not_found`. Просроченные попытки завершает фоновая задача (каждые 15 с), сохранённые ответы оцениваются.
+- `GET /attempts/{id}` никогда не содержит ключей (`correct`, шаблоны, значения, отзывы вариантов) — ни для студента, ни для преподавателя. `GET /attempts/{id}/result` незавершённой попытки → 409 `quiz.attempt_in_progress`.
+- Оценивание: multiple_choice `partial` = верные/всего_верных − неверные/всего_неверных, `partial_with_penalty` = (верные − неверные)/всего_верных (обе ≥ 0); short_answer/numerical — лучший процент подходящего варианта; matching — доля верных пар; ordering — доля элементов на своих местах; эссе — ручная проверка. Балл попытки масштабируется к `maxScore`.
+- Журнал: итог по `gradingMethod` среди завершённых попыток записывается в gradebook; публикуется сразу при `review.whenScore = 'immediately'` и отсутствии непроверенных эссе, при `after_close` — автоматически в момент `closeAt`, при `never` — вручную (`POST /items/{id}/grades/publish`).
+- Переоценка (`POST /items/{id}/regrade`): все завершённые попытки переводятся на текущие версии вопросов и перепроверяются (ручные оценки эссе сохраняются), журнал пересчитывается; история и уведомление `grade_published` об изменившейся опубликованной оценке — gradebook. До переоценки попытки остаются на своих версиях (DATA-02).
+- Файлы в тексте вопроса привязываются к владельцу `question` (читают составители банка, проверяющие и студенты, у которых вопрос был в попытке); файлы эссе — к `attempt` (автор попытки и проверяющие), прикреплять можно только свои загрузки.
 
 ## 11. Форумы (`communication`)
 
 | GET | `/items/{id}/discussions?cursor` | `Page<Discussion>` |
 |---|---|---|
-| POST | `/items/{id}/discussions` | `{ title, body: BlockDoc }` → `Discussion` |
+| POST | `/items/{id}/discussions` | `{ title, body: BlockDoc, mentions?: Id[] }` → 201 `Discussion` |
 | GET | `/discussions/{id}` | `{ discussion: Discussion; posts: Post[] }` (дерево, глубина ≤ 3) |
-| POST | `/discussions/{id}/posts` | `{ parentId: Id | null, body: BlockDoc }` → `Post` |
+| POST | `/discussions/{id}/posts` | `{ parentId: Id | null, body: BlockDoc, mentions?: Id[] }` → 201 `Post` |
 | PATCH | `/posts/{id}` | `{ body }` (в пределах окна правки) |
 | DELETE | `/posts/{id}` | 204 (автор в окне правки или модератор) |
 | POST | `/discussions/{id}/pin` · `/lock` · `/subscribe` (DELETE — отменить) | 204 |
 | POST | `/discussions/{id}/read` | 204 |
+| POST | `/posts/{id}/hide` (DELETE — показать) | 204 (модератор) |
 
 ```ts
 type ForumSettings = { kind: 'forum'; forumType: 'general' | 'qa' | 'announcements'; editWindowMinutes: number; gradeCategoryId: Id | null }
@@ -387,12 +521,28 @@ type Post = { id: Id; parentId: Id | null; authorId: Id; authorName: string; bod
               canEdit: boolean; canDelete: boolean; hidden: boolean; children: Post[] }
 ```
 
+Детали (форумы, `communication.forum`):
+- Чтение — `content.view` и доступность элемента (как у тестов: скрыт → 404, закрыт условиями → 403 `forum.unavailable`); писать — `forum.post`; в форуме объявлений темы и ответы — только `forum.announce`; закрепление/блокировка/скрытие — `forum.moderate`.
+- Умолчания `ForumSettings`: `forumType: 'general'`, `editWindowMinutes: 30` (0…10080).
+- `parentId: null` — ответ на корневой пост темы. Глубина дерева ≤ 3 (корень — 0): ответ на пост глубины 3 прикрепляется к его родителю (плоское продолжение).
+- Q&A: студент без своего поста в теме видит только корневой пост и свои посты. Скрытые посты (и их ветви) видят только модераторы.
+- Правка/удаление своего поста — в пределах окна правки (422 `forum.edit_window_passed` / `forum.cannot_delete`; удалить можно только пост без ответов), модератор — всегда; удаление поста удаляет ветвь, удаление корневого поста — тему. Ответ в заблокированную тему → 422 `forum.discussion_locked` (кроме модераторов).
+- Первая страница списка тем начинается со всех закреплённых тем, далее — по `lastPostAt`. `unreadCount` — чужие видимые посты после последней отметки `/read`.
+- Автор темы/ответа автоматически подписывается на тему. Уведомления: объявление — всем активным студентам курса (`announcement`); ответ — подписчикам темы, кроме автора (`forum_reply`); `mentions` (≤ 20, только активные участники курса) — упомянутым (`forum_reply`). Ссылка в уведомлении: `/courses/{courseId}/items/{itemId}/discussions/{discussionId}`.
+- Вложения постов привязываются к владельцу `post`. iframe-вставки в постах не разрешены.
+
 ## 12. Прогресс и отчёты (`progress`, `reporting`)
 
 | GET | `/courses/{id}/completion/me` | `{ percent: number; completedAt: Instant | null; items: Record<Id, 'complete' | 'incomplete'> }` |
 |---|---|---|
 | GET | `/courses/{id}/reports/progress?groupId&format` | `{ items: { id: Id; title: string }[]; rows: { userId: Id; userName: string; completed: Id[]; percent: number; completedAt: Instant | null }[] }` или CSV |
 | GET | `/audit-log?actorId&objectType&from&to&cursor` | `Page<AuditEntry>` |
+
+Детали (прогресс, `progress`):
+- `percent` — доля выполненных элементов с отслеживанием выполнения (`completionRule.mode ≠ 'none'`, не скрытых), с округлением вниз; без таких элементов — 0 (в `CourseCard.progressPercent` — null). Отчёт — `completion.viewAll`, строки — активные студенты (фильтр `groupId`), `format=csv` — `text/csv` UTF-8 с BOM: «Студент; Выполнено, %; Курс завершён; <по столбцу 1/0 на элемент>».
+- Автовыполнение: `viewed` — открытие элемента, `submitted` — сдача задания или завершение попытки теста, `graded` — опубликованная оценка, `passed` — опубликованная оценка ≥ `passPercent` элемента (по умолчанию 50%), `posted` — пост в форуме; `auto` выполнено, когда наступили все события из `on`. Курс завершён, когда выполнены все `requiredItemIds` и/или итог ≥ `minFinalPercent`; дата фиксируется один раз.
+- `POST/DELETE /items/{id}/complete` — только для `mode: 'manual'` (иначе 422 `progress.not_manual`); элемент должен быть открыт студенту (403 `progress.item_locked`).
+- Условия доступа (`ConditionGroup`): оценка — по опубликованной оценке, `minPercent` включительно, `maxPercent` не включительно; дата — `[from, until)`. Недоступность модуля делает недоступными вложенные модули и элементы. `Availability.reasons` — первая строка «Откроется, когда: …» (условия через «; » для `all`, « или » для `any`), истёкший срок — отдельной строкой «Доступ закрыт …».
 
 ```ts
 type AuditEntry = { id: Id; at: Instant; actorId: Id | null; actorName: string | null; action: string; objectType: string; objectId: string; ip: string | null; diff: object | null }
@@ -406,7 +556,7 @@ type AuditEntry = { id: Id; at: Instant; actorId: Id | null; actorName: string |
 | GET | `/orders/{id}` | `Order` |
 | GET | `/billing/orders?courseId&cursor` | `Page<Order>` (teacher/admin) |
 | POST | `/billing/webhooks/{provider}` | вебхук провайдера (подпись проверяется) |
-| POST | `/billing/fake/{orderId}/pay` | только профиль `dev`: имитация успешной оплаты |
+| POST | `/billing/fake/{orderId}/pay` | только при `PAYMENT_PROVIDER=fake`: имитация успешной оплаты покупателем → `Order` |
 
 ```ts
 type Order = { id: Id; courseId: Id; courseTitle: string; buyerId: Id; buyerName: string; amount: Money; status: 'pending' | 'paid' | 'failed' | 'refunded' | 'canceled'; provider: string; createdAt: Instant; paidAt: Instant | null }
@@ -415,6 +565,11 @@ type PublicCourse = { id: Id; slug: string; title: string; description: BlockDoc
                       selfEnrolEnabled: boolean; tenantSlug: string; tenantName: string }
 ```
 
+Детали (биллинг):
+- `POST /courses/{id}/orders` → 201; покупатель — текущий пользователь. `returnUrl` — только адреса `WEB_ORIGIN`/`PUBLIC_BASE_URL` (иначе 400 `returnUrl`/`not_allowed`). Курс не опубликован или без цены → 422 `billing.course_not_for_sale`; уже записан → 422 `billing.already_enrolled`; провайдер недоступен → 422 `billing.provider_unavailable` (заказ не создаётся, запрос можно повторить с тем же ключом).
+- `GET /orders/{id}`: покупатель или `billing.manage` в курсе (иначе 404 `billing.order_not_found`). `GET /billing/orders`: с `courseId` — `billing.manage` в курсе, без — в tenant.
+- Вебхуки: `provider` ≠ настроенному → 404 `billing.provider_not_found`; неверная подпись/тело → 401 `billing.webhook_invalid`. Stripe — проверка `Stripe-Signature` (HMAC-SHA256, допуск 5 мин); ЮKassa — статус платежа перепроверяется запросом к API. Повторное событие игнорируется. Оплата: `pending → paid` один раз → запись на курс (`method: 'payment'`), вебхук `order.paid`, уведомление `sale` преподавателям курса и автору («Новая продажа курса «…» на 5 000,00 ₽!»).
+
 ## 14. Интеграции (`integrations`)
 
 | GET/POST | `/tokens` | `ApiTokenSummary[]` / `{ name, scopes: string[], expiresAt? }` → `{ id, token }` (один раз) · DELETE `/tokens/{id}` |
@@ -422,7 +577,21 @@ type PublicCourse = { id: Id; slug: string; title: string; description: BlockDoc
 | GET/POST | `/webhooks` | `Webhook[]` / `{ url, events: string[] }` → `{ id, secret }` (один раз) · DELETE `/webhooks/{id}` |
 | GET | `/webhooks/{id}/deliveries` | `Page<WebhookDelivery>` |
 
+```ts
+type ApiTokenSummary = { id: Id; userId: Id; name: string; scopes: ('read' | 'write')[]; expiresAt: Instant | null; lastUsedAt: Instant | null; createdAt: Instant }
+type Webhook = { id: Id; url: string; events: string[]; createdAt: Instant }
+type WebhookDelivery = { id: Id; event: string; status: 'pending' | 'succeeded' | 'failed'; attempts: number; responseCode: number | null;
+                         error: string | null; createdAt: Instant; lastAttemptAt: Instant | null; nextAttemptAt: Instant }
+```
+
+Права: `integration.manage`. Токен: `tcpat_<random>`, передаётся как `Authorization: Bearer tcpat_...` и действует от имени создавшего пользователя (его права); `read` — только GET/HEAD/OPTIONS (иначе 403 `integrations.token_read_only`), `write` — любые методы; отозванный/истёкший токен или приостановленный владелец → 401 `auth.invalid_token`.
+
 События вебхуков: `enrollment.created`, `submission.submitted`, `grade.published`, `course.completed`, `order.paid`. Подпись: заголовок `X-TC-Signature: t=<unix>,v1=<hex(hmac_sha256(secret, t + "." + body))>`.
+Тело: `{ id: Id /* id доставки, для идемпотентности получателя */; event: string; occurredAt: Instant; data: object }`; `data`:
+`enrollment.created { courseId, userId, role, method }`, `submission.submitted { courseId, itemId, userId, submissionId, late }`,
+`grade.published { courseId, itemId, userId, score, maxScore }`, `course.completed { courseId, userId }`,
+`order.paid { orderId, courseId, buyerId, amountMinor, currency }`.
+URL — только `https` на публичный адрес (частные/loopback/link-local адреса запрещены, проверка и при отправке); `http://localhost` — только в dev. Ответ 2xx — успех; иначе повтор через 30 с × 2^(n−1), максимум 8 попыток; таймаут 10 с; редиректы не выполняются.
 
 ## 15. Служебное
 

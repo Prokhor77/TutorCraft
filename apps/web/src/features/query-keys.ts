@@ -1,0 +1,66 @@
+/** Central query key factory (ARCH-07): mutations invalidate by these prefixes. */
+export const queryKeys = {
+  me: ['me'] as const,
+  providers: ['auth', 'providers'] as const,
+  myTasks: ['me', 'tasks'] as const,
+  teaching: ['me', 'teaching'] as const,
+  myCourses: ['me', 'courses'] as const,
+  myGrades: ['me', 'grades'] as const,
+  myCourseGrades: (courseId: string) => ['me', 'grades', courseId] as const,
+  notifications: ['notifications'] as const,
+  notificationPreferences: ['me', 'notification-preferences'] as const,
+  calendar: (from: string, to: string) => ['me', 'calendar', from, to] as const,
+  completion: (courseId: string) => ['courses', courseId, 'completion'] as const,
+
+  courses: ['courses'] as const,
+  courseList: (params: object) => ['courses', 'list', params] as const,
+  course: (id: string) => ['courses', id] as const,
+  outline: (id: string) => ['courses', id, 'outline'] as const,
+  trash: (courseId: string) => ['courses', courseId, 'trash'] as const,
+  item: (id: string) => ['items', id] as const,
+
+  enrollments: (courseId: string, params: object) =>
+    ['courses', courseId, 'enrollments', params] as const,
+  enrollmentsRoot: (courseId: string) => ['courses', courseId, 'enrollments'] as const,
+  groups: (courseId: string) => ['courses', courseId, 'groups'] as const,
+  inviteLinks: (courseId: string) => ['courses', courseId, 'invite-links'] as const,
+
+  mySubmission: (itemId: string) => ['items', itemId, 'my-submission'] as const,
+  submissions: (itemId: string, params: object) =>
+    ['items', itemId, 'submissions', params] as const,
+  submission: (id: string) => ['submissions', id] as const,
+  gradingQueue: (params: object) => ['grading-queue', params] as const,
+  gradingQueueRoot: ['grading-queue'] as const,
+
+  gradebook: (courseId: string, groupId?: string) =>
+    ['courses', courseId, 'gradebook', groupId ?? 'all'] as const,
+  gradebookRoot: (courseId: string) => ['courses', courseId, 'gradebook'] as const,
+  gradebookSetup: (courseId: string) => ['courses', courseId, 'gradebook-setup'] as const,
+  gradeHistory: (gradeId: string) => ['grades', gradeId, 'history'] as const,
+  scales: ['scales'] as const,
+
+  qCategories: (courseId: string) => ['courses', courseId, 'qcategories'] as const,
+  questions: (courseId: string, params: object) =>
+    ['courses', courseId, 'questions', params] as const,
+  questionsRoot: (courseId: string) => ['courses', courseId, 'questions'] as const,
+  question: (id: string) => ['questions', id] as const,
+  quizSlots: (itemId: string) => ['items', itemId, 'quiz-slots'] as const,
+  attempt: (id: string) => ['attempts', id] as const,
+  attemptResult: (id: string) => ['attempts', id, 'result'] as const,
+  quizAttempts: (itemId: string) => ['items', itemId, 'attempts'] as const,
+
+  discussions: (itemId: string) => ['items', itemId, 'discussions'] as const,
+  thread: (id: string) => ['discussions', id] as const,
+
+  tenant: ['tenant'] as const,
+  categories: ['categories'] as const,
+  users: (params: object) => ['users', params] as const,
+  usersRoot: ['users'] as const,
+  auditLog: (params: object) => ['audit-log', params] as const,
+  orders: (params: object) => ['orders', params] as const,
+  order: (id: string) => ['orders', id] as const,
+  tokens: ['tokens'] as const,
+  webhooks: ['webhooks'] as const,
+  deliveries: (id: string) => ['webhooks', id, 'deliveries'] as const,
+  file: (id: string) => ['files', id] as const,
+};

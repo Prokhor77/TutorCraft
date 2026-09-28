@@ -1,0 +1,89 @@
+@import 'katex/dist/katex.min.css';
+@import './fonts.css';
+@import './tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-background font-sans text-base text-text antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid rgb(var(--focus-ring));
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: rgb(var(--primary) / 0.2);
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-semibold tracking-tight text-text;
+  }
+}
+
+@layer components {
+  /* Reader typography for BlockDoc content — shared by pages, feedback, forum posts. */
+  .prose-content {
+    @apply max-w-prose text-base leading-relaxed text-text;
+  }
+  .prose-content > * + * {
+    @apply mt-4;
+  }
+  .prose-content h1 {
+    @apply text-3xl;
+  }
+  .prose-content h2 {
+    @apply mt-8 text-2xl;
+  }
+  .prose-content h3 {
+    @apply mt-6 text-xl;
+  }
+  .prose-content a {
+    @apply text-primary underline underline-offset-2;
+  }
+  .prose-content code {
+    @apply rounded-xs bg-surface-muted px-1 py-0.5 font-mono text-sm;
+  }
+  .prose-content pre {
+    @apply overflow-x-auto rounded-md bg-surface-muted p-4 font-mono text-sm;
+  }
+  .prose-content pre code {
+    @apply bg-transparent p-0;
+  }
+  .prose-content blockquote {
+    @apply border-l-4 border-border pl-4 italic text-text-muted;
+  }
+  .prose-content ul {
+    @apply list-disc pl-6;
+  }
+  .prose-content ol {
+    @apply list-decimal pl-6;
+  }
+  .prose-content table {
+    @apply w-full border-collapse text-sm;
+  }
+  .prose-content td {
+    @apply border border-border px-3 py-2 align-top;
+  }
+  .prose-content img {
+    @apply max-w-full rounded-md;
+  }
+
+  .editable-text:empty::before {
+    content: attr(data-placeholder);
+    @apply pointer-events-none text-text-muted/70;
+  }
+}
+
+@layer utilities {
+  .pb-safe-nav {
+    padding-bottom: calc(var(--size-bottom-nav) + env(safe-area-inset-bottom));
+  }
+}

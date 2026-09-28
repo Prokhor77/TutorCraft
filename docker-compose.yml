@@ -104,7 +104,8 @@ services:
     healthcheck: { <<: *hc, retries: 60, test: ["CMD", "wget", "-qO-", "http://localhost:8080/health/ready"] }
 
   media-worker:
-    build: ./services/media-worker
+    # Context ./services: Go workers share services/workerkit.
+    build: { context: ./services, dockerfile: media-worker/Dockerfile }
     env_file: .env
     environment:
       KAFKA_BROKERS: kafka:9092
@@ -112,9 +113,10 @@ services:
     depends_on:
       kafka-init: { condition: service_completed_successfully }
       minio-init: { condition: service_completed_successfully }
+    healthcheck: { <<: *hc, test: ["CMD", "wget", "-qO-", "http://localhost:8091/health/ready"] }
 
   notifier:
-    build: ./services/notifier
+    build: { context: ./services, dockerfile: notifier/Dockerfile }
     env_file: .env
     environment:
       KAFKA_BROKERS: kafka:9092
@@ -123,6 +125,7 @@ services:
     ports: ["8090:8090"]
     depends_on:
       kafka-init: { condition: service_completed_successfully }
+    healthcheck: { <<: *hc, test: ["CMD", "wget", "-qO-", "http://localhost:8090/health/ready"] }
 
   web:
     build:

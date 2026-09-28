@@ -3,12 +3,16 @@ package com.tutorcraft.core.shared.security;
 import com.tutorcraft.core.shared.api.ProblemWriter;
 import com.tutorcraft.core.shared.config.AppProperties;
 import java.util.List;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenResolver;
+import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -38,8 +42,12 @@ public class SecurityConfig {
     private static final long CORS_MAX_AGE_SECONDS = 3600;
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService jwtService, ProblemWriter problemWriter)
-            throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService jwtService, ProblemWriter problemWriter,
+                                            ObjectProvider<PersonalAccessTokenFilter> patFilters) throws Exception {
+        PersonalAccessTokenFilter patFilter = patFilters.getIfAvailable();
+        if (patFilter != null) {
+            http.addFilterBefore(patFilter, BearerTokenAuthenticationFilter.class);
+        }
         http
             .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> { })
@@ -51,12 +59,22 @@ public class SecurityConfig {
                 .requestMatchers(PUBLIC_PATHS).permitAll()
                 .anyRequest().authenticated())
             .oauth2ResourceServer(oauth -> oauth
+                .bearerTokenResolver(jwtOnlyResolver(patFilter))
                 .jwt(jwt -> jwt.decoder(jwtService.decoder()))
                 .authenticationEntryPoint((request, response, ex) ->
                     problemWriter.write(request, response, HttpStatus.UNAUTHORIZED, "auth.required")))
             .exceptionHandling(ex -> ex.accessDeniedHandler((request, response, denied) ->
                 problemWriter.write(request, response, HttpStatus.FORBIDDEN, "access.denied")));
         return http.build();
+    }
+
+    /** PAT (FR-INTEG-01) обрабатывает PersonalAccessTokenFilter; JWT-декодеру они не передаются. */
+    private static BearerTokenResolver jwtOnlyResolver(PersonalAccessTokenFilter patFilter) {
+        DefaultBearerTokenResolver delegate = new DefaultBearerTokenResolver();
+        return request -> {
+            String token = delegate.resolve(request);
+            return token != null && patFilter != null && patFilter.supports(token) ? null : token;
+        };
     }
 
     @Bean
