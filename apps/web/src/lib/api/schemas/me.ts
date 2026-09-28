@@ -14,7 +14,8 @@ export const taskEntrySchema = z.object({
   itemTitle: z.string(),
   itemType: itemTypeSchema,
   dueAt: nullableInstant,
-  status: progressStatusSchema,
+  /** Null for teacher «upcoming deadlines» (no per-student progress there). */
+  status: progressStatusSchema.nullable(),
 });
 export type TaskEntry = z.infer<typeof taskEntrySchema>;
 

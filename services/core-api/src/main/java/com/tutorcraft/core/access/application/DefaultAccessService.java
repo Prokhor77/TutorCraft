@@ -51,7 +51,28 @@ class DefaultAccessService implements AccessService {
     @Override
     public Set<Permission> permissions(AccessContext context) {
         CurrentUser user = currentUser.require();
+        if (user.actsInForeignTenant()) {
+            return foreignTenantPermissions(user, context);
+        }
         return permissionsOf(user.tenantId(), user.userId(), context);
+    }
+
+    /**
+     * Главный администратор в выбранной школе: права только из платформенной роли его собственного tenant
+     * (проверяется по БД, а не по токену). Прочим пользователям чужой tenant ничего не даёт.
+     */
+    private Set<Permission> foreignTenantPermissions(CurrentUser user, AccessContext context) {
+        List<RoleGrant> platformGrants = roles.grantsOf(user.homeTenantId(), user.userId()).stream()
+                .filter(grant -> RoleScope.PLATFORM.key().equals(grant.contextType()))
+                .toList();
+        if (platformGrants.isEmpty()) {
+            return Set.of();
+        }
+        if (context.type() == AccessContext.Type.COURSE && courses.categoryOf(user.tenantId(), context.id()).isEmpty()) {
+            throw new NotFoundException(COURSE_NOT_FOUND, "Course not found");
+        }
+        return new PermissionResolver(roles.rolePermissions(user.homeTenantId()))
+                .resolve(platformGrants, List.of(), Optional.empty());
     }
 
     @Override
@@ -122,6 +143,17 @@ class DefaultAccessService implements AccessService {
                 .forEach(role -> roles.insertGrant(tenantId, userId, role.key(), RoleScope.TENANT.key(), null, actorId));
         audit.record(AuditRecord.of(tenantId, actorId, "role.tenant_roles_changed", "user", userId.toString())
                 .withDiff(Map.of("before", keys(before), "after", keys(newRoles))));
+    }
+
+    @Override
+    @Transactional
+    public void ensureSolePlatformAdmin(UUID tenantId, UUID userId) {
+        int revoked = roles.deletePlatformGrantsExcept(userId);
+        roles.insertGrant(tenantId, userId, TenantRole.PLATFORM_ADMIN.key(), RoleScope.PLATFORM.key(), null, null);
+        if (revoked > 0) {
+            audit.record(AuditRecord.of(tenantId, userId, "role.platform_admin_revoked", "user", userId.toString())
+                    .withDiff(Map.of("revokedGrants", revoked)));
+        }
     }
 
     @Override

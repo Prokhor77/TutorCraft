@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { LoadMore } from '@/components/ui/load-more';
+import { Panel } from '@/components/ui/page-header';
 import { SkeletonList } from '@/components/ui/skeleton';
 import { ROUTES } from '@/features/auth/routes';
 import { useCourseContext } from '@/features/courses/course-context';
@@ -22,6 +23,7 @@ import { PostComposer } from './post-composer';
 /** Forum item: discussions list + new topic (FR-FORUM-01..03). */
 export function ForumView({ item }: { item: ItemDetail }) {
   const t = useTranslations('forum');
+  const tWorkspace = useTranslations('workspace');
   const tCommon = useTranslations('common');
   const locale = useLocale();
   const { can } = useCourseContext();
@@ -37,18 +39,22 @@ export function ForumView({ item }: { item: ItemDetail }) {
   const rows = flattenPages(discussions.data?.pages);
 
   return (
-    <div className="flex flex-col gap-4">
+    <Panel
+      title={tWorkspace('forumTitle')}
+      actions={
+        canStart && !composing ? (
+          <Button size="sm" onClick={() => setComposing(true)}>
+            <Plus aria-hidden /> {t('newTopic')}
+          </Button>
+        ) : null
+      }
+    >
       {settings?.forumType === 'qa' ? <Alert tone="info" title={t('qaNotice')} /> : null}
       {settings?.forumType === 'announcements' ? (
         <Alert tone="info" title={t('announcementsNotice')} />
       ) : null}
-      {canStart && !composing ? (
-        <Button className="self-start" onClick={() => setComposing(true)}>
-          <Plus aria-hidden /> {t('newTopic')}
-        </Button>
-      ) : null}
       {composing ? (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 rounded-md bg-surface-muted p-4">
           <Input
             aria-label={t('topicTitle')}
             placeholder={t('topicTitle')}
@@ -82,8 +88,11 @@ export function ForumView({ item }: { item: ItemDetail }) {
           <li key={discussion.id}>
             <Link
               href={ROUTES.discussion(item.courseId, item.id, discussion.id)}
-              className="flex items-center gap-3 rounded border border-card-border bg-surface px-4 py-3 shadow-sm hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+              className="flex items-center gap-3 rounded-md border border-transparent bg-surface-muted/60 px-4 py-3 transition-colors hover:border-card-border-hover hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             >
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
+                <MessagesSquare className="size-4" aria-hidden />
+              </span>
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="flex items-center gap-2">
                   {discussion.pinned ? (
@@ -116,6 +125,6 @@ export function ForumView({ item }: { item: ItemDetail }) {
         onClick={() => void discussions.fetchNextPage()}
         label={tCommon('loadMore')}
       />
-    </div>
+    </Panel>
   );
 }

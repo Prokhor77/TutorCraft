@@ -7,8 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ErrorState } from '@/components/ui/error-state';
-import { PageHeader } from '@/components/ui/page-header';
+import { PageHeader, Panel } from '@/components/ui/page-header';
 import { SkeletonList } from '@/components/ui/skeleton';
+import { SettingsTabs } from '@/components/settings/settings-tabs';
 import { toast } from '@/components/ui/toast';
 import { useMe } from '@/features/auth/use-auth';
 import {
@@ -21,6 +22,7 @@ import {
   NOTIFICATION_CHANNELS,
   type NotificationPreferences,
 } from '@/lib/api/schemas/me';
+import { cn } from '@/lib/utils/cn';
 
 /** FR-NOTIF-02: one screen — rows = categories, columns = channels; Telegram linking (FR-NOTIF-HYB-01). */
 export default function NotificationSettingsPage() {
@@ -35,15 +37,26 @@ export default function NotificationSettingsPage() {
     if (prefs.data) setMatrix(prefs.data.matrix);
   }, [prefs.data]);
 
+  const header = (
+    <PageHeader title={t('title')} description={t('description')}>
+      <SettingsTabs />
+    </PageHeader>
+  );
+
   if (prefs.isLoading || !matrix)
-    return prefs.isError ? (
-      <ErrorState
-        title={t('loadError')}
-        retryLabel={tCommon('retry')}
-        onRetry={() => void prefs.refetch()}
-      />
-    ) : (
-      <SkeletonList label={tCommon('loading')} />
+    return (
+      <>
+        {header}
+        {prefs.isError ? (
+          <ErrorState
+            title={t('loadError')}
+            retryLabel={tCommon('retry')}
+            onRetry={() => void prefs.refetch()}
+          />
+        ) : (
+          <SkeletonList label={tCommon('loading')} />
+        )}
+      </>
     );
 
   const toggle = (
@@ -57,18 +70,25 @@ export default function NotificationSettingsPage() {
 
   return (
     <>
-      <PageHeader title={t('title')} description={t('description')} />
-      <div className="mb-6 flex flex-col gap-3 rounded-md border border-card-border bg-surface p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-1">
-          <span className="flex items-center gap-2 font-medium">
-            Telegram{' '}
-            {me?.telegramLinked ? (
-              <Badge tone="success">{t('linked')}</Badge>
-            ) : (
-              <Badge>{t('notLinked')}</Badge>
-            )}
+      {header}
+      <Panel className="mb-4 sm:flex-row sm:items-center sm:justify-between md:mb-gutter">
+        <div className="flex items-start gap-3 sm:items-center">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-info-soft text-info">
+            <Send className="size-5" aria-hidden />
           </span>
-          <span className="text-sm text-text-muted">{t('telegramHint')}</span>
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg">Telegram</h2>
+              {me?.telegramLinked ? (
+                <Badge tone="success" dot>
+                  {t('linked')}
+                </Badge>
+              ) : (
+                <Badge dot>{t('notLinked')}</Badge>
+              )}
+            </span>
+            <span className="text-sm text-text-muted">{t('telegramHint')}</span>
+          </div>
         </div>
         <Button
           variant={me?.telegramLinked ? 'secondary' : 'primary'}
@@ -81,65 +101,121 @@ export default function NotificationSettingsPage() {
         >
           <Send aria-hidden /> {me?.telegramLinked ? t('relink') : t('link')}
         </Button>
-      </div>
+      </Panel>
       {!me?.telegramLinked ? (
-        <Alert tone="info" className="mb-4" title={t('telegramDisabledColumn')} />
+        <Alert tone="info" className="mb-4 md:mb-gutter" title={t('telegramDisabledColumn')} />
       ) : null}
-      <div className="overflow-x-auto rounded-md border border-card-border bg-surface shadow-sm">
-        <table className="w-full text-sm">
-          <caption className="sr-only">{t('title')}</caption>
-          <thead className="bg-surface-muted text-xs uppercase text-text-muted">
-            <tr>
-              <th scope="col" className="px-4 py-3 text-left">
-                {t('category')}
-              </th>
-              {NOTIFICATION_CHANNELS.map((channel) => (
-                <th key={channel} scope="col" className="px-4 py-3 text-center">
-                  {t(`channels.${channel}`)}
+      <Panel title={t('matrixTitle')}>
+        <div className="-mx-1 hidden overflow-x-auto px-1 sm:block">
+          <table className="w-full min-w-[32rem] border-separate border-spacing-y-1 text-sm">
+            <caption className="sr-only">{t('title')}</caption>
+            <thead className="text-label-md uppercase text-text-muted">
+              <tr>
+                <th
+                  scope="col"
+                  className="rounded-l-full bg-surface-muted px-4 py-2.5 text-left font-semibold"
+                >
+                  {t('category')}
                 </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {NOTIFICATION_CATEGORIES.map((category) => (
-              <tr key={category} className="border-t border-border">
-                <th scope="row" className="px-4 py-3 text-left font-normal">
-                  <span className="block font-medium">{t(`categories.${category}.title`)}</span>
-                  <span className="block text-xs text-text-muted">
-                    {t(`categories.${category}.hint`)}
-                  </span>
-                </th>
-                {NOTIFICATION_CHANNELS.map((channel) => (
-                  <td key={channel} className="px-4 py-3 text-center">
-                    <Checkbox
-                      aria-label={t('toggle', {
-                        category: t(`categories.${category}.title`),
-                        channel: t(`channels.${channel}`),
-                      })}
-                      checked={matrix[category]?.[channel] ?? false}
-                      disabled={channel === 'telegram' && !me?.telegramLinked}
-                      onCheckedChange={(checked) => toggle(category, channel, checked === true)}
-                    />
-                  </td>
+                {NOTIFICATION_CHANNELS.map((channel, index) => (
+                  <th
+                    key={channel}
+                    scope="col"
+                    className={cn(
+                      'bg-surface-muted px-3 py-2.5 text-center font-semibold',
+                      index === NOTIFICATION_CHANNELS.length - 1 && 'rounded-r-full',
+                    )}
+                  >
+                    {t(`channels.${channel}`)}
+                  </th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="mt-4 flex justify-end">
-        <Button
-          loading={save.isPending}
-          onClick={() =>
-            save.mutate(
-              { matrix },
-              { onSuccess: () => toast({ tone: 'success', title: t('saved') }) },
-            )
-          }
-        >
-          {tCommon('save')}
-        </Button>
-      </div>
+            </thead>
+            <tbody>
+              {NOTIFICATION_CATEGORIES.map((category) => (
+                <tr key={category} className="group">
+                  <th
+                    scope="row"
+                    className="rounded-l-md px-4 py-3 text-left font-normal transition-colors duration-fast group-hover:bg-surface-muted/50"
+                  >
+                    <span className="block font-semibold">{t(`categories.${category}.title`)}</span>
+                    <span className="block text-xs text-text-muted">
+                      {t(`categories.${category}.hint`)}
+                    </span>
+                  </th>
+                  {NOTIFICATION_CHANNELS.map((channel, index) => (
+                    <td
+                      key={channel}
+                      className={cn(
+                        'px-3 py-3 text-center transition-colors duration-fast group-hover:bg-surface-muted/50',
+                        index === NOTIFICATION_CHANNELS.length - 1 && 'rounded-r-md',
+                      )}
+                    >
+                      <Checkbox
+                        aria-label={t('toggle', {
+                          category: t(`categories.${category}.title`),
+                          channel: t(`channels.${channel}`),
+                        })}
+                        checked={matrix[category]?.[channel] ?? false}
+                        disabled={channel === 'telegram' && !me?.telegramLinked}
+                        onCheckedChange={(checked) => toggle(category, channel, checked === true)}
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {/* Phones: one rounded card per event with labelled channel pills instead of a wide table. */}
+        <ul className="flex flex-col gap-2 sm:hidden">
+          {NOTIFICATION_CATEGORIES.map((category) => (
+            <li
+              key={category}
+              className="flex flex-col gap-2.5 rounded-md bg-surface-muted/60 px-3 py-3"
+            >
+              <span className="flex flex-col">
+                <span className="text-sm font-semibold">{t(`categories.${category}.title`)}</span>
+                <span className="text-xs text-text-muted">{t(`categories.${category}.hint`)}</span>
+              </span>
+              <span className="flex flex-wrap gap-1.5">
+                {NOTIFICATION_CHANNELS.map((channel) => {
+                  const disabled = channel === 'telegram' && !me?.telegramLinked;
+                  return (
+                    <label
+                      key={channel}
+                      className={cn(
+                        'inline-flex items-center gap-2 rounded-full bg-surface py-1.5 pl-2 pr-3 text-label-md shadow-sm',
+                        disabled ? 'opacity-60' : 'cursor-pointer',
+                      )}
+                    >
+                      <Checkbox
+                        checked={matrix[category]?.[channel] ?? false}
+                        disabled={disabled}
+                        onCheckedChange={(checked) => toggle(category, channel, checked === true)}
+                      />
+                      {t(`channels.${channel}`)}
+                    </label>
+                  );
+                })}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <div className="flex justify-end border-t border-border pt-4">
+          <Button
+            loading={save.isPending}
+            onClick={() =>
+              save.mutate(
+                { matrix },
+                { onSuccess: () => toast({ tone: 'success', title: t('saved') }) },
+              )
+            }
+          >
+            {tCommon('save')}
+          </Button>
+        </div>
+      </Panel>
     </>
   );
 }

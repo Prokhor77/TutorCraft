@@ -7,13 +7,17 @@ import java.util.EnumSet;
 import java.util.Optional;
 import java.util.Set;
 
-/** Системные неизменяемые роли (ТЗ 3.2, docs/permissions.md). */
+/**
+ * Системные неизменяемые роли (ТЗ 3.2, docs/permissions.md). Администрирование — только у {@code platform_admin}
+ * (единственный главный администратор из env, см. PlatformAdminBootstrapper); {@code tenant_admin} — владелец школы
+ * (репетитор): ведёт свои курсы, но админ-разделы ему недоступны.
+ */
 public enum SystemRole {
     PLATFORM_ADMIN("platform_admin", RoleScope.PLATFORM, EnumSet.allOf(Permission.class)),
-    TENANT_ADMIN("tenant_admin", RoleScope.TENANT, allExcept(PLATFORM_MANAGE)),
+    TENANT_ADMIN("tenant_admin", RoleScope.TENANT, allExcept(adminOnly())),
     CATEGORY_MANAGER("category_manager", RoleScope.CATEGORY, EnumSet.of(
-            CATEGORY_MANAGE, COURSE_CREATE, COURSE_VIEW, COURSE_VIEW_HIDDEN, COURSE_EDIT, COURSE_DELETE, COURSE_PUBLISH,
-            CONTENT_VIEW, ENROLLMENT_VIEW, ENROLLMENT_MANAGE, GROUP_MANAGE, USER_VIEW, REPORT_VIEW, FILE_UPLOAD)),
+            COURSE_CREATE, COURSE_VIEW, COURSE_VIEW_HIDDEN, COURSE_EDIT, COURSE_DELETE, COURSE_PUBLISH,
+            CONTENT_VIEW, ENROLLMENT_VIEW, ENROLLMENT_MANAGE, GROUP_MANAGE, REPORT_VIEW, FILE_UPLOAD)),
     TEACHER("teacher", RoleScope.COURSE, EnumSet.of(
             COURSE_VIEW, COURSE_VIEW_HIDDEN, COURSE_EDIT, COURSE_DELETE, COURSE_PUBLISH, CONTENT_VIEW,
             ENROLLMENT_VIEW, ENROLLMENT_MANAGE, GROUP_MANAGE, SUBMISSION_VIEW_ALL, SUBMISSION_GRADE,
@@ -54,9 +58,15 @@ public enum SystemRole {
         return Arrays.stream(values()).filter(role -> role.key.equals(key)).findFirst();
     }
 
-    private static Set<Permission> allExcept(Permission excluded) {
+    /** Права админ-разделов (пользователи, категории, брендинг, аудит, заказы, интеграции). */
+    public static Set<Permission> adminOnly() {
+        return EnumSet.of(PLATFORM_MANAGE, TENANT_MANAGE, TENANT_BRANDING, USER_VIEW, USER_MANAGE, USER_IMPORT,
+                USER_IMPERSONATE, ROLE_MANAGE, CATEGORY_MANAGE, AUDIT_VIEW, INTEGRATION_MANAGE, BILLING_MANAGE);
+    }
+
+    private static Set<Permission> allExcept(Set<Permission> excluded) {
         EnumSet<Permission> all = EnumSet.allOf(Permission.class);
-        all.remove(excluded);
+        all.removeAll(excluded);
         return all;
     }
 }

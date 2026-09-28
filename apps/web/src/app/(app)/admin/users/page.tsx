@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useDeferredValue, useState } from 'react';
+import { AdminTablePanel, FilterChips, PersonCell } from '@/components/admin/admin-panel';
 import { CreateUserDialog } from '@/components/admin/create-user-dialog';
 import { ImportUsersDialog } from '@/components/admin/import-users-dialog';
 import { Badge } from '@/components/ui/badge';
@@ -23,10 +24,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
-import { Input, NativeSelect } from '@/components/ui/input';
+import { Input } from '@/components/ui/input';
 import { LoadMore } from '@/components/ui/load-more';
 import { SkeletonList } from '@/components/ui/skeleton';
-import { Table, TableContainer, TBody, TD, TH, THead, TR } from '@/components/ui/table';
+import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 import { toast } from '@/components/ui/toast';
 import { useUserMutations, useUsers } from '@/features/admin/use-admin';
 import { flattenPages } from '@/lib/api/pagination';
@@ -38,6 +39,7 @@ const STATUS_TONE = { active: 'success', suspended: 'warning', invited: 'info' }
 /** FR-USER-01..03: users with search/filters, create/invite, suspend, CSV import. */
 export default function AdminUsersPage() {
   const t = useTranslations('adminUsers');
+  const tAdmin = useTranslations('admin');
   const tCommon = useTranslations('common');
   const locale = useLocale();
   const [query, setQuery] = useState('');
@@ -49,159 +51,201 @@ export default function AdminUsersPage() {
   const isAdmin = (user: UserSummary) => user.tenantRoles.includes('tenant_admin');
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2 md:flex-row md:items-center">
-        <div className="relative flex-1">
-          <Search
-            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-muted"
-            aria-hidden
-          />
-          <Input
-            type="search"
-            aria-label={t('search')}
-            placeholder={t('search')}
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <NativeSelect
-          aria-label={t('status')}
-          value={status}
-          onChange={(event) => setStatus(event.target.value)}
-          className="md:w-44"
-        >
-          <option value="">{t('allStatuses')}</option>
-          {USER_STATUSES.map((option) => (
-            <option key={option} value={option}>
-              {t(`statuses.${option}`)}
-            </option>
-          ))}
-        </NativeSelect>
-        <div className="flex gap-2">
+    <AdminTablePanel
+      title={tAdmin('nav.users')}
+      count={
+        rows.length > 0 ? (
+          <Badge tone="primary">{t('shownCount', { count: rows.length })}</Badge>
+        ) : null
+      }
+      description={t('panelHint')}
+      actions={
+        <>
           <ImportUsersDialog />
           <CreateUserDialog />
+        </>
+      }
+      toolbar={
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="relative lg:max-w-md lg:flex-1">
+            <Search
+              className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-text-muted"
+              aria-hidden
+            />
+            <Input
+              type="search"
+              aria-label={t('search')}
+              placeholder={t('search')}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              className="rounded-full border-transparent bg-surface-muted pl-10"
+            />
+          </div>
+          <FilterChips
+            label={t('status')}
+            value={status}
+            onChange={setStatus}
+            options={[
+              { value: '', label: t('allStatuses') },
+              ...USER_STATUSES.map((option) => ({
+                value: option,
+                label: t(`statusFilters.${option}`),
+              })),
+            ]}
+          />
         </div>
-      </div>
-      {users.isLoading ? <SkeletonList label={tCommon('loading')} /> : null}
-      {users.isError ? (
-        <ErrorState
-          title={t('loadError')}
-          retryLabel={tCommon('retry')}
-          onRetry={() => void users.refetch()}
+      }
+      footer={
+        <LoadMore
+          hasMore={!!users.hasNextPage}
+          loading={users.isFetchingNextPage}
+          onClick={() => void users.fetchNextPage()}
+          label={tCommon('loadMore')}
         />
+      }
+    >
+      {users.isLoading ? (
+        <div className="p-5 sm:p-6">
+          <SkeletonList label={tCommon('loading')} />
+        </div>
+      ) : null}
+      {users.isError ? (
+        <div className="p-5 sm:p-6">
+          <ErrorState
+            title={t('loadError')}
+            retryLabel={tCommon('retry')}
+            onRetry={() => void users.refetch()}
+          />
+        </div>
       ) : null}
       {users.isSuccess && rows.length === 0 ? (
-        <EmptyState
-          icon={Users}
-          title={t('emptyTitle')}
-          description={t('emptyText')}
-          action={<CreateUserDialog />}
-        />
+        <div className="p-5 sm:p-6">
+          <EmptyState
+            icon={Users}
+            title={t('emptyTitle')}
+            description={t('emptyText')}
+            action={<CreateUserDialog />}
+          />
+        </div>
       ) : null}
       {rows.length > 0 ? (
-        <TableContainer>
-          <Table>
-            <THead>
-              <tr>
-                <TH>{t('name')}</TH>
-                <TH>{t('email')}</TH>
-                <TH>{t('status')}</TH>
-                <TH>{t('roles')}</TH>
-                <TH>{t('lastLogin')}</TH>
-                <TH className="w-10">
-                  <span className="sr-only">{t('actions')}</span>
-                </TH>
-              </tr>
-            </THead>
-            <TBody>
-              {rows.map((user) => (
-                <TR key={user.id}>
-                  <TD className="font-medium">
-                    {user.firstName} {user.lastName}
-                  </TD>
-                  <TD className="text-text-muted">{user.email}</TD>
-                  <TD>
-                    <Badge tone={STATUS_TONE[user.status]}>{t(`statuses.${user.status}`)}</Badge>
-                  </TD>
-                  <TD className="text-xs">
-                    {user.tenantRoles.map((role) => t(`tenantRoles.${role}`)).join(', ') || '—'}
-                  </TD>
-                  <TD className="text-xs text-text-muted">
-                    {user.lastLoginAt ? formatRelative(user.lastLoginAt, locale) : t('never')}
-                  </TD>
-                  <TD>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label={t('actionsFor', {
-                            name: `${user.firstName} ${user.lastName}`,
-                          })}
-                        >
-                          <MoreHorizontal aria-hidden />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {user.status === 'suspended' ? (
-                          <DropdownMenuItem
-                            onSelect={() =>
-                              update.mutate({ id: user.id, patch: { status: 'active' } })
-                            }
-                          >
-                            <UserCheck aria-hidden /> {t('activate')}
-                          </DropdownMenuItem>
-                        ) : (
-                          <DropdownMenuItem
-                            onSelect={() =>
-                              update.mutate({ id: user.id, patch: { status: 'suspended' } })
-                            }
-                          >
-                            <UserX aria-hidden /> {t('suspend')}
-                          </DropdownMenuItem>
-                        )}
+        <Table>
+          <THead>
+            <tr>
+              <TH>{t('user')}</TH>
+              <TH className="hidden sm:table-cell">{t('status')}</TH>
+              <TH className="hidden md:table-cell">{t('roles')}</TH>
+              <TH className="hidden md:table-cell">{t('lastLogin')}</TH>
+              <TH className="w-10">
+                <span className="sr-only">{t('actions')}</span>
+              </TH>
+            </tr>
+          </THead>
+          <TBody>
+            {rows.map((user) => (
+              <TR key={user.id}>
+                <TD className="sm:min-w-56">
+                  <PersonCell
+                    name={`${user.firstName} ${user.lastName}`}
+                    secondary={user.email}
+                    extra={
+                      <span className="mt-1 flex flex-wrap gap-1 empty:hidden md:hidden">
+                        <Badge dot tone={STATUS_TONE[user.status]} className="sm:hidden">
+                          {t(`statuses.${user.status}`)}
+                        </Badge>
+                        {isAdmin(user) ? (
+                          <Badge tone="primary">{t('tenantRoles.tenant_admin')}</Badge>
+                        ) : null}
+                      </span>
+                    }
+                  />
+                </TD>
+                <TD className="hidden sm:table-cell">
+                  <Badge dot tone={STATUS_TONE[user.status]}>
+                    {t(`statuses.${user.status}`)}
+                  </Badge>
+                </TD>
+                <TD className="hidden md:table-cell">
+                  {user.tenantRoles.length > 0 ? (
+                    <span className="flex flex-wrap gap-1">
+                      {user.tenantRoles.map((role) => (
+                        <Badge key={role} tone="primary">
+                          {t(`tenantRoles.${role}`)}
+                        </Badge>
+                      ))}
+                    </span>
+                  ) : (
+                    <span className="text-text-muted">—</span>
+                  )}
+                </TD>
+                <TD className="hidden whitespace-nowrap text-xs text-text-muted md:table-cell">
+                  {user.lastLoginAt ? formatRelative(user.lastLoginAt, locale) : t('never')}
+                </TD>
+                <TD>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={t('actionsFor', {
+                          name: `${user.firstName} ${user.lastName}`,
+                        })}
+                      >
+                        <MoreHorizontal aria-hidden />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {user.status === 'suspended' ? (
                         <DropdownMenuItem
                           onSelect={() =>
-                            update.mutate({
-                              id: user.id,
-                              patch: {
-                                tenantRoles: isAdmin(user)
-                                  ? user.tenantRoles.filter((role) => role !== 'tenant_admin')
-                                  : [...user.tenantRoles, 'tenant_admin'],
-                              },
+                            update.mutate({ id: user.id, patch: { status: 'active' } })
+                          }
+                        >
+                          <UserCheck aria-hidden /> {t('activate')}
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem
+                          onSelect={() =>
+                            update.mutate({ id: user.id, patch: { status: 'suspended' } })
+                          }
+                        >
+                          <UserX aria-hidden /> {t('suspend')}
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem
+                        onSelect={() =>
+                          update.mutate({
+                            id: user.id,
+                            patch: {
+                              tenantRoles: isAdmin(user)
+                                ? user.tenantRoles.filter((role) => role !== 'tenant_admin')
+                                : [...user.tenantRoles, 'tenant_admin'],
+                            },
+                          })
+                        }
+                      >
+                        {isAdmin(user) ? <ShieldOff aria-hidden /> : <ShieldCheck aria-hidden />}{' '}
+                        {isAdmin(user) ? t('revokeAdmin') : t('grantAdmin')}
+                      </DropdownMenuItem>
+                      {user.status === 'invited' ? (
+                        <DropdownMenuItem
+                          onSelect={() =>
+                            resendInvite.mutate(user.id, {
+                              onSuccess: () => toast({ tone: 'success', title: t('inviteSent') }),
                             })
                           }
                         >
-                          {isAdmin(user) ? <ShieldOff aria-hidden /> : <ShieldCheck aria-hidden />}{' '}
-                          {isAdmin(user) ? t('revokeAdmin') : t('grantAdmin')}
+                          <MailPlus aria-hidden /> {t('resendInvite')}
                         </DropdownMenuItem>
-                        {user.status === 'invited' ? (
-                          <DropdownMenuItem
-                            onSelect={() =>
-                              resendInvite.mutate(user.id, {
-                                onSuccess: () => toast({ tone: 'success', title: t('inviteSent') }),
-                              })
-                            }
-                          >
-                            <MailPlus aria-hidden /> {t('resendInvite')}
-                          </DropdownMenuItem>
-                        ) : null}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TD>
-                </TR>
-              ))}
-            </TBody>
-          </Table>
-        </TableContainer>
+                      ) : null}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TD>
+              </TR>
+            ))}
+          </TBody>
+        </Table>
       ) : null}
-      <LoadMore
-        hasMore={!!users.hasNextPage}
-        loading={users.isFetchingNextPage}
-        onClick={() => void users.fetchNextPage()}
-        label={tCommon('loadMore')}
-      />
-    </div>
+    </AdminTablePanel>
   );
 }

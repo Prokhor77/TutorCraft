@@ -1,0 +1,70 @@
+name: Reusable image build
+
+# Собирает один образ и публикует в GHCR под двумя тегами: latest и sha-<short>.
+# Второй тег — для отката: TUTORCRAFT_IMAGE_TAG=sha-abc1234 docker compose -f docker-compose.prod.yml up -d
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        description: "Short name (web|core-api|media-worker|notifier)"
+        required: true
+        type: string
+      context:
+        description: "Build context path"
+        required: true
+        type: string
+      dockerfile:
+        description: "Dockerfile path relative to repo root (default <context>/Dockerfile)"
+        required: false
+        type: string
+        default: ""
+      ref:
+        description: "Commit to build"
+        required: true
+        type: string
+      build_args:
+        description: "Multi-line build args (KEY=VAL each)"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Image name (GHCR требует нижний регистр)
+        id: meta
+        run: |
+          echo "name=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/tutorcraft-${{ inputs.image }}" >> "$GITHUB_OUTPUT"
+          echo "sha=sha-$(git rev-parse --short=7 '${{ inputs.ref }}')" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ inputs.context }}
+          file: ${{ inputs.dockerfile != '' && inputs.dockerfile || format('{0}/Dockerfile', inputs.context) }}
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.name }}:latest
+            ${{ steps.meta.outputs.name }}:${{ steps.meta.outputs.sha }}
+          build-args: ${{ inputs.build_args }}
+          # Кэш в GitHub Actions cache, а не в registry: GHCR получает только финальные теги.
+          cache-from: type=gha,scope=tutorcraft-${{ inputs.image }}
+          cache-to: type=gha,scope=tutorcraft-${{ inputs.image }},mode=max,ignore-error=true

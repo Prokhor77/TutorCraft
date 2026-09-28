@@ -5,12 +5,12 @@ import { useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { Panel } from '@/components/ui/page-header';
 import { Sheet, SheetContent } from '@/components/ui/dialog';
 import { toast } from '@/components/ui/toast';
 import { useDeliveries, useIntegrations } from '@/features/admin/use-admin';
@@ -213,7 +213,7 @@ function DeliveriesSheet({
           {flattenPages(deliveries.data?.pages).map((delivery) => (
             <li
               key={delivery.id}
-              className="flex flex-col gap-1 rounded-md bg-surface-muted p-3 text-sm"
+              className="flex flex-col gap-1 rounded-md bg-surface-muted px-4 py-3 text-sm"
             >
               <span className="flex items-center justify-between">
                 <span className="font-mono text-xs">{delivery.event}</span>
@@ -251,79 +251,110 @@ export default function AdminIntegrationsPage() {
   const { tokens, webhooks, revokeToken, deleteWebhook } = useIntegrations();
   const [deliveriesFor, setDeliveriesFor] = useState<string | null>(null);
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('tokens')}</CardTitle>
-          <CreateTokenDialog />
-        </CardHeader>
-        <CardContent>
-          {tokens.data?.length === 0 ? (
-            <EmptyState icon={KeyRound} title={t('noTokens')} description={t('noTokensHint')} />
-          ) : null}
-          <ul className="flex flex-col gap-2">
-            {tokens.data?.map((token) => (
-              <li
-                key={token.id}
-                className="flex items-center gap-3 rounded-md bg-surface-muted px-3 py-2"
-              >
-                <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="font-medium">{token.name}</span>
-                  <span className="text-xs text-text-muted">
-                    {token.scopes.join(', ')} ·{' '}
+    <div className="grid grid-cols-1 gap-gutter lg:grid-cols-2">
+      <Panel
+        title={
+          <span className="flex items-center gap-2">
+            {t('tokens')}
+            {tokens.data?.length ? <Badge tone="primary">{tokens.data.length}</Badge> : null}
+          </span>
+        }
+        description={t('tokensHint')}
+        actions={<CreateTokenDialog />}
+      >
+        {tokens.data?.length === 0 ? (
+          <EmptyState icon={KeyRound} title={t('noTokens')} description={t('noTokensHint')} />
+        ) : null}
+        <ul className="flex flex-col gap-2">
+          {tokens.data?.map((token) => (
+            <li
+              key={token.id}
+              className="flex items-center gap-3 rounded-md bg-surface-muted px-4 py-3"
+            >
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
+                <KeyRound className="size-4" aria-hidden />
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col gap-1">
+                <span className="truncate font-semibold">{token.name}</span>
+                <span className="flex flex-wrap items-center gap-1.5 text-xs text-text-muted">
+                  {token.scopes.map((scope) => (
+                    <Badge key={scope} tone="primary">
+                      {t(`scopes.${scope}`)}
+                    </Badge>
+                  ))}
+                  <span>
                     {token.lastUsedAt
                       ? t('lastUsed', { date: formatDateTime(token.lastUsedAt, locale) })
                       : t('neverUsed')}
                   </span>
                 </span>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={t('revokeToken', { name: token.name })}
-                  onClick={() => revokeToken.mutate(token.id)}
-                >
-                  <Trash2 aria-hidden />
-                </Button>
-              </li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('webhooks')}</CardTitle>
-          <CreateWebhookDialog />
-        </CardHeader>
-        <CardContent>
-          {webhooks.data?.length === 0 ? (
-            <EmptyState icon={Webhook} title={t('noWebhooks')} description={t('noWebhooksHint')} />
-          ) : null}
-          <ul className="flex flex-col gap-2">
-            {webhooks.data?.map((webhook) => (
-              <li
-                key={webhook.id}
-                className="flex items-center gap-3 rounded-md bg-surface-muted px-3 py-2"
+              </span>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="text-danger hover:bg-danger-soft hover:text-danger"
+                aria-label={t('revokeToken', { name: token.name })}
+                onClick={() => revokeToken.mutate(token.id)}
               >
-                <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate font-mono text-xs">{webhook.url}</span>
-                  <span className="text-xs text-text-muted">{webhook.events.join(', ')}</span>
+                <Trash2 aria-hidden />
+              </Button>
+            </li>
+          ))}
+        </ul>
+      </Panel>
+      <Panel
+        title={
+          <span className="flex items-center gap-2">
+            {t('webhooks')}
+            {webhooks.data?.length ? <Badge tone="primary">{webhooks.data.length}</Badge> : null}
+          </span>
+        }
+        description={t('webhooksHint')}
+        actions={<CreateWebhookDialog />}
+      >
+        {webhooks.data?.length === 0 ? (
+          <EmptyState icon={Webhook} title={t('noWebhooks')} description={t('noWebhooksHint')} />
+        ) : null}
+        <ul className="flex flex-col gap-2">
+          {webhooks.data?.map((webhook) => (
+            <li
+              key={webhook.id}
+              className="flex flex-wrap items-center gap-3 rounded-md bg-surface-muted px-4 py-3 sm:flex-nowrap"
+            >
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-success-soft text-success">
+                <Webhook className="size-4" aria-hidden />
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col gap-1">
+                <span className="truncate font-mono text-xs font-semibold">{webhook.url}</span>
+                <span className="flex flex-wrap gap-1">
+                  {webhook.events.map((event) => (
+                    <span
+                      key={event}
+                      className="rounded-full bg-surface px-2 py-0.5 font-mono text-[11px] text-text-muted"
+                    >
+                      {event}
+                    </span>
+                  ))}
                 </span>
-                <Button variant="ghost" size="sm" onClick={() => setDeliveriesFor(webhook.id)}>
+              </span>
+              <span className="flex shrink-0 items-center gap-1">
+                <Button variant="secondary" size="sm" onClick={() => setDeliveriesFor(webhook.id)}>
                   {t('deliveries')}
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon-sm"
+                  className="text-danger hover:bg-danger-soft hover:text-danger"
                   aria-label={t('deleteWebhook')}
                   onClick={() => deleteWebhook.mutate(webhook.id)}
                 >
                   <Trash2 aria-hidden />
                 </Button>
-              </li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </Panel>
       <DeliveriesSheet webhookId={deliveriesFor} onClose={() => setDeliveriesFor(null)} />
     </div>
   );

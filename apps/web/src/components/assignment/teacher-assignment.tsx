@@ -10,6 +10,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Field } from '@/components/ui/field';
 import { DateTimeInput, NativeSelect } from '@/components/ui/input';
 import { LoadMore } from '@/components/ui/load-more';
+import { Panel } from '@/components/ui/page-header';
 import { Segmented } from '@/components/ui/segmented';
 import { SkeletonList } from '@/components/ui/skeleton';
 import { Table, TableContainer, TBody, TD, TH, THead, TR } from '@/components/ui/table';
@@ -87,6 +88,7 @@ function ExtensionDialog({ item }: { item: ItemDetail }) {
 /** Teacher view of an assignment: submissions, publish grades (FR-ASSIGN-07), extensions (FR-ASSIGN-03). */
 export function AssignmentSubmissions({ item }: { item: ItemDetail }) {
   const t = useTranslations('assignment');
+  const tWorkspace = useTranslations('workspace');
   const tCommon = useTranslations('common');
   const locale = useLocale();
   const { course, can } = useCourseContext();
@@ -97,7 +99,7 @@ export function AssignmentSubmissions({ item }: { item: ItemDetail }) {
   const reviewHref = `${ROUTES.gradingReview}?courseId=${course.id}&itemId=${item.id}`;
 
   return (
-    <div className="flex flex-col gap-4">
+    <Panel title={tWorkspace('submissionsTitle')}>
       <div className="flex flex-wrap items-center gap-2">
         <Segmented<StatusFilter>
           label={t('filter')}
@@ -139,7 +141,7 @@ export function AssignmentSubmissions({ item }: { item: ItemDetail }) {
         />
       ) : null}
       {rows.length > 0 ? (
-        <TableContainer>
+        <TableContainer className="rounded-md shadow-none">
           <Table>
             <THead>
               <tr>
@@ -180,6 +182,6 @@ export function AssignmentSubmissions({ item }: { item: ItemDetail }) {
         onClick={() => void submissions.fetchNextPage()}
         label={tCommon('loadMore')}
       />
-    </div>
+    </Panel>
   );
 }

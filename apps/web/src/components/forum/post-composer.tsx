@@ -21,7 +21,7 @@ export function PostComposer({ label, submitLabel, initial, onSubmit, onCancel }
   const [busy, setBusy] = useState(false);
   const invalid = isDocEmpty(doc) || validateDoc(doc).length > 0;
   return (
-    <div className="flex flex-col gap-2 rounded border border-card-border bg-surface p-3 shadow-sm">
+    <div className="flex flex-col gap-2 rounded-md border border-card-border bg-surface p-3">
       <BlockEditor value={doc} onChange={setDoc} label={label} kinds={COMPACT_BLOCK_KINDS} />
       <div className="flex justify-end gap-2">
         {onCancel ? (

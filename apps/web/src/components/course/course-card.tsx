@@ -1,5 +1,5 @@
 'use client';
-import { BookOpen, Copy, MoreHorizontal, Trash2 } from 'lucide-react';
+import { ArrowUpRight, BookOpen, Copy, MoreHorizontal, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
@@ -18,46 +18,76 @@ import { formatMoney } from '@/lib/utils/money';
 
 type Props = { course: CourseCardData; onDuplicate?: () => void; onDelete?: () => void };
 
+const STAFF_ROLES = new Set(['teacher', 'assistant']);
+
+/** Stitch course card: inset rounded cover with status / price chips, headline title, role chip, progress. */
 export function CourseCard({ course, onDuplicate, onDelete }: Props) {
   const t = useTranslations('courses');
   const tRoles = useTranslations('roles');
   const locale = useLocale();
   const manageable = !!(onDuplicate || onDelete);
+  const staff = course.role !== null && STAFF_ROLES.has(course.role);
+  const showStatus = staff || course.visibility !== 'published';
+  const percent = course.progressPercent !== null ? Math.round(course.progressPercent) : null;
   return (
-    <article className="group relative flex h-full flex-col overflow-hidden rounded-md border border-card-border bg-surface shadow-sm transition-shadow focus-within:ring-2 focus-within:ring-focus-ring hover:shadow-md">
-      {course.coverUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element -- storage URL
-        <img src={course.coverUrl} alt="" className="aspect-[16/7] w-full object-cover" />
-      ) : (
-        <div
-          className="relative flex aspect-[16/7] w-full items-center justify-center bg-gradient-to-br from-primary-soft via-surface-muted to-success-soft/60 text-primary"
-          aria-hidden
-        >
-          <BookOpen className="size-10 opacity-70" />
-          {course.shortName ? (
-            <span className="absolute bottom-2 left-2 rounded-full bg-surface/90 px-2.5 py-0.5 text-label-sm uppercase text-text shadow-sm">
-              {course.shortName}
+    <article className="group relative flex h-full flex-col gap-1 rounded-lg border border-card-border bg-surface p-2 shadow-sm transition-[box-shadow,border-color] duration-fast focus-within:border-card-border-hover focus-within:shadow-md hover:border-card-border-hover hover:shadow-md">
+      <div className="relative overflow-hidden rounded-md">
+        {course.coverUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- storage URL
+          <img
+            src={course.coverUrl}
+            alt=""
+            className="aspect-[16/8] w-full object-cover transition-transform duration-base group-hover:scale-[1.02]"
+          />
+        ) : (
+          <div
+            className="flex aspect-[16/8] w-full items-center justify-center bg-gradient-to-br from-primary-soft via-surface-muted to-success-soft/70 text-primary"
+            aria-hidden
+          >
+            <span className="flex size-14 items-center justify-center rounded-full bg-surface/80 shadow-sm">
+              <BookOpen className="size-6" />
             </span>
-          ) : null}
-        </div>
-      )}
-      <div className="flex flex-1 flex-col gap-3 p-4">
+          </div>
+        )}
+        {showStatus || course.price ? (
+          <div className="pointer-events-none absolute inset-x-2 top-2 flex flex-wrap items-start justify-between gap-1.5">
+            {showStatus ? (
+              <StatusChip visibility={course.visibility} className="shadow-sm" />
+            ) : (
+              <span />
+            )}
+            {course.price ? (
+              <Badge className="bg-surface/95 text-text shadow-sm">
+                {formatMoney(course.price, locale)}
+              </Badge>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+      <div className="flex flex-1 flex-col gap-3 px-3 pb-3 pt-2">
         <div className="flex items-start gap-2">
-          <h2 className="flex-1 text-base font-semibold leading-snug">
-            <Link
-              href={ROUTES.course(course.id)}
-              className="after:absolute after:inset-0 focus-visible:outline-none"
-            >
-              {course.title}
-            </Link>
-          </h2>
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            {course.shortName ? (
+              <span className="truncate text-label-sm uppercase text-text-muted">
+                {course.shortName}
+              </span>
+            ) : null}
+            <h2 className="text-lg leading-snug">
+              <Link
+                href={ROUTES.course(course.id)}
+                className="after:absolute after:inset-0 after:rounded-lg focus-visible:outline-none"
+              >
+                {course.title}
+              </Link>
+            </h2>
+          </div>
           {manageable ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  className="relative z-10"
+                  className="relative z-10 -mr-1"
                   aria-label={t('actionsFor', { title: course.title })}
                 >
                   <MoreHorizontal aria-hidden />
@@ -78,22 +108,25 @@ export function CourseCard({ course, onDuplicate, onDelete }: Props) {
             </DropdownMenu>
           ) : null}
         </div>
-        <div className="flex flex-wrap gap-1.5">
-          {course.role ? <Badge tone="primary">{tRoles(course.role)}</Badge> : null}
-          {course.visibility !== 'published' ? <StatusChip visibility={course.visibility} /> : null}
-          {course.price ? <Badge>{formatMoney(course.price, locale)}</Badge> : null}
-        </div>
-        {course.progressPercent !== null ? (
-          <div className="mt-auto flex flex-col gap-1">
-            <span className="text-xs text-text-muted">
-              {t('progress', { percent: Math.round(course.progressPercent) })}
-            </span>
-            <Progress
-              value={course.progressPercent}
-              label={t('progress', { percent: Math.round(course.progressPercent) })}
-            />
+        {percent !== null ? (
+          <div className="mt-auto flex flex-col gap-1.5">
+            <div className="flex items-center justify-between gap-2 text-xs">
+              {course.role ? <Badge tone="primary">{tRoles(course.role)}</Badge> : <span />}
+              <span className="font-semibold text-primary">{t('progress', { percent })}</span>
+            </div>
+            <Progress value={course.progressPercent ?? 0} label={t('progress', { percent })} />
           </div>
-        ) : null}
+        ) : (
+          <div className="mt-auto flex items-center justify-between gap-2">
+            {course.role ? <Badge tone="primary">{tRoles(course.role)}</Badge> : <span />}
+            <span
+              className="flex size-8 items-center justify-center rounded-full bg-surface-muted text-primary transition-colors duration-fast group-hover:bg-primary group-hover:text-primary-foreground"
+              aria-hidden
+            >
+              <ArrowUpRight className="size-4" />
+            </span>
+          </div>
+        )}
       </div>
     </article>
   );

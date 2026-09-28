@@ -37,7 +37,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix: { module: [workerkit, media-worker, notifier] }
-    defaults: { run: { working-directory: services/${{ matrix.module }} } }
+    # Блочный стиль обязателен: `${{` внутри inline-объекта `{ ... }` ломает YAML
+    # (GitHub отклоняет весь файл как Invalid workflow file).
+    defaults:
+      run:
+        working-directory: services/${{ matrix.module }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -46,7 +50,9 @@ jobs:
       - run: go vet ./...
       - run: go test -race ./...
       - uses: golang/govulncheck-action@v1
-        with: { work-dir: services/${{ matrix.module }}, go-version-input: '1.24' }
+        with:
+          work-dir: services/${{ matrix.module }}
+          go-version-input: '1.24'
 
   web:
     runs-on: ubuntu-latest

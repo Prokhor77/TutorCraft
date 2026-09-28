@@ -1,14 +1,16 @@
 'use client';
-import { Shuffle, Trash2, Users } from 'lucide-react';
+import { Plus, Shuffle, Trash2, Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Avatar } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Field } from '@/components/ui/field';
 import { InlineEdit } from '@/components/ui/inline-edit';
 import { Input, NativeSelect } from '@/components/ui/input';
+import { Panel } from '@/components/ui/page-header';
 import {
   useEnrollmentMutations,
   useEnrollments,
@@ -41,7 +43,7 @@ function MembersDialog({ courseId, group }: { courseId: string; group: Group }) 
         <ul className="flex max-h-80 flex-col gap-1 overflow-y-auto">
           {flattenPages(students.data?.pages).map((enrollment) => (
             <li key={enrollment.user.id}>
-              <label className="flex items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-surface-muted">
+              <label className="flex items-center gap-2.5 rounded-full px-3 py-1.5 text-sm hover:bg-surface-muted">
                 <Checkbox
                   checked={members.has(enrollment.user.id)}
                   onCheckedChange={(checked) =>
@@ -52,6 +54,11 @@ function MembersDialog({ courseId, group }: { courseId: string; group: Group }) 
                       return next;
                     })
                   }
+                />
+                <Avatar
+                  name={`${enrollment.user.firstName} ${enrollment.user.lastName}`}
+                  src={enrollment.user.avatarUrl}
+                  size="sm"
                 />
                 {enrollment.user.firstName} {enrollment.user.lastName}
               </label>
@@ -144,39 +151,43 @@ export function GroupsPanel({ courseId }: { courseId: string }) {
   const mutations = useEnrollmentMutations(courseId);
   const [name, setName] = useState('');
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap gap-2">
-        <form
-          className="flex gap-2"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (name.trim())
-              mutations.createGroup.mutate(name.trim(), { onSuccess: () => setName('') });
-          }}
-        >
-          <Input
-            aria-label={t('newGroup')}
-            placeholder={t('newGroup')}
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            className="w-56"
-          />
-          <Button type="submit" loading={mutations.createGroup.isPending}>
-            {t('createGroup')}
-          </Button>
-        </form>
-        <AutoGroupsDialog courseId={courseId} />
-      </div>
+    <Panel
+      title={t('groupsTitle')}
+      description={t('groupsHint')}
+      actions={<AutoGroupsDialog courseId={courseId} />}
+    >
+      <form
+        className="flex flex-col gap-2 sm:flex-row"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (name.trim())
+            mutations.createGroup.mutate(name.trim(), { onSuccess: () => setName('') });
+        }}
+      >
+        <Input
+          aria-label={t('newGroup')}
+          placeholder={t('newGroup')}
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          className="h-10 rounded-full border-transparent bg-surface-muted sm:w-72"
+        />
+        <Button type="submit" loading={mutations.createGroup.isPending}>
+          <Plus aria-hidden /> {t('createGroup')}
+        </Button>
+      </form>
       {groups.data?.length === 0 ? (
         <EmptyState icon={Users} title={t('noGroupsTitle')} description={t('noGroupsText')} />
       ) : null}
-      <ul className="flex flex-col gap-2">
+      <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         {groups.data?.map((group) => (
           <li
             key={group.id}
-            className="flex items-center gap-3 rounded border border-card-border bg-surface px-3 py-2 shadow-sm"
+            className="flex items-center gap-3 rounded-md border border-card-border bg-surface p-3 pl-4 shadow-sm transition-shadow duration-fast hover:shadow-md"
           >
-            <span className="min-w-0 flex-1 font-medium">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
+              <Users className="size-4" aria-hidden />
+            </span>
+            <span className="min-w-0 flex-1 font-semibold">
               <InlineEdit
                 value={group.name}
                 label={t('renameGroup', { name: group.name })}
@@ -195,6 +206,6 @@ export function GroupsPanel({ courseId }: { courseId: string }) {
           </li>
         ))}
       </ul>
-    </div>
+    </Panel>
   );
 }

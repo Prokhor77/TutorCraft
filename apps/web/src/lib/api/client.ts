@@ -44,6 +44,8 @@ export type ApiClientConfig = {
   session: SessionAccess;
   fetchImpl?: typeof fetch;
   getLocale?: () => string | undefined;
+  /** School chosen by the platform administrator; sent as `X-Tenant-Id` (ignored by the API for everyone else). */
+  getTenantOverride?: () => string | undefined;
   onSessionExpired?: () => void;
 };
 
@@ -68,6 +70,7 @@ export class ApiClient {
   private readonly session: SessionAccess;
   private readonly fetchImpl: typeof fetch;
   private readonly getLocale?: () => string | undefined;
+  private readonly getTenantOverride?: () => string | undefined;
   private readonly onSessionExpired?: () => void;
   private refreshInFlight: Promise<RefreshOutcome> | null = null;
 
@@ -76,6 +79,7 @@ export class ApiClient {
     this.session = config.session;
     this.fetchImpl = config.fetchImpl ?? ((...args) => fetch(...args));
     this.getLocale = config.getLocale;
+    this.getTenantOverride = config.getTenantOverride;
     this.onSessionExpired = config.onSessionExpired;
   }
 
@@ -203,6 +207,8 @@ export class ApiClient {
     const headers = new Headers({ Accept: 'application/json, application/problem+json' });
     const locale = this.getLocale?.();
     if (locale) headers.set('Accept-Language', locale);
+    const tenantId = this.getTenantOverride?.();
+    if (tenantId) headers.set('X-Tenant-Id', tenantId);
     return headers;
   }
 

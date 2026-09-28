@@ -2,7 +2,11 @@
 server:
   port: 8080
   shutdown: graceful
-  forward-headers-strategy: framework
+  # native = Tomcat RemoteIpValve: подставляет IP клиента из X-Forwarded-For (доверяя только
+  # внутренним прокси — docker-сети 172.16/12, 10/8, 127/8) и схему из X-Forwarded-Proto.
+  # framework (ForwardedHeaderFilter) X-Forwarded-For НЕ трогает — за прокси все запросы
+  # выглядели бы одним IP, и rate-limit/троттлинг входа били бы по всем пользователям сразу.
+  forward-headers-strategy: native
   error:
     include-stacktrace: never
     include-message: never
@@ -125,6 +129,11 @@ tutorcraft:
   seed:
     enabled: ${SEED_DEMO_DATA:false}
     demo-password: ${SEED_DEMO_PASSWORD:}
+  admin:
+    email: ${ADMIN_EMAIL:}
+    password: ${ADMIN_PASSWORD:}
+    first-name: ${ADMIN_FIRST_NAME:Главный}
+    last-name: ${ADMIN_LAST_NAME:администратор}
   # Исходящие вебхуки (integrations): не входят в AppProperties, читаются через @Value с умолчаниями.
   webhooks:
     poll-interval: PT5S

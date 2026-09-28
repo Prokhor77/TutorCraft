@@ -15,87 +15,226 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ArrowDown, ArrowUp, Dices, GripVertical, ListPlus, Save, Trash2 } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  Dices,
+  GripVertical,
+  ListPlus,
+  Plus,
+  Save,
+  Search,
+  Trash2,
+} from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useEffect, useState } from 'react';
+import {
+  useDeferredValue,
+  useEffect,
+  useImperativeHandle,
+  useState,
+  type Ref,
+} from 'react';
+import { QuestionEditor } from '@/components/qbank/question-editor';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Field } from '@/components/ui/field';
 import { Input, NativeSelect } from '@/components/ui/input';
+import { LoadMore } from '@/components/ui/load-more';
 import { SkeletonList } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
 import { useQCategories, useQuestions } from '@/features/qbank/use-qbank';
 import { useQuizSlots, useSaveSlots } from '@/features/quiz/use-quiz';
 import { flattenPages } from '@/lib/api/pagination';
-import type { QuestionSummary, QuizSlot } from '@/lib/api/schemas/quiz';
+import {
+  QUESTION_TYPES,
+  type Question,
+  type QuestionSummary,
+  type QuizSlot,
+} from '@/lib/api/schemas/quiz';
 import { cn } from '@/lib/utils/cn';
 import { localId } from '@/lib/utils/ids';
 import { PointsPill, QUESTION_TYPE_ICONS, QuestionTypeTag } from './question-type';
 
 const DEFAULT_RANDOM_COUNT = 5;
 
+/**
+ * Picks questions from the course bank: search + category/type filters, questions already in this quiz are marked
+ * and locked. «Create new» hands over to the create flow so a tutor never has to leave the builder.
+ */
 function AddFromBankDialog({
   courseId,
+  existingIds,
   onAdd,
+  onCreateNew,
+  triggerClassName,
 }: {
   courseId: string;
+  existingIds: ReadonlySet<string>;
   onAdd: (questions: QuestionSummary[]) => void;
+  onCreateNew: () => void;
+  triggerClassName?: string;
 }) {
   const t = useTranslations('quizSlots');
+  const tTypes = useTranslations('qbank.types');
+  const tQbank = useTranslations('qbank');
   const tCommon = useTranslations('common');
+  const categories = useQCategories(courseId);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [type, setType] = useState('');
+  const deferredQuery = useDeferredValue(query.trim());
   const [selected, setSelected] = useState<Map<string, QuestionSummary>>(new Map());
-  const questions = useQuestions(courseId, { q: query || undefined });
+  const questions = useQuestions(courseId, {
+    q: deferredQuery || undefined,
+    categoryId: categoryId || undefined,
+    type: type || undefined,
+  });
   const list = flattenPages(questions.data?.pages);
+  const filtered = !!deferredQuery || !!categoryId || !!type;
+  const close = () => {
+    setSelected(new Map());
+    setOpen(false);
+  };
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : close())}>
       <DialogTrigger asChild>
-        <Button variant="secondary" size="sm">
+        <Button variant="secondary" size="sm" className={triggerClassName}>
           <ListPlus aria-hidden /> {t('addFromBank')}
         </Button>
       </DialogTrigger>
-      <DialogContent title={t('addFromBank')} closeLabel={tCommon('close')} className="max-w-2xl">
-        <Input
-          type="search"
-          aria-label={t('search')}
-          placeholder={t('search')}
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-        <ul className="flex max-h-80 flex-col gap-1 overflow-y-auto">
-          {list.length === 0 ? (
-            <li className="py-6 text-center text-sm text-text-muted">{t('bankEmpty')}</li>
-          ) : null}
-          {list.map((question) => (
-            <li key={question.id}>
-              <label className="flex cursor-pointer items-center gap-3 rounded px-2 py-2 hover:bg-surface-muted">
-                <Checkbox
-                  checked={selected.has(question.id)}
-                  onCheckedChange={(checked) =>
-                    setSelected((current) => {
-                      const next = new Map(current);
-                      if (checked) next.set(question.id, question);
-                      else next.delete(question.id);
-                      return next;
-                    })
-                  }
-                />
-                <span className="flex-1 text-sm">{question.title}</span>
-                <span className="text-xs text-text-muted">{question.type}</span>
-              </label>
+      <DialogContent
+        title={t('addFromBank')}
+        description={t('bankHint')}
+        closeLabel={tCommon('close')}
+        className="max-w-2xl"
+      >
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="relative flex-1">
+            <Search
+              className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-text-muted"
+              aria-hidden
+            />
+            <Input
+              type="search"
+              aria-label={t('search')}
+              placeholder={t('search')}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <NativeSelect
+            aria-label={t('category')}
+            value={categoryId}
+            onChange={(event) => setCategoryId(event.target.value)}
+            className="sm:w-44"
+          >
+            <option value="">{t('allCategories')}</option>
+            {categories.data?.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name} ({category.questionCount})
+              </option>
+            ))}
+          </NativeSelect>
+          <NativeSelect
+            aria-label={tQbank('filterType')}
+            value={type}
+            onChange={(event) => setType(event.target.value)}
+            className="sm:w-44"
+          >
+            <option value="">{tQbank('allTypes')}</option>
+            {QUESTION_TYPES.map((option) => (
+              <option key={option} value={option}>
+                {tTypes(option)}
+              </option>
+            ))}
+          </NativeSelect>
+        </div>
+        <ul className="flex max-h-96 flex-col gap-1 overflow-y-auto">
+          {questions.isLoading ? (
+            <li>
+              <SkeletonList label={tCommon('loading')} rows={3} />
             </li>
-          ))}
+          ) : null}
+          {questions.isSuccess && list.length === 0 ? (
+            <li className="flex flex-col items-center gap-3 py-6 text-center text-sm text-text-muted">
+              {filtered ? t('bankNoMatch') : t('bankEmpty')}
+            </li>
+          ) : null}
+          {list.map((question) => {
+            const inQuiz = existingIds.has(question.id);
+            const checked = inQuiz || selected.has(question.id);
+            return (
+              <li key={question.id}>
+                <label
+                  className={cn(
+                    'flex items-center gap-3 rounded-md border border-transparent px-3 py-2.5 transition-colors duration-fast',
+                    inQuiz ? 'cursor-default opacity-60' : 'cursor-pointer hover:bg-surface-muted',
+                    selected.has(question.id) && 'border-accent/40 bg-primary-soft/60',
+                  )}
+                >
+                  <Checkbox
+                    checked={checked}
+                    disabled={inQuiz}
+                    onCheckedChange={(next) =>
+                      setSelected((current) => {
+                        const map = new Map(current);
+                        if (next) map.set(question.id, question);
+                        else map.delete(question.id);
+                        return map;
+                      })
+                    }
+                  />
+                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="truncate text-sm font-medium">{question.title}</span>
+                    <span className="flex flex-wrap items-center gap-1.5 text-xs text-text-muted">
+                      {inQuiz ? (
+                        <span className="font-medium text-primary">{t('alreadyInQuiz')}</span>
+                      ) : (
+                        tQbank('usedIn', { count: question.usedInQuizzes })
+                      )}
+                      {question.tags.map((tag) => (
+                        <Badge key={tag} tone="info">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </span>
+                  </span>
+                  <QuestionTypeTag type={question.type} className="shrink-0" />
+                </label>
+              </li>
+            );
+          })}
+          {questions.hasNextPage ? (
+            <li>
+              <LoadMore
+                hasMore
+                loading={questions.isFetchingNextPage}
+                onClick={() => void questions.fetchNextPage()}
+                label={tCommon('loadMore')}
+              />
+            </li>
+          ) : null}
         </ul>
-        <DialogFooter>
+        <DialogFooter className="sm:justify-between">
+          <Button
+            variant="ghost"
+            onClick={() => {
+              close();
+              onCreateNew();
+            }}
+          >
+            <Plus aria-hidden /> {t('createNew')}
+          </Button>
           <Button
             disabled={selected.size === 0}
             onClick={() => {
               onAdd([...selected.values()]);
-              setSelected(new Map());
-              setOpen(false);
+              close();
             }}
           >
             {t('addSelected', { count: selected.size })}
@@ -109,9 +248,11 @@ function AddFromBankDialog({
 function AddRandomDialog({
   courseId,
   onAdd,
+  triggerClassName,
 }: {
   courseId: string;
   onAdd: (slot: QuizSlot) => void;
+  triggerClassName?: string;
 }) {
   const t = useTranslations('quizSlots');
   const tCommon = useTranslations('common');
@@ -123,7 +264,7 @@ function AddRandomDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="secondary" size="sm">
+        <Button variant="secondary" size="sm" className={triggerClassName}>
           <Dices aria-hidden /> {t('addRandom')}
         </Button>
       </DialogTrigger>
@@ -270,7 +411,8 @@ function SlotCard({
       <Input
         type="number"
         min={0}
-        className={compact ? 'h-8 w-16 px-2' : 'h-9 w-24'}
+        placeholder="—"
+        className={compact ? 'h-8 w-16 bg-surface px-2 text-center' : 'h-9 w-24'}
         value={slot.points ?? ''}
         onChange={(event) =>
           onChange({ points: event.target.value ? Number(event.target.value) : undefined })
@@ -297,14 +439,19 @@ function SlotCard({
         transition: sortable.transition,
       }}
       className={cn(
-        'border bg-surface shadow-sm transition-[box-shadow,border-color] duration-fast hover:shadow-md',
-        compact ? 'flex flex-col gap-2 rounded-md p-3' : 'flex items-start gap-3 rounded-lg p-5',
-        selected
-          ? 'border-accent/50 bg-primary-soft/40 ring-1 ring-accent/30'
-          : 'border-card-border',
-        sortable.isDragging && 'z-10 scale-[1.02] shadow-lg',
+        'relative border transition-[box-shadow,border-color,background-color] duration-fast',
+        compact
+          ? 'flex flex-col gap-2 rounded-md p-3 hover:border-card-border-hover'
+          : 'flex items-start gap-3 rounded-lg bg-surface p-5 shadow-sm hover:shadow-md',
+        compact && !selected && 'border-transparent bg-surface-muted',
+        !compact && !selected && 'border-card-border',
+        selected && 'border-accent/40 bg-primary-soft/60 shadow-sm',
+        sortable.isDragging && 'z-10 scale-[1.02] bg-surface shadow-lg',
       )}
     >
+      {selected ? (
+        <span className="absolute inset-y-4 left-0 w-1 rounded-r-full bg-primary" aria-hidden />
+      ) : null}
       {compact ? (
         <>
           {/* Stitch structure card: «Q1 · Один вариант» chip, points chip, title, actions. */}
@@ -379,6 +526,26 @@ function SlotCard({
   );
 }
 
+/** Bank summary of a just-saved question, so its slot card has a title/type before the slots refetch. */
+export function toQuestionSummary(question: Question): QuestionSummary {
+  return {
+    id: question.id,
+    type: question.type,
+    title: question.title,
+    tags: question.tags,
+    version: question.version,
+    updatedAt: new Date().toISOString(),
+    usedInQuizzes: 0,
+  };
+}
+
+export type SlotsEditorHandle = {
+  /** Appends bank questions (skipping ones already in the quiz) and saves the composition right away. */
+  addQuestions: (questions: QuestionSummary[], options?: { notify?: boolean }) => void;
+  /** Number of slots the next appended question will get. */
+  nextNumber: () => number;
+};
+
 /** Quiz composition (FR-QUIZ-02): Stitch question cards with drag grip; fixed bank questions and random picks. */
 export function SlotsEditor({
   courseId,
@@ -386,6 +553,8 @@ export function SlotsEditor({
   compact,
   selectedQuestionId,
   onSelectQuestion,
+  onCreateQuestion,
+  handleRef,
 }: {
   courseId: string;
   itemId: string;
@@ -394,13 +563,48 @@ export function SlotsEditor({
   selectedQuestionId?: string | null;
   /** Fixed bank questions become selectable (opens the question editor). */
   onSelectQuestion?: (questionId: string, number: number) => void;
+  /** Custom «New question» flow (quiz builder opens the form inline); defaults to a sheet with the question form. */
+  onCreateQuestion?: () => void;
+  handleRef?: Ref<SlotsEditorHandle>;
 }) {
   const t = useTranslations('quizSlots');
   const tCommon = useTranslations('common');
   const slotsQuery = useQuizSlots(itemId);
   const save = useSaveSlots(itemId);
+  const categories = useQCategories(courseId);
   const [rows, setRows] = useState<SlotRow[]>([]);
   const [questions, setQuestions] = useState<Map<string, QuestionSummary>>(new Map());
+  const [creating, setCreating] = useState(false);
+  const inQuiz = new Set(
+    rows.flatMap((row) => ('questionId' in row.slot ? [row.slot.questionId] : [])),
+  );
+
+  const addQuestions: SlotsEditorHandle['addQuestions'] = (added, { notify = true } = {}) => {
+    const fresh = added.filter((question) => !inQuiz.has(question.id));
+    if (fresh.length === 0) return;
+    setQuestions(
+      (current) =>
+        new Map([...current, ...fresh.map((question) => [question.id, question] as const)]),
+    );
+    const next = [
+      ...rows,
+      ...fresh.map((question) => ({
+        key: localId('slot'),
+        slot: { questionId: question.id, page: 0 } as QuizSlot,
+      })),
+    ];
+    setRows(next);
+    save.mutate(
+      next.map((row) => row.slot),
+      {
+        onSuccess: () => {
+          if (notify) toast({ tone: 'success', title: t('added', { count: fresh.length }) });
+        },
+      },
+    );
+  };
+  useImperativeHandle(handleRef, () => ({ addQuestions, nextNumber: () => rows.length + 1 }));
+  const startCreate = () => (onCreateQuestion ? onCreateQuestion() : setCreating(true));
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: DRAG_DISTANCE_PX } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -437,30 +641,46 @@ export function SlotsEditor({
   };
 
   if (slotsQuery.isLoading) return <SkeletonList label={tCommon('loading')} />;
+  const dirty =
+    !!slotsQuery.data &&
+    JSON.stringify(rows.map((row) => row.slot)) !== JSON.stringify(slotsQuery.data.slots);
   return (
     <div className="flex flex-col gap-4">
-      <div className={cn('flex flex-wrap gap-2', compact && 'order-last')}>
+      <div
+        className={cn(
+          'flex flex-wrap gap-2',
+          compact && 'order-last grid grid-cols-1 border-t border-border pt-4',
+        )}
+      >
+        {dirty ? (
+          <p
+            role="status"
+            className={cn(
+              'flex items-center gap-1.5 text-label-md text-warning',
+              !compact && 'w-full',
+            )}
+          >
+            <span className="size-1.5 rounded-full bg-current" aria-hidden />
+            {t('unsaved')}
+          </p>
+        ) : null}
+        <Button size="sm" className={compact ? 'w-full' : undefined} onClick={startCreate}>
+          <Plus aria-hidden /> {t('newQuestion')}
+        </Button>
         <AddFromBankDialog
           courseId={courseId}
-          onAdd={(added) => {
-            setQuestions(
-              (current) =>
-                new Map([...current, ...added.map((question) => [question.id, question] as const)]),
-            );
-            setRows((current) => [
-              ...current,
-              ...added.map((question) => ({
-                key: localId('slot'),
-                slot: { questionId: question.id, page: 0 },
-              })),
-            ]);
-          }}
+          existingIds={inQuiz}
+          triggerClassName={compact ? 'w-full' : undefined}
+          onAdd={(added) => addQuestions(added)}
+          onCreateNew={startCreate}
         />
         <AddRandomDialog
           courseId={courseId}
+          triggerClassName={compact ? 'w-full' : undefined}
           onAdd={(slot) => setRows((current) => [...current, { key: localId('slot'), slot }])}
         />
         <Button
+          variant={dirty ? 'primary' : 'soft'}
           className={compact ? 'w-full' : 'ml-auto'}
           loading={save.isPending}
           onClick={() =>
@@ -504,6 +724,17 @@ export function SlotsEditor({
           </ol>
         </SortableContext>
       </DndContext>
+      {onCreateQuestion ? null : (
+        <QuestionEditor
+          courseId={courseId}
+          questionId={null}
+          open={creating}
+          onOpenChange={setCreating}
+          categories={categories.data ?? []}
+          defaultCategoryId={null}
+          onSaved={(question) => addQuestions([toQuestionSummary(question)], { notify: false })}
+        />
+      )}
     </div>
   );
 }

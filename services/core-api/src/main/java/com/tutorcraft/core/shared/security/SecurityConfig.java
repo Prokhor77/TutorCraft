@@ -82,7 +82,8 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of(properties.webOrigin()));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Idempotency-Key", "If-Match", "Accept-Language"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Idempotency-Key", "If-Match", "Accept-Language",
+                CurrentUser.TENANT_OVERRIDE_HEADER));
         config.setExposedHeaders(List.of("ETag", "X-Unread-Count", "RateLimit-Limit", "RateLimit-Remaining", "RateLimit-Reset"));
         config.setAllowCredentials(true);
         config.setMaxAge(CORS_MAX_AGE_SECONDS);

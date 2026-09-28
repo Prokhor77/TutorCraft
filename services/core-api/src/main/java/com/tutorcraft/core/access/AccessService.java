@@ -28,5 +28,11 @@ public interface AccessService {
     /** Заменяет роли уровня tenant (tenant_admin и т.п.). category_manager назначается отдельно. */
     void replaceTenantRoles(UUID tenantId, UUID userId, Set<TenantRole> roles, UUID actorId);
 
+    /**
+     * Делает пользователя единственным главным администратором (platform_admin): роль назначается ему и
+     * снимается со всех остальных. Вызывается только при старте из конфигурации (ADMIN_EMAIL), не через API.
+     */
+    void ensureSolePlatformAdmin(UUID tenantId, UUID userId);
+
     void assignCategoryManager(UUID tenantId, UUID userId, UUID categoryId, UUID actorId);
 }

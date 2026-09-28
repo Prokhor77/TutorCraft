@@ -1,4 +1,5 @@
 'use client';
+import { Save } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -183,7 +184,7 @@ export function ItemSettingsForm({ item }: { item: ItemDetail }) {
 
   return (
     <form
-      className="flex flex-col gap-6"
+      className="grid grid-cols-1 items-start gap-4 xl:grid-cols-2"
       onSubmit={(event) => {
         event.preventDefault();
         save().catch(() => undefined);
@@ -225,57 +226,59 @@ export function ItemSettingsForm({ item }: { item: ItemDetail }) {
           />
         </CardContent>
       </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('completion')}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <Field label={t('completionMode')}>
-            <NativeSelect
-              value={draft.completionRule.mode}
-              onChange={(event) =>
-                set('completionRule', {
-                  ...draft.completionRule,
-                  mode: event.target.value as ItemCompletionRule['mode'],
-                })
-              }
-            >
-              {(['none', 'manual', 'auto'] as const).map((mode) => (
-                <option key={mode} value={mode}>
-                  {t(`completionModes.${mode}`)}
-                </option>
-              ))}
-            </NativeSelect>
-          </Field>
-          {draft.completionRule.mode === 'auto' ? (
-            <CompletionTriggers
-              value={draft.completionRule.on ?? []}
-              onChange={(on) =>
-                set('completionRule', {
-                  ...draft.completionRule,
-                  on: on as ItemCompletionRule['on'],
-                })
-              }
+      <div className="flex flex-col gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('completion')}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <Field label={t('completionMode')}>
+              <NativeSelect
+                value={draft.completionRule.mode}
+                onChange={(event) =>
+                  set('completionRule', {
+                    ...draft.completionRule,
+                    mode: event.target.value as ItemCompletionRule['mode'],
+                  })
+                }
+              >
+                {(['none', 'manual', 'auto'] as const).map((mode) => (
+                  <option key={mode} value={mode}>
+                    {t(`completionModes.${mode}`)}
+                  </option>
+                ))}
+              </NativeSelect>
+            </Field>
+            {draft.completionRule.mode === 'auto' ? (
+              <CompletionTriggers
+                value={draft.completionRule.on ?? []}
+                onChange={(on) =>
+                  set('completionRule', {
+                    ...draft.completionRule,
+                    on: on as ItemCompletionRule['on'],
+                  })
+                }
+              />
+            ) : null}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('conditions')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ConditionsEditor
+              value={draft.conditions}
+              onChange={(conditions) => set('conditions', conditions)}
+              items={otherItems}
+              groups={(groups.data ?? []).map((group) => ({ id: group.id, title: group.name }))}
             />
-          ) : null}
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('conditions')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ConditionsEditor
-            value={draft.conditions}
-            onChange={(conditions) => set('conditions', conditions)}
-            items={otherItems}
-            groups={(groups.data ?? []).map((group) => ({ id: group.id, title: group.name }))}
-          />
-        </CardContent>
-      </Card>
-      <div className="flex justify-end">
+          </CardContent>
+        </Card>
+      </div>
+      <div className="glass sticky bottom-[calc(var(--size-bottom-nav)+env(safe-area-inset-bottom)+0.75rem)] z-10 flex justify-end justify-self-end rounded-full border border-card-border p-1.5 shadow-md md:bottom-4 xl:col-span-2">
         <Button type="submit" loading={isSaving}>
-          {tCommon('save')}
+          <Save aria-hidden /> {tCommon('save')}
         </Button>
       </div>
     </form>

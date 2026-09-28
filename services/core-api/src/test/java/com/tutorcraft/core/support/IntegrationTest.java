@@ -69,7 +69,7 @@ public abstract class IntegrationTest {
         UUID id = Ids.newId();
         Timestamp now = Timestamp.from(Instant.now());
         jdbc.sql("INSERT INTO tenants (id, slug, name, created_at, updated_at) VALUES (:id, :slug, :slug, :now, :now)")
-            .param("id", id).param("slug", slug + "-" + id.toString().substring(0, 8)).param("now", now).update();
+            .param("id", id).param("slug", slug + "-" + id.toString().substring(24)).param("now", now).update();
         return id;
     }
 
@@ -94,5 +94,22 @@ public abstract class IntegrationTest {
 
     protected String bearer(UUID tenantId, UUID userId) {
         return "Bearer " + jwt.issueAccessToken(userId, tenantId, List.of()).value();
+    }
+
+    /** Токен с ролью platform_admin в claims (как выдаёт логин главного администратора). */
+    protected String platformAdminBearer(UUID tenantId, UUID userId) {
+        return "Bearer " + jwt.issueAccessToken(userId, tenantId, List.of("platform_admin")).value();
+    }
+
+    /** Главный администратор в собственном служебном tenant (без снятия роли с администратора из конфигурации). */
+    protected UUID createPlatformAdmin(UUID tenantId, String email) {
+        UUID userId = createUser(tenantId, email);
+        jdbc.sql("""
+                INSERT INTO role_assignments (id, tenant_id, user_id, role_id, context_type, created_at)
+                SELECT :id, :tenantId, :userId, r.id, 'platform', now() FROM roles r
+                WHERE r.key = 'platform_admin' AND r.tenant_id IS NULL
+                """)
+            .param("id", Ids.newId()).param("tenantId", tenantId).param("userId", userId).update();
+        return userId;
     }
 }

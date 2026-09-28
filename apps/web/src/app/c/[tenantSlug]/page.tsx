@@ -1,15 +1,15 @@
-import { BookOpen } from 'lucide-react';
+import { BookOpen, GraduationCap, Users } from 'lucide-react';
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { SiteFooter } from '@/components/landing/site-footer';
 import { SiteHeader } from '@/components/landing/site-header';
-import { Badge } from '@/components/ui/badge';
+import { MAIN_CONTENT_ID } from '@/components/layout/skip-link';
+import { StorefrontCourseCard } from '@/components/public/storefront-course-card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ROUTES } from '@/features/auth/routes';
 import { fetchCatalog } from '@/lib/server/public-api';
-import { formatMoney } from '@/lib/utils/money';
+import { initials } from '@/lib/utils/format';
 
 type Params = { params: Promise<{ tenantSlug: string }> };
 
@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   };
 }
 
-/** SSR public catalog (FR-COURSE-HYB-01). */
+/** SSR public catalog (FR-COURSE-HYB-01): school hero card + course cards in the landing card style. */
 export default async function CatalogPage({ params }: Params) {
   const { tenantSlug } = await params;
   const locale = await getLocale();
@@ -34,57 +34,83 @@ export default async function CatalogPage({ params }: Params) {
   const courses = await fetchCatalog(tenantSlug, locale);
   if (!courses) notFound();
   const tenantName = courses[0]?.tenantName ?? tenantSlug;
+  const teacherCount = new Set(courses.map((course) => course.teacher.name)).size;
 
   return (
-    <>
+    <div className="flex min-h-dvh flex-col bg-background">
       <SiteHeader brandName={tenantName} brandHref={ROUTES.catalog(tenantSlug)} />
-      <main id="main-content" className="mx-auto max-w-content px-page-x py-page-y">
-        <h1 className="mb-6 text-3xl">{t('catalogTitle', { school: tenantName })}</h1>
-        {courses.length === 0 ? (
-          <EmptyState
-            icon={BookOpen}
-            title={t('catalogEmpty')}
-            description={t('catalogEmptyHint')}
-          />
-        ) : (
-          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {courses.map((course) => (
-              <li key={course.id}>
-                <Link
-                  href={ROUTES.courseLanding(tenantSlug, course.slug)}
-                  className="flex h-full flex-col overflow-hidden rounded-md border border-card-border bg-surface shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
-                >
-                  {course.coverUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- storage URL
-                    <img
-                      src={course.coverUrl}
-                      alt=""
-                      className="aspect-video w-full object-cover"
-                    />
-                  ) : (
-                    <div
-                      className="flex aspect-video w-full items-center justify-center bg-gradient-to-br from-primary-soft via-surface-muted to-success-soft/60 text-primary"
-                      aria-hidden
-                    >
-                      <BookOpen className="size-10 opacity-70" />
-                    </div>
-                  )}
-                  <div className="flex flex-1 flex-col gap-2 p-4">
-                    <h2 className="text-lg">{course.title}</h2>
-                    <p className="text-sm text-text-muted">{course.teacher.name}</p>
-                    <div className="mt-auto">
-                      <Badge tone={course.price ? 'primary' : 'success'}>
-                        {course.price ? formatMoney(course.price, locale) : t('free')}
-                      </Badge>
-                    </div>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+      <main id={MAIN_CONTENT_ID} className="flex-1">
+        <section className="mx-auto max-w-content px-page-x pt-6 md:pt-10">
+          <div className="relative overflow-hidden rounded-xl border border-card-border bg-surface px-6 py-10 shadow-md md:px-12 md:py-14">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -right-24 -top-32 size-96 rounded-full bg-primary-soft opacity-80 blur-3xl"
+            />
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -bottom-40 right-1/4 size-80 rounded-full bg-success-soft opacity-80 blur-3xl"
+            />
+            <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:gap-10">
+              <span
+                aria-hidden
+                className="flex size-20 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary-container font-heading text-3xl font-bold text-primary-foreground shadow-glow md:size-28 md:text-4xl"
+              >
+                {initials(tenantName)}
+              </span>
+              <div className="flex min-w-0 flex-col gap-3">
+                <span className="w-fit rounded-full bg-accent/10 px-4 py-1.5 text-label-md uppercase text-primary">
+                  {t('catalogEyebrow')}
+                </span>
+                <h1 className="text-hero-mobile font-bold md:text-4xl">{tenantName}</h1>
+                <p className="max-w-2xl text-base text-text-muted">
+                  {t('catalogDescription', { school: tenantName })}
+                </p>
+                {courses.length > 0 ? (
+                  <ul className="flex flex-wrap gap-2">
+                    <li className="flex items-center gap-2 rounded-full border border-card-border bg-surface px-4 py-2 text-label-lg shadow-sm">
+                      <BookOpen className="size-4 text-primary" aria-hidden />
+                      {t('coursesCount', { count: courses.length })}
+                    </li>
+                    <li className="flex items-center gap-2 rounded-full border border-card-border bg-surface px-4 py-2 text-label-lg shadow-sm">
+                      <Users className="size-4 text-primary" aria-hidden />
+                      {t('teachersCount', { count: teacherCount })}
+                    </li>
+                  </ul>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </section>
+        <section
+          aria-labelledby="catalog-courses-title"
+          className="mx-auto flex max-w-content flex-col gap-6 px-page-x py-10 md:py-14"
+        >
+          <div className="flex items-center gap-3">
+            <span className="flex size-10 items-center justify-center rounded-full bg-primary-soft text-primary">
+              <GraduationCap className="size-5" aria-hidden />
+            </span>
+            <h2 id="catalog-courses-title" className="text-2xl">
+              {t('coursesHeading')}
+            </h2>
+          </div>
+          {courses.length === 0 ? (
+            <EmptyState
+              icon={BookOpen}
+              title={t('catalogEmpty')}
+              description={t('catalogEmptyHint')}
+            />
+          ) : (
+            <ul className="grid grid-cols-1 gap-gutter sm:grid-cols-2 lg:grid-cols-3">
+              {courses.map((course) => (
+                <li key={course.id}>
+                  <StorefrontCourseCard course={course} tenantSlug={tenantSlug} locale={locale} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       </main>
       <SiteFooter />
-    </>
+    </div>
   );
 }

@@ -5,6 +5,7 @@ import {
   FileQuestion,
   ListOrdered,
   MousePointerClick,
+  Plus,
   Repeat,
   Save,
   Settings2,
@@ -13,13 +14,12 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { QuestionForm } from '@/components/qbank/question-editor';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Switch } from '@/components/ui/checkbox';
 import { Input, NativeSelect } from '@/components/ui/input';
-import { StatCard, StatGrid } from '@/components/ui/stat-card';
+import { Segmented } from '@/components/ui/segmented';
 import { toast } from '@/components/ui/toast';
 import { ROUTES } from '@/features/auth/routes';
 import { useItemPatcher } from '@/features/items/use-item';
@@ -32,10 +32,13 @@ import {
   type ItemDetail,
   type QuizSettings,
 } from '@/lib/api/schemas/courses';
+import { cn } from '@/lib/utils/cn';
 import { SECONDS_PER_MINUTE } from '@/lib/utils/time';
-import { SlotsEditor } from './slots-editor';
+import { SlotsEditor, toQuestionSummary, type SlotsEditorHandle } from './slots-editor';
 
 const DEFAULT_TIME_LIMIT_MIN = 30;
+const STICKY_PANE =
+  'xl:sticky xl:top-[calc(var(--size-header)+1rem)] xl:max-h-[calc(100dvh-var(--size-header)-2rem)] xl:overflow-y-auto';
 
 function ParamSection({
   icon: Icon,
@@ -51,7 +54,7 @@ function ParamSection({
   children?: ReactNode;
 }) {
   return (
-    <section className="flex flex-col gap-3 rounded bg-surface-muted p-4">
+    <section className="flex flex-col gap-3 rounded bg-surface-muted p-4 transition-colors duration-fast focus-within:bg-surface-container">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-0.5">
           <h3 className="flex items-center gap-2 font-sans text-sm font-semibold">
@@ -67,7 +70,15 @@ function ParamSection({
 }
 
 /** Stitch «Параметры теста»: the quiz settings a tutor changes most, as toggle sections; the rest in «Все настройки». */
-function QuizParams({ item, settings }: { item: ItemDetail; settings: QuizSettings }) {
+function QuizParams({
+  item,
+  settings,
+  className,
+}: {
+  item: ItemDetail;
+  settings: QuizSettings;
+  className?: string;
+}) {
   const t = useTranslations('quizBuilder');
   const tSettings = useTranslations('itemSettings');
   const { patch, isSaving } = useItemPatcher(item);
@@ -78,10 +89,30 @@ function QuizParams({ item, settings }: { item: ItemDetail; settings: QuizSettin
   const dirty = JSON.stringify(draft) !== JSON.stringify(settings);
   const minutes = draft.timeLimitSec === null ? null : draft.timeLimitSec / SECONDS_PER_MINUTE;
   return (
-    <Card className="flex flex-col gap-3 p-5">
-      <h2 className="flex items-center gap-2 text-xl">
-        <Settings2 className="size-5 text-primary" aria-hidden /> {t('params')}
-      </h2>
+    <aside
+      aria-labelledby="quiz-params-title"
+      className={cn(
+        'min-w-0 flex-col gap-3 rounded-lg border border-card-border bg-surface p-5 shadow-sm',
+        STICKY_PANE,
+        className,
+      )}
+    >
+      <div className="flex items-center gap-2">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
+          <Settings2 className="size-4" aria-hidden />
+        </span>
+        <h2 id="quiz-params-title" className="flex-1 text-lg">
+          {t('params')}
+        </h2>
+        {dirty ? (
+          <span
+            role="status"
+            className="rounded-full bg-warning-soft px-2.5 py-0.5 text-label-md text-warning"
+          >
+            {t('unsaved')}
+          </span>
+        ) : null}
+      </div>
       <ParamSection
         icon={Timer}
         title={t('timeLimit')}
@@ -100,7 +131,7 @@ function QuizParams({ item, settings }: { item: ItemDetail; settings: QuizSettin
             <Input
               type="number"
               min={1}
-              className="h-10 w-24"
+              className="h-10 w-24 bg-surface"
               value={minutes}
               onChange={(event) =>
                 set('timeLimitSec', Number(event.target.value || 1) * SECONDS_PER_MINUTE)
@@ -116,7 +147,8 @@ function QuizParams({ item, settings }: { item: ItemDetail; settings: QuizSettin
             type="number"
             min={1}
             aria-label={tSettings('maxAttempts')}
-            className="h-10"
+            placeholder="∞"
+            className="h-10 bg-surface"
             value={draft.maxAttempts ?? ''}
             onChange={(event) =>
               set('maxAttempts', event.target.value === '' ? null : Number(event.target.value))
@@ -124,7 +156,7 @@ function QuizParams({ item, settings }: { item: ItemDetail; settings: QuizSettin
           />
           <NativeSelect
             aria-label={tSettings('gradingMethod')}
-            className="h-10"
+            className="h-10 bg-surface"
             value={draft.gradingMethod}
             onChange={(event) =>
               set('gradingMethod', event.target.value as QuizSettings['gradingMethod'])
@@ -155,7 +187,7 @@ function QuizParams({ item, settings }: { item: ItemDetail; settings: QuizSettin
       <ParamSection icon={Eye} title={t('showAnswers')}>
         <NativeSelect
           aria-label={t('showAnswers')}
-          className="h-10"
+          className="h-10 bg-surface"
           value={draft.review.whenCorrectAnswers}
           onChange={(event) =>
             set('review', {
@@ -173,20 +205,24 @@ function QuizParams({ item, settings }: { item: ItemDetail; settings: QuizSettin
         </NativeSelect>
       </ParamSection>
       <ParamSection icon={Award} title={tSettings('passPercent')}>
-        <Input
-          type="number"
-          min={0}
-          max={100}
-          aria-label={tSettings('passPercent')}
-          className="h-10"
-          value={draft.passPercent ?? ''}
-          onChange={(event) =>
-            set('passPercent', event.target.value === '' ? null : Number(event.target.value))
-          }
-        />
+        <label className="flex items-center gap-2 text-sm text-text-muted">
+          <Input
+            type="number"
+            min={0}
+            max={100}
+            aria-label={tSettings('passPercent')}
+            className="h-10 w-24 bg-surface"
+            value={draft.passPercent ?? ''}
+            onChange={(event) =>
+              set('passPercent', event.target.value === '' ? null : Number(event.target.value))
+            }
+          />
+          %
+        </label>
       </ParamSection>
       <Button
         variant="success"
+        size="lg"
         disabled={!dirty}
         loading={isSaving}
         onClick={() =>
@@ -202,79 +238,183 @@ function QuizParams({ item, settings }: { item: ItemDetail; settings: QuizSettin
           <Settings2 aria-hidden /> {t('allSettings')}
         </Link>
       </Button>
-    </Card>
+    </aside>
   );
 }
 
+/** Stitch header stat chip («Вопросы · 8 пунктов», «Хронометраж · 35 минут») — values from slots/settings only. */
+function SummaryChip({
+  icon: Icon,
+  label,
+  value,
+  unit,
+  tone = 'primary',
+  hint,
+}: {
+  icon: typeof Timer;
+  label: string;
+  value: ReactNode;
+  unit: string;
+  tone?: 'primary' | 'warning' | 'success';
+  hint?: string;
+}) {
+  return (
+    <div className="flex min-w-0 items-center gap-3 rounded-md border border-card-border bg-surface py-2 pl-2 pr-3 shadow-sm sm:rounded-full sm:pr-5">
+      <span
+        className={cn(
+          'flex size-9 shrink-0 items-center justify-center rounded-full',
+          tone === 'primary' && 'bg-primary-soft text-primary',
+          tone === 'warning' && 'bg-warning-soft text-warning',
+          tone === 'success' && 'bg-success-soft text-success',
+        )}
+      >
+        <Icon className="size-4" aria-hidden />
+      </span>
+      <dl className="flex min-w-0 flex-col">
+        <dt className="truncate text-label-sm uppercase text-text-muted">{label}</dt>
+        <dd className="font-heading text-base font-semibold leading-tight sm:truncate">
+          {value} <span className="font-sans text-sm font-normal text-text-muted">{unit}</span>
+          {hint ? <span className="sr-only"> ({hint})</span> : null}
+        </dd>
+      </dl>
+    </div>
+  );
+}
+
+type Pane = 'editor' | 'structure' | 'params';
+
 /**
- * Quiz builder (Stitch «Конструктор тестов и квизов»): stat cards from real slot/settings data, question structure
- * (sortable slots) on the left, the selected bank question's editor in the center, «Параметры теста» on the right.
+ * Quiz builder (Stitch «Конструктор тестов и квизов»): summary chips from real slot/settings data, then a three-pane
+ * workbench — question structure (sortable slots) · selected bank question's editor · «Параметры теста» inspector.
+ * Below xl the panes collapse into one column switched by a segmented control.
  */
 export function QuizBuilder({ item }: { item: ItemDetail }) {
   const t = useTranslations('quizBuilder');
+  const tSlots = useTranslations('quizSlots');
   const slots = useQuizSlots(item.id);
   const categories = useQCategories(item.courseId);
+  const slotsEditor = useRef<SlotsEditorHandle>(null);
   const [selected, setSelected] = useState<{ id: string; number: number } | null>(null);
+  // «New question» replaces the editor stage with an empty form; saving puts it into the bank and this quiz.
+  const [creating, setCreating] = useState<{ number: number } | null>(null);
+  const [pane, setPane] = useState<Pane>('editor');
+  const startCreate = () => {
+    setCreating({ number: slotsEditor.current?.nextNumber() ?? 1 });
+    setPane('editor');
+  };
   // Open the first bank question by default so the editor is never an empty stage.
   useEffect(() => {
-    if (selected || !slots.data) return;
+    if (selected || creating || !slots.data) return;
     const index = slots.data.slots.findIndex((slot) => 'questionId' in slot);
     const first = slots.data.slots[index];
     if (first && 'questionId' in first) setSelected({ id: first.questionId, number: index + 1 });
-  }, [slots.data, selected]);
+  }, [slots.data, selected, creating]);
   if (item.settings.kind !== 'quiz') return null;
   const settings = item.settings;
   const summary = quizSummary(slots.data?.slots ?? []);
   const minutes =
     settings.timeLimitSec === null ? null : Math.round(settings.timeLimitSec / SECONDS_PER_MINUTE);
+  const pointsUnknown = summary.partial && summary.points === 0;
+  const paneClass = (target: Pane) => (pane === target ? 'flex' : 'hidden xl:flex');
   return (
     <div className="flex flex-col gap-gutter">
-      <StatGrid>
-        <StatCard
-          label={t('statQuestions')}
+      <div
+        role="group"
+        aria-label={t('summary')}
+        className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3"
+      >
+        <SummaryChip
           icon={ListOrdered}
+          label={t('statQuestions')}
           value={summary.questions}
           unit={t('questionsUnit', { count: summary.questions })}
         />
-        <StatCard
-          label={t('statPoints')}
+        <SummaryChip
           icon={Award}
           tone="warning"
-          value={summary.partial ? `≥ ${summary.points}` : summary.points}
-          unit={t('pointsUnit')}
-          footer={summary.partial ? t('pointsPartial') : undefined}
+          label={t('statPoints')}
+          value={pointsUnknown ? '—' : summary.partial ? `≥ ${summary.points}` : summary.points}
+          unit={pointsUnknown ? t('pointsDefault') : t('pointsUnit')}
+          hint={summary.partial ? t('pointsPartial') : undefined}
         />
-        <StatCard
-          label={t('statTime')}
+        <SummaryChip
           icon={Timer}
           tone="success"
+          label={t('statTime')}
           value={minutes ?? '∞'}
           unit={minutes ? t('minutesUnit') : t('noLimit')}
         />
-        <StatCard
-          label={t('statAttempts')}
+        <SummaryChip
           icon={Repeat}
+          label={t('statAttempts')}
           value={settings.maxAttempts ?? '∞'}
           unit={
             settings.maxAttempts ? t('attemptsUnit', { count: settings.maxAttempts }) : t('noLimit')
           }
         />
-      </StatGrid>
+      </div>
+      <Segmented<Pane>
+        className="flex w-full xl:hidden"
+        label={t('panes')}
+        value={pane}
+        onChange={setPane}
+        options={[
+          { value: 'editor', label: t('paneEditor') },
+          { value: 'structure', label: t('paneStructure') },
+          { value: 'params', label: t('paneParams') },
+        ]}
+      />
       <div className="grid grid-cols-1 items-start gap-gutter xl:grid-cols-[minmax(0,var(--size-tree))_minmax(0,1fr)_var(--size-inspector)]">
-        <Card className="flex flex-col gap-4 p-4 xl:sticky xl:top-[calc(var(--size-header)+1rem)] xl:max-h-[calc(100dvh-var(--size-header)-2rem)] xl:overflow-y-auto">
-          <h2 className="flex items-center gap-2 text-lg">
-            <FileQuestion className="size-5 text-primary" aria-hidden /> {t('structure')}
-          </h2>
+        <section
+          aria-labelledby="quiz-structure-title"
+          className={cn(
+            'min-w-0 flex-col gap-4 rounded-lg border border-card-border bg-surface p-4 shadow-sm',
+            STICKY_PANE,
+            paneClass('structure'),
+          )}
+        >
+          <div className="flex items-center gap-2 px-1 pt-1">
+            <h2 id="quiz-structure-title" className="min-w-0 flex-1 text-lg">
+              {t('structure')}
+            </h2>
+            <span className="shrink-0 rounded-full bg-surface-muted px-2.5 py-0.5 text-label-md text-text-muted">
+              {t('inQuiz', { count: summary.questions })}
+            </span>
+          </div>
           <SlotsEditor
             courseId={item.courseId}
             itemId={item.id}
             compact
-            selectedQuestionId={selected?.id ?? null}
-            onSelectQuestion={(id, number) => setSelected({ id, number })}
+            handleRef={slotsEditor}
+            selectedQuestionId={creating ? null : (selected?.id ?? null)}
+            onSelectQuestion={(id, number) => {
+              setCreating(null);
+              setSelected({ id, number });
+              setPane('editor');
+            }}
+            onCreateQuestion={startCreate}
           />
-        </Card>
-        <div className="min-w-0">
-          {selected ? (
+        </section>
+        <div className={cn('min-w-0 flex-col', paneClass('editor'))}>
+          {creating ? (
+            <QuestionForm
+              key={`new-${creating.number}`}
+              variant="card"
+              number={creating.number}
+              courseId={item.courseId}
+              questionId={null}
+              categories={categories.data ?? []}
+              defaultCategoryId={null}
+              onCancel={() => setCreating(null)}
+              onSaved={(question) => {
+                slotsEditor.current?.addQuestions([toQuestionSummary(question)], {
+                  notify: false,
+                });
+                setSelected({ id: question.id, number: creating.number });
+                setCreating(null);
+              }}
+            />
+          ) : selected ? (
             <QuestionForm
               key={selected.id}
               variant="card"
@@ -285,16 +425,29 @@ export function QuizBuilder({ item }: { item: ItemDetail }) {
               defaultCategoryId={null}
             />
           ) : (
-            <Card className="flex flex-col items-center gap-3 px-6 py-14 text-center">
+            <section className="flex flex-col items-center gap-3 rounded-lg border-2 border-dashed border-accent/25 bg-surface px-6 py-14 text-center">
               <span className="flex size-12 items-center justify-center rounded-full bg-accent/10 text-primary">
                 <MousePointerClick className="size-6" aria-hidden />
               </span>
               <p className="font-heading text-lg font-semibold">{t('selectTitle')}</p>
               <p className="max-w-sm text-sm text-text-muted">{t('selectText')}</p>
-            </Card>
+              <div className="flex flex-wrap justify-center gap-2">
+                <Button size="sm" onClick={startCreate}>
+                  <Plus aria-hidden /> {tSlots('newQuestion')}
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="xl:hidden"
+                  onClick={() => setPane('structure')}
+                >
+                  <FileQuestion aria-hidden /> {t('paneStructure')}
+                </Button>
+              </div>
+            </section>
           )}
         </div>
-        <QuizParams item={item} settings={settings} />
+        <QuizParams item={item} settings={settings} className={paneClass('params')} />
       </div>
     </div>
   );

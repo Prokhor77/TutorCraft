@@ -38,32 +38,34 @@ export default function CoursesPage() {
         title={t('pageTitle')}
         description={t('pageDescription')}
         actions={canCreate ? <CreateCourseDialog /> : null}
-      />
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
-          <Search
-            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-muted"
-            aria-hidden
-          />
-          <Input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={t('search')}
-            aria-label={t('search')}
-            className="pl-9"
+      >
+        <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative flex-1 sm:max-w-md">
+            <Search
+              className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-text-muted"
+              aria-hidden
+            />
+            <Input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={t('search')}
+              aria-label={t('search')}
+              className="rounded-full border-transparent bg-surface-muted pl-10 shadow-inner focus:bg-surface"
+            />
+          </div>
+          <Segmented<Scope>
+            className="sm:ml-auto sm:min-w-64"
+            label={t('scope')}
+            value={scope}
+            onChange={setScope}
+            options={[
+              { value: 'mine', label: t('mine') },
+              { value: 'all', label: t('all') },
+            ]}
           />
         </div>
-        <Segmented<Scope>
-          label={t('scope')}
-          value={scope}
-          onChange={setScope}
-          options={[
-            { value: 'mine', label: t('mine') },
-            { value: 'all', label: t('all') },
-          ]}
-        />
-      </div>
+      </PageHeader>
       {list.isLoading ? <SkeletonList label={tCommon('loading')} /> : null}
       {list.isError ? (
         <ErrorState
@@ -86,7 +88,7 @@ export default function CoursesPage() {
           action={!deferredQuery && canCreate ? <CreateCourseDialog /> : null}
         />
       ) : null}
-      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-gutter xl:grid-cols-3">
         {courses.map((course) => {
           const manageable = course.role !== null && TEACHING_ROLES.has(course.role);
           return (

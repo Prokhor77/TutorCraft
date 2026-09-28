@@ -9,3 +9,7 @@ tutorcraft:
     secret-key: test-secret
   kafka:
     outbox-poll-interval: PT0.2S
+  # Главный администратор для интеграционных тестов (в проде — ADMIN_EMAIL / ADMIN_PASSWORD из .env).
+  admin:
+    email: admin@tutorcraft.test
+    password: TestAdmin-Passw0rd

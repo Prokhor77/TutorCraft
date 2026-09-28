@@ -1,5 +1,6 @@
 'use client';
 import { Search, UserMinus, UserX, Users } from 'lucide-react';
+import { ProgressReport } from '@/components/participants/progress-report';
 import { useLocale, useTranslations } from 'next-intl';
 import { useDeferredValue, useState } from 'react';
 import { GroupsPanel } from '@/components/participants/groups-panel';
@@ -10,14 +11,17 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { EmptyState } from '@/components/ui/empty-state';
-import { PageHeader } from '@/components/ui/page-header';
+import { Breadcrumbs, PageHeader } from '@/components/ui/page-header';
+import { Progress } from '@/components/ui/progress';
 import { Input, NativeSelect } from '@/components/ui/input';
 import { LoadMore } from '@/components/ui/load-more';
 import { SkeletonList } from '@/components/ui/skeleton';
 import { Table, TableContainer, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/components/ui/toast';
+import { ROUTES } from '@/features/auth/routes';
 import { useCourseContext } from '@/features/courses/course-context';
+import { useProgressReport } from '@/features/gradebook/use-gradebook';
 import {
   useEnrollmentMutations,
   useEnrollments,
@@ -27,7 +31,10 @@ import { PERMISSIONS } from '@/lib/access/permissions';
 import { flattenPages } from '@/lib/api/pagination';
 import { COURSE_ROLES, type CourseRole } from '@/lib/api/schemas/common';
 import type { Enrollment } from '@/lib/api/schemas/enrollment';
-import { formatRelative } from '@/lib/utils/format';
+import { formatPercent, formatRelative } from '@/lib/utils/format';
+
+const PERCENT = 100;
+const PILL_FIELD = 'h-10 rounded-full border-transparent bg-surface-muted';
 
 /** Participants (SPEC §10): search, roles, groups, last access, bulk actions, invite. */
 export default function ParticipantsPage() {
@@ -35,6 +42,7 @@ export default function ParticipantsPage() {
   const tRoles = useTranslations('roles');
   const tUndo = useTranslations('undo');
   const tCommon = useTranslations('common');
+  const tShell = useTranslations('shell');
   const locale = useLocale();
   const { course, can } = useCourseContext();
   const [query, setQuery] = useState('');
@@ -50,6 +58,9 @@ export default function ParticipantsPage() {
   const groups = useGroups(course.id);
   const mutations = useEnrollmentMutations(course.id);
   const manage = can(PERMISSIONS.enrollmentManage);
+  const canProgress = can(PERMISSIONS.completionViewAll);
+  const report = useProgressReport(course.id, canProgress);
+  const progressByUser = new Map((report.data?.rows ?? []).map((row) => [row.userId, row.percent]));
   const rows = flattenPages(enrollments.data?.pages);
   const groupName = new Map((groups.data ?? []).map((group) => [group.id, group.name]));
 
@@ -80,9 +91,19 @@ export default function ParticipantsPage() {
   };
 
   return (
-    <>
+    <Tabs defaultValue="people" className="flex flex-col gap-gutter">
       <PageHeader
-        eyebrow={course.title}
+        className="mb-0"
+        breadcrumbs={
+          <Breadcrumbs
+            label={tShell('breadcrumbs')}
+            items={[
+              { label: tShell('myCourses'), href: ROUTES.courses },
+              { label: course.title, href: ROUTES.course(course.id) },
+              { label: tShell('participants') },
+            ]}
+          />
+        }
         title={t('pageTitle')}
         description={t('pageDescription')}
         actions={
@@ -93,19 +114,31 @@ export default function ParticipantsPage() {
             </>
           ) : null
         }
-      />
-      <Tabs defaultValue="people">
+      >
         <TabsList>
           <TabsTrigger value="people">{t('tabPeople')}</TabsTrigger>
           {can(PERMISSIONS.groupManage) ? (
-            <TabsTrigger value="groups">{t('tabGroups')}</TabsTrigger>
+            <TabsTrigger value="groups" className="group">
+              {t('tabGroups')}
+              {groups.data && groups.data.length > 0 ? (
+                <span className="min-w-5 rounded-full bg-surface-container px-1.5 text-center text-label-sm leading-5 group-data-[state=active]:bg-primary-foreground group-data-[state=active]:text-primary">
+                  {groups.data.length}
+                </span>
+              ) : null}
+            </TabsTrigger>
           ) : null}
+          {canProgress ? <TabsTrigger value="progress">{t('tabProgress')}</TabsTrigger> : null}
         </TabsList>
-        <TabsContent value="people" className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2 md:flex-row">
+      </PageHeader>
+      <TabsContent value="people" className="mt-0 flex flex-col gap-4">
+        <section
+          aria-label={t('tabPeople')}
+          className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-card-border bg-surface shadow-sm"
+        >
+          <div className="flex flex-col gap-2 p-5 sm:p-6 md:flex-row md:items-center">
             <div className="relative flex-1">
               <Search
-                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-muted"
+                className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-text-muted"
                 aria-hidden
               />
               <Input
@@ -114,14 +147,14 @@ export default function ParticipantsPage() {
                 placeholder={t('search')}
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                className="pl-9"
+                className={`${PILL_FIELD} pl-10`}
               />
             </div>
             <NativeSelect
               aria-label={t('role')}
               value={role}
               onChange={(event) => setRole(event.target.value)}
-              className="md:w-44"
+              className={`${PILL_FIELD} md:w-44`}
             >
               <option value="">{t('allRoles')}</option>
               {COURSE_ROLES.map((option) => (
@@ -134,7 +167,7 @@ export default function ParticipantsPage() {
               aria-label={t('group')}
               value={groupId}
               onChange={(event) => setGroupId(event.target.value)}
-              className="md:w-44"
+              className={`${PILL_FIELD} md:w-44`}
             >
               <option value="">{t('allGroups')}</option>
               {groups.data?.map((group) => (
@@ -148,13 +181,13 @@ export default function ParticipantsPage() {
             <div
               role="region"
               aria-label={t('bulkActions')}
-              className="flex flex-wrap items-center gap-2 rounded border border-card-border bg-surface p-2 shadow-sm"
+              className="mx-5 mb-4 flex flex-wrap items-center gap-2 rounded-full bg-primary-soft/60 py-1.5 pl-4 pr-1.5 sm:mx-6"
             >
               <span className="text-sm font-medium">{t('selected', { count: selected.size })}</span>
               <NativeSelect
                 aria-label={t('setRole')}
                 defaultValue=""
-                className="h-8 w-44 text-xs"
+                className="h-8 w-44 rounded-full border-transparent text-xs"
                 onChange={(event) =>
                   event.target.value &&
                   void bulk((row) =>
@@ -192,17 +225,23 @@ export default function ParticipantsPage() {
               </Button>
             </div>
           ) : null}
-          {enrollments.isLoading ? <SkeletonList label={tCommon('loading')} /> : null}
+          {enrollments.isLoading ? (
+            <div className="px-5 pb-5 sm:px-6">
+              <SkeletonList label={tCommon('loading')} />
+            </div>
+          ) : null}
           {enrollments.isSuccess && rows.length === 0 ? (
-            <EmptyState
-              icon={Users}
-              title={t('emptyTitle')}
-              description={t('emptyText')}
-              action={manage ? <InviteDialog courseId={course.id} /> : null}
-            />
+            <div className="px-5 pb-5 sm:px-6 sm:pb-6">
+              <EmptyState
+                icon={Users}
+                title={t('emptyTitle')}
+                description={t('emptyText')}
+                action={manage ? <InviteDialog courseId={course.id} /> : null}
+              />
+            </div>
           ) : null}
           {rows.length > 0 ? (
-            <TableContainer>
+            <TableContainer className="rounded-none border-0 border-t border-border shadow-none">
               <Table>
                 <THead>
                   <tr>
@@ -225,9 +264,10 @@ export default function ParticipantsPage() {
                     ) : null}
                     <TH>{t('name')}</TH>
                     <TH>{t('role')}</TH>
-                    <TH>{t('groups')}</TH>
-                    <TH>{t('status')}</TH>
-                    <TH>{t('lastAccess')}</TH>
+                    {canProgress ? <TH className="hidden sm:table-cell">{t('progress')}</TH> : null}
+                    <TH className="hidden lg:table-cell">{t('groups')}</TH>
+                    <TH className="hidden md:table-cell">{t('status')}</TH>
+                    <TH className="hidden md:table-cell">{t('lastAccess')}</TH>
                     {manage ? (
                       <TH className="w-10">
                         <span className="sr-only">{t('actions')}</span>
@@ -238,6 +278,7 @@ export default function ParticipantsPage() {
                 <TBody>
                   {rows.map((row) => {
                     const name = `${row.user.firstName} ${row.user.lastName}`;
+                    const percent = progressByUser.get(row.user.id);
                     return (
                       <TR key={row.id}>
                         {manage ? (
@@ -257,11 +298,13 @@ export default function ParticipantsPage() {
                           </TD>
                         ) : null}
                         <TD>
-                          <span className="flex items-center gap-2">
-                            <Avatar name={name} src={row.user.avatarUrl} size="sm" />
-                            <span className="flex flex-col">
-                              <span className="font-medium">{name}</span>
-                              <span className="text-xs text-text-muted">{row.user.email}</span>
+                          <span className="flex items-center gap-3">
+                            <Avatar name={name} src={row.user.avatarUrl} size="md" />
+                            <span className="flex min-w-0 flex-col">
+                              <span className="truncate font-semibold">{name}</span>
+                              <span className="truncate text-xs text-text-muted">
+                                {row.user.email}
+                              </span>
                             </span>
                           </span>
                         </TD>
@@ -270,7 +313,7 @@ export default function ParticipantsPage() {
                             <NativeSelect
                               aria-label={t('roleOf', { name })}
                               value={row.role}
-                              className="h-8 w-36 text-xs"
+                              className="h-8 w-36 rounded-full border-transparent bg-surface-muted text-xs"
                               onChange={(event) =>
                                 mutations.update.mutate({
                                   id: row.id,
@@ -288,13 +331,44 @@ export default function ParticipantsPage() {
                             tRoles(row.role)
                           )}
                         </TD>
-                        <TD className="text-xs">
-                          {row.groupIds
-                            .map((id) => groupName.get(id))
-                            .filter(Boolean)
-                            .join(', ') || '—'}
+                        {canProgress ? (
+                          <TD className="hidden sm:table-cell">
+                            {percent === undefined ? (
+                              <span className="text-xs text-text-muted">—</span>
+                            ) : (
+                              <span className="flex items-center gap-2">
+                                <Progress
+                                  value={percent}
+                                  label={t('progressOf', { name })}
+                                  tone={percent >= PERCENT ? 'success' : 'primary'}
+                                  className="h-1.5 w-20"
+                                />
+                                <span className="text-xs font-semibold tabular-nums">
+                                  {formatPercent(percent, locale)}
+                                </span>
+                              </span>
+                            )}
+                          </TD>
+                        ) : null}
+                        <TD className="hidden lg:table-cell">
+                          <span className="flex flex-wrap gap-1">
+                            {row.groupIds
+                              .map((id) => groupName.get(id))
+                              .filter((group): group is string => !!group)
+                              .map((group) => (
+                                <span
+                                  key={group}
+                                  className="rounded-full bg-surface-muted px-2 py-0.5 text-label-sm text-text-muted"
+                                >
+                                  {group}
+                                </span>
+                              ))}
+                            {row.groupIds.every((id) => !groupName.has(id)) ? (
+                              <span className="text-xs text-text-muted">—</span>
+                            ) : null}
+                          </span>
                         </TD>
-                        <TD>
+                        <TD className="hidden md:table-cell">
                           <Badge
                             tone={
                               row.status === 'active'
@@ -307,7 +381,7 @@ export default function ParticipantsPage() {
                             {t(`statuses.${row.status}`)}
                           </Badge>
                         </TD>
-                        <TD className="text-xs text-text-muted">
+                        <TD className="hidden text-xs text-text-muted md:table-cell">
                           {row.lastAccessAt ? formatRelative(row.lastAccessAt, locale) : t('never')}
                         </TD>
                         {manage ? (
@@ -329,17 +403,22 @@ export default function ParticipantsPage() {
               </Table>
             </TableContainer>
           ) : null}
-          <LoadMore
-            hasMore={!!enrollments.hasNextPage}
-            loading={enrollments.isFetchingNextPage}
-            onClick={() => void enrollments.fetchNextPage()}
-            label={tCommon('loadMore')}
-          />
+        </section>
+        <LoadMore
+          hasMore={!!enrollments.hasNextPage}
+          loading={enrollments.isFetchingNextPage}
+          onClick={() => void enrollments.fetchNextPage()}
+          label={tCommon('loadMore')}
+        />
+      </TabsContent>
+      <TabsContent value="groups" className="mt-0">
+        <GroupsPanel courseId={course.id} />
+      </TabsContent>
+      {canProgress ? (
+        <TabsContent value="progress" className="mt-0">
+          <ProgressReport courseId={course.id} />
         </TabsContent>
-        <TabsContent value="groups">
-          <GroupsPanel courseId={course.id} />
-        </TabsContent>
-      </Tabs>
-    </>
+      ) : null}
+    </Tabs>
   );
 }

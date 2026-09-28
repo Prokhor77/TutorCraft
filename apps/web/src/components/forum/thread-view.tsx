@@ -1,12 +1,25 @@
 'use client';
-import { Bell, BellOff, Lock, Pencil, Pin, Reply, Trash2, Unlock } from 'lucide-react';
+import {
+  ArrowLeft,
+  Bell,
+  BellOff,
+  Lock,
+  MessagesSquare,
+  Pencil,
+  Pin,
+  Reply,
+  Trash2,
+  Unlock,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
 import { useEffect, useMemo, useState } from 'react';
 import { BlockRenderer } from '@/components/blockdoc/block-renderer';
 import { Avatar } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ErrorState } from '@/components/ui/error-state';
+import { Breadcrumbs, PageHeader, Panel } from '@/components/ui/page-header';
 import { SkeletonList } from '@/components/ui/skeleton';
 import { ROUTES } from '@/features/auth/routes';
 import { useCourseContext } from '@/features/courses/course-context';
@@ -16,6 +29,7 @@ import {
   useForumMutations,
   useThread,
 } from '@/features/forum/use-forum';
+import { useItem } from '@/features/items/use-item';
 import { PERMISSIONS } from '@/lib/access/permissions';
 import type { Post } from '@/lib/api/schemas/forum';
 import { cn } from '@/lib/utils/cn';
@@ -38,7 +52,7 @@ function PostNode({ post, depth, actions }: { post: Post; depth: number; actions
   return (
     <li className={cn('flex flex-col gap-2', depth > 1 && 'border-l-2 border-border pl-3 sm:pl-5')}>
       <article
-        className="flex flex-col gap-2 rounded bg-surface p-3"
+        className="flex flex-col gap-2 rounded-md bg-surface-muted/60 p-4"
         aria-label={t('postBy', { name: post.authorName })}
       >
         <header className="flex items-center gap-2">
@@ -116,9 +130,11 @@ function PostNode({ post, depth, actions }: { post: Post; depth: number; actions
 /** Discussion thread (tree ≤ 3 levels), reply, edit window, pin/lock/subscribe (FR-FORUM-01..04). */
 export function ThreadView({ itemId, discussionId }: { itemId: string; discussionId: string }) {
   const t = useTranslations('forum');
+  const tShell = useTranslations('shell');
   const tCommon = useTranslations('common');
   const { course, can } = useCourseContext();
   const thread = useThread(discussionId);
+  const forumTitle = useItem(itemId).data?.title;
   const mutations = useForumMutations(itemId, discussionId);
   const { markRead } = mutations;
   const parents = useMemo(() => {
@@ -160,62 +176,104 @@ export function ThreadView({ itemId, discussionId }: { itemId: string; discussio
 
   return (
     <div className="flex flex-col gap-4">
-      <Link href={ROUTES.item(course.id, itemId)} className="text-sm text-primary hover:underline">
-        ← {t('backToForum')}
-      </Link>
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl">{discussion.title}</h1>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() =>
-              mutations.toggle.mutate({ toggle: 'subscribe', enabled: !discussion.subscribed })
-            }
-          >
-            {discussion.subscribed ? <BellOff aria-hidden /> : <Bell aria-hidden />}{' '}
-            {discussion.subscribed ? t('unsubscribe') : t('subscribe')}
-          </Button>
-          {moderator ? (
-            <>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() =>
-                  mutations.toggle.mutate({ toggle: 'pin', enabled: !discussion.pinned })
-                }
-              >
-                <Pin aria-hidden /> {discussion.pinned ? t('unpin') : t('pin')}
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() =>
-                  mutations.toggle.mutate({ toggle: 'lock', enabled: !discussion.locked })
-                }
-              >
-                {discussion.locked ? <Unlock aria-hidden /> : <Lock aria-hidden />}{' '}
-                {discussion.locked ? t('unlock') : t('lock')}
-              </Button>
-            </>
-          ) : null}
-        </div>
-      </header>
-      <ul className="flex flex-col gap-3">
-        {posts.map((post) => (
-          <PostNode key={post.id} post={post} depth={1} actions={actions} />
-        ))}
-      </ul>
+      <PageHeader
+        className="mb-0"
+        breadcrumbs={
+          <Breadcrumbs
+            label={tShell('breadcrumbs')}
+            items={[
+              { label: tShell('myCourses'), href: ROUTES.courses },
+              { label: course.title, href: ROUTES.course(course.id) },
+              { label: forumTitle ?? t('backToForum'), href: ROUTES.item(course.id, itemId) },
+              { label: discussion.title },
+            ]}
+          />
+        }
+        eyebrow={
+          <span className="inline-flex items-center gap-1.5">
+            <MessagesSquare className="size-4" aria-hidden /> {t('discussion')}
+          </span>
+        }
+        title={discussion.title}
+        meta={
+          discussion.pinned || discussion.locked || discussion.subscribed ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {discussion.pinned ? (
+                <Badge tone="primary">
+                  <Pin aria-hidden /> {t('pinned')}
+                </Badge>
+              ) : null}
+              {discussion.locked ? (
+                <Badge tone="neutral">
+                  <Lock aria-hidden /> {t('locked')}
+                </Badge>
+              ) : null}
+              {discussion.subscribed ? <Badge tone="info">{t('subscribed')}</Badge> : null}
+            </div>
+          ) : undefined
+        }
+        actions={
+          <>
+            <Button asChild variant="ghost" size="sm">
+              <Link href={ROUTES.item(course.id, itemId)}>
+                <ArrowLeft aria-hidden /> {t('backToForum')}
+              </Link>
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() =>
+                mutations.toggle.mutate({ toggle: 'subscribe', enabled: !discussion.subscribed })
+              }
+            >
+              {discussion.subscribed ? <BellOff aria-hidden /> : <Bell aria-hidden />}{' '}
+              {discussion.subscribed ? t('unsubscribe') : t('subscribe')}
+            </Button>
+            {moderator ? (
+              <>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() =>
+                    mutations.toggle.mutate({ toggle: 'pin', enabled: !discussion.pinned })
+                  }
+                >
+                  <Pin aria-hidden /> {discussion.pinned ? t('unpin') : t('pin')}
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() =>
+                    mutations.toggle.mutate({ toggle: 'lock', enabled: !discussion.locked })
+                  }
+                >
+                  {discussion.locked ? <Unlock aria-hidden /> : <Lock aria-hidden />}{' '}
+                  {discussion.locked ? t('unlock') : t('lock')}
+                </Button>
+              </>
+            ) : null}
+          </>
+        }
+      />
+      <Panel>
+        <ul className="flex flex-col gap-3">
+          {posts.map((post) => (
+            <PostNode key={post.id} post={post} depth={1} actions={actions} />
+          ))}
+        </ul>
+      </Panel>
       {discussion.locked ? (
-        <p className="flex items-center gap-2 text-sm text-text-muted">
+        <p className="flex items-center gap-2 rounded-full bg-surface-muted px-4 py-2 text-sm text-text-muted">
           <Lock className="size-4" aria-hidden /> {t('lockedNotice')}
         </p>
       ) : actions.canPost ? (
-        <PostComposer
-          label={t('yourReply')}
-          submitLabel={t('reply')}
-          onSubmit={(body) => mutations.reply.mutateAsync({ parentId: null, body })}
-        />
+        <Panel title={t('yourReply')}>
+          <PostComposer
+            label={t('yourReply')}
+            submitLabel={t('reply')}
+            onSubmit={(body) => mutations.reply.mutateAsync({ parentId: null, body })}
+          />
+        </Panel>
       ) : null}
     </div>
   );

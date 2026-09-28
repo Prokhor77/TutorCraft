@@ -3,13 +3,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { AtSign, Lock } from 'lucide-react';
+import { AtSign, Link2Off, Lock, MailCheck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { StatusMessage } from '@/components/public/status-card';
 import { Field } from '@/components/ui/field';
 import { IconInput, Input, PasswordInput } from '@/components/ui/input';
 import { describeProblem } from '@/features/app/use-problem-toast';
@@ -35,12 +36,18 @@ export function ForgotPasswordForm() {
 
   if (sent) {
     return (
-      <div>
-        <AuthHeading title={t('checkEmailTitle')} description={t('checkEmailText')} />
-        <Button asChild variant="secondary" className="w-full">
-          <Link href={ROUTES.login}>{t('backToLogin')}</Link>
-        </Button>
-      </div>
+      <StatusMessage
+        icon={MailCheck}
+        tone="success"
+        role="status"
+        title={t('checkEmailTitle')}
+        description={t('checkEmailText')}
+        actions={
+          <Button asChild variant="secondary" size="lg">
+            <Link href={ROUTES.login}>{t('backToLogin')}</Link>
+          </Button>
+        }
+      />
     );
   }
   return (
@@ -67,14 +74,40 @@ export function ForgotPasswordForm() {
             {...form.register('email')}
           />
         </Field>
-        <Button type="submit" size="lg" loading={mutation.isPending}>
+        <Button
+          type="submit"
+          size="lg"
+          loading={mutation.isPending}
+          className="mt-2 h-14 text-base"
+        >
           {t('sendResetLink')}
         </Button>
-        <Link href={ROUTES.login} className="text-center text-sm text-primary hover:underline">
+        <Link
+          href={ROUTES.login}
+          className="mx-auto rounded-sm text-sm font-semibold text-primary hover:underline"
+        >
           {t('backToLogin')}
         </Link>
       </form>
     </div>
+  );
+}
+
+/** Broken reset/invite link: friendly status card with a way back to sign-in. */
+function TokenMissing() {
+  const t = useTranslations('auth');
+  return (
+    <StatusMessage
+      icon={Link2Off}
+      tone="danger"
+      role="alert"
+      title={t('tokenMissing')}
+      actions={
+        <Button asChild variant="secondary" size="lg">
+          <Link href={ROUTES.login}>{t('backToLogin')}</Link>
+        </Button>
+      }
+    />
   );
 }
 
@@ -101,7 +134,7 @@ export function ResetPasswordForm() {
     defaultValues: { newPassword: '' },
   });
 
-  if (!token) return <Alert tone="danger" title={t('tokenMissing')} />;
+  if (!token) return <TokenMissing />;
   return (
     <div>
       <AuthHeading title={t('resetTitle')} />
@@ -138,7 +171,12 @@ export function ResetPasswordForm() {
             {...form.register('newPassword')}
           />
         </Field>
-        <Button type="submit" size="lg" loading={mutation.isPending}>
+        <Button
+          type="submit"
+          size="lg"
+          loading={mutation.isPending}
+          className="mt-2 h-14 text-base"
+        >
           {t('savePassword')}
         </Button>
       </form>
@@ -164,7 +202,7 @@ export function AcceptInvitationForm() {
     defaultValues: { firstName: '', lastName: '', password: '' },
   });
 
-  if (!token) return <Alert tone="danger" title={t('tokenMissing')} />;
+  if (!token) return <TokenMissing />;
   return (
     <div>
       <AuthHeading title={t('acceptInviteTitle')} description={t('acceptInviteSubtitle')} />
@@ -225,7 +263,7 @@ export function AcceptInvitationForm() {
             {...form.register('password')}
           />
         </Field>
-        <Button type="submit" size="lg" loading={accept.isPending}>
+        <Button type="submit" size="lg" loading={accept.isPending} className="mt-2 h-14 text-base">
           {t('acceptInvite')}
         </Button>
       </form>

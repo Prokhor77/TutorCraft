@@ -57,14 +57,13 @@ export function canAny(
   return required.some((permission) => can(permissions, permission));
 }
 
-const ADMIN_ROLES: readonly TenantRole[] = ['platform_admin', 'tenant_admin'];
-
 /**
- * Tenant-level UI hint only (nav visibility). The contract exposes tenant roles, not tenant permissions;
- * every admin endpoint is authorized server-side (FR-ACL-02).
+ * Administration belongs to the single platform administrator (configured on the server via ADMIN_EMAIL);
+ * school owners (`tenant_admin`) only run their courses. UI hint only — every admin endpoint is authorized
+ * server-side (FR-ACL-02).
  */
-export function isTenantAdminHint(tenantRoles: readonly TenantRole[] | undefined): boolean {
-  return !!tenantRoles?.some((role) => ADMIN_ROLES.includes(role));
+export function isPlatformAdminHint(tenantRoles: readonly TenantRole[] | undefined): boolean {
+  return !!tenantRoles?.includes('platform_admin');
 }
 
 export function canCreateCoursesHint(tenantRoles: readonly TenantRole[] | undefined): boolean {

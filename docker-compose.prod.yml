@@ -1,0 +1,233 @@
+# Production-стек TutorCraft на общем сервере с confeek (sproogeek).
+#
+# Принципы (см. docs/deployment.md):
+#   • Образы приложений собираются в GitHub Actions и лежат в GHCR — на сервере только `pull`,
+#     ничего не собираем (Maven/Next.js build съел бы память соседнего прода).
+#   • Наружу на хост публикуются ТОЛЬКО 127.0.0.1:3100 (web) и 127.0.0.1:8190 (WebSocket notifier).
+#     Их проксирует host-nginx (infra/deploy/nginx/tutorcraft.conf). БД, Kafka, Redis — только во
+#     внутренней сети tutorcraft_net. Порты 8080/9000/5432 не занимаем — на хосте уже живёт confeek.
+#   • Все лимиты ресурсов — только в deploy.resources.limits (docker compose v2 применяет их и вне
+#     swarm; дублировать короткими ключами mem_limit/cpus нельзя — compose падает на коллизии).
+#   • S3 — внешний (Yandex Object Storage / R2 / AWS, ADR-011), SMTP — реальный. SeaweedFS и Mailpit
+#     из dev-compose здесь отсутствуют.
+#   • Секреты — только в .env рядом с этим файлом (chmod 600). Web-контейнеру .env не отдаём:
+#     ему нужен лишь CORE_API_URL.
+#
+# Запуск:  docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d
+# Откат:   TUTORCRAFT_IMAGE_TAG=sha-<short> docker compose -f docker-compose.prod.yml up -d
+
+name: tutorcraft
+
+x-healthcheck: &hc
+  interval: 10s
+  timeout: 5s
+  retries: 30
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "3"
+
+x-app-image: &app-image
+  pull_policy: always
+  restart: unless-stopped
+  logging: *logging
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: tutorcraft_postgres
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      # Только 127.0.0.1 — для DBeaver через SSH-туннель. 5433 занят confeek.
+      - "127.0.0.1:5434:5432"
+    volumes: [pg-data:/var/lib/postgresql/data]
+    networks: [tutorcraft_net]
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 768M }
+    healthcheck: { <<: *hc, test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"] }
+
+  mongo:
+    image: mongo:7
+    container_name: tutorcraft_mongo
+    restart: unless-stopped
+    logging: *logging
+    # replSet нужен транзакциям core-api; wiredTigerCacheSizeGB — иначе Mongo заберёт 50 % RAM хоста.
+    command: ["--replSet", "rs0", "--bind_ip_all", "--wiredTigerCacheSizeGB", "0.25"]
+    volumes: [mongo-data:/data/db]
+    networks: [tutorcraft_net]
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 768M }
+    healthcheck:
+      <<: *hc
+      test: ["CMD", "mongosh", "--quiet", "--eval", "try { rs.status().ok } catch (e) { rs.initiate({_id:'rs0',members:[{_id:0,host:'mongo:27017'}]}).ok }"]
+
+  redis:
+    image: redis:7-alpine
+    container_name: tutorcraft_redis
+    restart: unless-stopped
+    logging: *logging
+    # Только rate-limit, троттлинг входа и кэш витрины — персистентность не нужна.
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru", "--save", ""]
+    networks: [tutorcraft_net]
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 192M }
+    healthcheck: { <<: *hc, test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"] }
+
+  kafka:
+    image: apache/kafka:3.8.0
+    container_name: tutorcraft_kafka
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      # Без EXTERNAL-листенера из dev: снаружи compose-сети к брокеру никто не ходит.
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_NUM_PARTITIONS: 6
+      KAFKA_LOG_RETENTION_HOURS: 168
+      # Каталог существует в образе и принадлежит appuser — named volume унаследует права.
+      # Дефолт образа /tmp/kraft-combined-logs — данные пропали бы при пересоздании контейнера.
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_HEAP_OPTS: "-Xms256m -Xmx512m"
+    volumes: [kafka-data:/var/lib/kafka/data]
+    networks: [tutorcraft_net]
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 1G }
+    healthcheck:
+      <<: *hc
+      start_period: 30s
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+
+  # Идемпотентно создаёт топики (infra/kafka/create-topics.sh едет на сервер вместе с compose-файлом).
+  kafka-init:
+    image: apache/kafka:3.8.0
+    container_name: tutorcraft_kafka_init
+    logging: *logging
+    depends_on: { kafka: { condition: service_healthy } }
+    volumes: ["./infra/kafka/create-topics.sh:/create-topics.sh:ro"]
+    entrypoint: ["/bin/bash", "/create-topics.sh"]
+    networks: [tutorcraft_net]
+    restart: "no"
+
+  core-api:
+    <<: *app-image
+    image: ghcr.io/prokhor77/tutorcraft-core-api:${TUTORCRAFT_IMAGE_TAG:-latest}
+    container_name: tutorcraft_core_api
+    # Перекрываем ENTRYPOINT образа (-XX:MaxRAMPercentage=75): явный -Xmx предсказуемее внутри лимита
+    # 1.5G — остаток уходит на metaspace, потоки и off-heap Kafka/Mongo-клиентов.
+    entrypoint: ["java", "-Xms256m", "-Xmx1g", "-XX:+ExitOnOutOfMemoryError", "-jar", "/app/app.jar"]
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: ${CORE_PROFILE:-prod}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      MONGO_URI: mongodb://mongo:27017/${MONGO_DB}?replicaSet=rs0
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      KAFKA_BOOTSTRAP: kafka:9092
+      SEED_DEMO_DATA: "false"
+    depends_on:
+      postgres: { condition: service_healthy }
+      mongo: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      kafka-init: { condition: service_completed_successfully }
+    networks: [tutorcraft_net]
+    deploy:
+      resources:
+        limits: { cpus: "2.0", memory: 1536M, pids: 512 }
+        reservations: { memory: 512M }
+    healthcheck: { <<: *hc, retries: 60, start_period: 60s, test: ["CMD", "wget", "-qO-", "http://localhost:8080/health/ready"] }
+
+  media-worker:
+    <<: *app-image
+    image: ghcr.io/prokhor77/tutorcraft-media-worker:${TUTORCRAFT_IMAGE_TAG:-latest}
+    container_name: tutorcraft_media_worker
+    # Воркеру не нужны JWT/пароли БД — отдаём только своё, без env_file.
+    environment:
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_TOPIC_PREFIX: ${KAFKA_TOPIC_PREFIX:-tc}
+      S3_ENDPOINT: ${S3_ENDPOINT}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_BUCKET: ${S3_BUCKET}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      MAX_VIDEO_BYTES: ${MAX_VIDEO_BYTES:-2147483648}
+      TRANSCODE_TIMEOUT: ${TRANSCODE_TIMEOUT:-30m}
+      # Один FFmpeg за раз: сервер общий, а транскодинг — самый прожорливый по CPU процесс стека.
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-1}
+    volumes:
+      # Scratch транскодинга (оригинал до 2 ГиБ + HLS) — на volume, а не в overlay-слое контейнера.
+      - media-scratch:/work
+    depends_on:
+      kafka-init: { condition: service_completed_successfully }
+    networks: [tutorcraft_net]
+    deploy:
+      resources:
+        limits: { cpus: "1.5", memory: 1G, pids: 256 }
+    healthcheck: { <<: *hc, test: ["CMD", "wget", "-qO-", "http://localhost:8091/health/ready"] }
+
+  notifier:
+    <<: *app-image
+    image: ghcr.io/prokhor77/tutorcraft-notifier:${TUTORCRAFT_IMAGE_TAG:-latest}
+    container_name: tutorcraft_notifier
+    env_file: .env
+    environment:
+      KAFKA_BROKERS: kafka:9092
+    ports:
+      # /ws для браузера — через host-nginx (wss://<домен>/ws → 127.0.0.1:8190).
+      - "127.0.0.1:8190:8090"
+    depends_on:
+      kafka-init: { condition: service_completed_successfully }
+    networks: [tutorcraft_net]
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 256M, pids: 256 }
+    healthcheck: { <<: *hc, test: ["CMD", "wget", "-qO-", "http://localhost:8090/health/ready"] }
+
+  web:
+    <<: *app-image
+    # NEXT_PUBLIC_WS_URL вшивается в бандл при сборке образа (CI: wss://<домен>/ws).
+    image: ghcr.io/prokhor77/tutorcraft-web:${TUTORCRAFT_IMAGE_TAG:-latest}
+    container_name: tutorcraft_web
+    environment:
+      CORE_API_URL: http://core-api:8080
+    ports:
+      # Только 127.0.0.1: host-nginx проксирует https://<домен>/ сюда. 8080 занят confeek.
+      - "127.0.0.1:3100:3000"
+    depends_on:
+      core-api: { condition: service_healthy }
+    networks: [tutorcraft_net]
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 512M, pids: 256 }
+
+networks:
+  tutorcraft_net:
+    driver: bridge
+
+volumes:
+  pg-data:
+  mongo-data:
+  kafka-data:
+  media-scratch:

@@ -15,7 +15,7 @@ export function ErrorState({
   return (
     <div
       role="alert"
-      className="flex flex-col items-center gap-3 rounded-md border border-danger/30 bg-danger-soft/40 px-6 py-8 text-center"
+      className="flex flex-col items-center gap-3 rounded-lg border border-danger/30 bg-danger-soft/40 px-6 py-8 text-center"
     >
       <AlertTriangle className="size-6 text-danger" aria-hidden />
       <div className="flex flex-col gap-1">

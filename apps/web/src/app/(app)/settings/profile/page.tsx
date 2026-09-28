@@ -6,11 +6,11 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field } from '@/components/ui/field';
 import { FileDropzone } from '@/components/ui/file-dropzone';
 import { Input, NativeSelect } from '@/components/ui/input';
-import { PageHeader } from '@/components/ui/page-header';
+import { PageHeader, Panel } from '@/components/ui/page-header';
+import { SettingsTabs } from '@/components/settings/settings-tabs';
 import { toast } from '@/components/ui/toast';
 import { PASSWORD_MIN_LENGTH_HINT } from '@/components/auth/register-form';
 import { useMe, useUpdateMe } from '@/features/auth/use-auth';
@@ -85,152 +85,164 @@ export default function ProfilePage() {
 
   return (
     <>
-      <PageHeader title={t('title')} />
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('personal')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form
-              noValidate
-              className="flex flex-col gap-4"
-              onSubmit={profileForm.handleSubmit((values) =>
-                update.mutate(values, {
-                  onSuccess: (updated) => {
-                    toast({ tone: 'success', title: t('saved') });
-                    if (updated.locale !== document.documentElement.lang) router.refresh();
-                  },
-                  onError: (error) =>
-                    applyServerFieldErrors(error, profileForm.setError, [
-                      'firstName',
-                      'lastName',
-                      'timezone',
-                      'locale',
-                    ]),
-                }),
-              )}
-            >
-              <div className="flex items-center gap-4">
-                <Avatar name={fullName(me)} src={me.avatarUrl} size="lg" />
-                <FileDropzone
-                  className="flex-1 py-4"
-                  title={t('avatar')}
-                  browseLabel={t('uploadAvatar')}
-                  accept="image/png,image/jpeg,image/webp"
-                  multiple={false}
-                  disabled={avatar.isUploading}
-                  onFiles={async ([file]) => {
-                    const meta = file ? await avatar.upload(file) : null;
-                    if (meta) update.mutate({ avatarFileId: meta.id });
-                  }}
-                />
-              </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Field
-                  label={tAuth('firstName')}
-                  error={profileForm.formState.errors.firstName?.message}
-                  required
-                >
-                  <Input autoComplete="given-name" {...profileForm.register('firstName')} />
-                </Field>
-                <Field
-                  label={tAuth('lastName')}
-                  error={profileForm.formState.errors.lastName?.message}
-                  required
-                >
-                  <Input autoComplete="family-name" {...profileForm.register('lastName')} />
-                </Field>
-              </div>
-              <Field label={tAuth('email')} hint={t('emailHint')}>
-                <Input value={me.email} readOnly disabled />
-              </Field>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Field label={t('timezone')}>
-                  <NativeSelect {...profileForm.register('timezone')}>
-                    {timezoneOptions(me.timezone).map((zone) => (
-                      <option key={zone} value={zone}>
-                        {zone}
-                      </option>
-                    ))}
-                  </NativeSelect>
-                </Field>
-                <Field label={tPrefs('language')}>
-                  <NativeSelect {...profileForm.register('locale')}>
-                    {LOCALES.map((locale) => (
-                      <option key={locale} value={locale}>
-                        {tPrefs(`languages.${locale}`)}
-                      </option>
-                    ))}
-                  </NativeSelect>
-                </Field>
-              </div>
-              <Button type="submit" loading={update.isPending} className="self-end">
-                {tCommon('save')}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('password')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form
-              noValidate
-              className="flex flex-col gap-4"
-              onSubmit={passwordForm.handleSubmit((values) =>
-                changePassword.mutate(
-                  {
-                    currentPassword: values.currentPassword || undefined,
-                    newPassword: values.newPassword,
-                  },
-                  {
-                    onSuccess: () => {
-                      passwordForm.reset();
-                      toast({
-                        tone: 'success',
-                        title: t('passwordChanged'),
-                        description: t('otherSessionsRevoked'),
-                      });
-                    },
-                    onError: (error) =>
-                      applyServerFieldErrors(error, passwordForm.setError, [
-                        'currentPassword',
-                        'newPassword',
-                      ]),
-                  },
-                ),
-              )}
-            >
+      <PageHeader
+        title={t('title')}
+        description={t('description')}
+        actions={
+          <span className="flex items-center gap-3 rounded-full bg-surface-muted py-1 pl-1 pr-4">
+            <span aria-hidden className="flex">
+              <Avatar name={fullName(me)} src={me.avatarUrl} size="md" />
+            </span>
+            <span className="flex min-w-0 flex-col">
+              <span className="truncate text-sm font-semibold">{fullName(me)}</span>
+              <span className="truncate text-xs text-text-muted">{me.email}</span>
+            </span>
+          </span>
+        }
+      >
+        <SettingsTabs />
+      </PageHeader>
+      <div className="grid grid-cols-1 items-start gap-4 md:gap-gutter lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <Panel title={t('personal')}>
+          <form
+            noValidate
+            className="flex flex-col gap-4"
+            onSubmit={profileForm.handleSubmit((values) =>
+              update.mutate(values, {
+                onSuccess: (updated) => {
+                  toast({ tone: 'success', title: t('saved') });
+                  if (updated.locale !== document.documentElement.lang) router.refresh();
+                },
+                onError: (error) =>
+                  applyServerFieldErrors(error, profileForm.setError, [
+                    'firstName',
+                    'lastName',
+                    'timezone',
+                    'locale',
+                  ]),
+              }),
+            )}
+          >
+            <div className="flex flex-col gap-4 rounded-md bg-surface-muted/60 p-3 sm:flex-row sm:items-center">
+              <Avatar
+                name={fullName(me)}
+                src={me.avatarUrl}
+                size="lg"
+                className="self-center ring-4 ring-surface"
+              />
+              <FileDropzone
+                layout="inline"
+                className="flex-1 bg-surface"
+                title={t('avatar')}
+                browseLabel={t('uploadAvatar')}
+                accept="image/png,image/jpeg,image/webp"
+                multiple={false}
+                disabled={avatar.isUploading}
+                onFiles={async ([file]) => {
+                  const meta = file ? await avatar.upload(file) : null;
+                  if (meta) update.mutate({ avatarFileId: meta.id });
+                }}
+              />
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field
-                label={t('currentPassword')}
-                hint={t('currentPasswordHint')}
-                error={passwordForm.formState.errors.currentPassword?.message}
-              >
-                <Input
-                  type="password"
-                  autoComplete="current-password"
-                  {...passwordForm.register('currentPassword')}
-                />
-              </Field>
-              <Field
-                label={tAuth('newPassword')}
-                error={passwordForm.formState.errors.newPassword?.message}
+                label={tAuth('firstName')}
+                error={profileForm.formState.errors.firstName?.message}
                 required
               >
-                <Input
-                  type="password"
-                  autoComplete="new-password"
-                  {...passwordForm.register('newPassword')}
-                />
+                <Input autoComplete="given-name" {...profileForm.register('firstName')} />
               </Field>
-              <Button type="submit" loading={changePassword.isPending} className="self-end">
-                {t('changePassword')}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+              <Field
+                label={tAuth('lastName')}
+                error={profileForm.formState.errors.lastName?.message}
+                required
+              >
+                <Input autoComplete="family-name" {...profileForm.register('lastName')} />
+              </Field>
+            </div>
+            <Field label={tAuth('email')} hint={t('emailHint')}>
+              <Input value={me.email} readOnly disabled />
+            </Field>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label={t('timezone')}>
+                <NativeSelect {...profileForm.register('timezone')}>
+                  {timezoneOptions(me.timezone).map((zone) => (
+                    <option key={zone} value={zone}>
+                      {zone}
+                    </option>
+                  ))}
+                </NativeSelect>
+              </Field>
+              <Field label={tPrefs('language')}>
+                <NativeSelect {...profileForm.register('locale')}>
+                  {LOCALES.map((locale) => (
+                    <option key={locale} value={locale}>
+                      {tPrefs(`languages.${locale}`)}
+                    </option>
+                  ))}
+                </NativeSelect>
+              </Field>
+            </div>
+            <Button type="submit" loading={update.isPending} className="self-end">
+              {tCommon('save')}
+            </Button>
+          </form>
+        </Panel>
+        <Panel title={t('password')} description={t('passwordDescription')}>
+          <form
+            noValidate
+            className="flex flex-col gap-4"
+            onSubmit={passwordForm.handleSubmit((values) =>
+              changePassword.mutate(
+                {
+                  currentPassword: values.currentPassword || undefined,
+                  newPassword: values.newPassword,
+                },
+                {
+                  onSuccess: () => {
+                    passwordForm.reset();
+                    toast({
+                      tone: 'success',
+                      title: t('passwordChanged'),
+                      description: t('otherSessionsRevoked'),
+                    });
+                  },
+                  onError: (error) =>
+                    applyServerFieldErrors(error, passwordForm.setError, [
+                      'currentPassword',
+                      'newPassword',
+                    ]),
+                },
+              ),
+            )}
+          >
+            <Field
+              label={t('currentPassword')}
+              hint={t('currentPasswordHint')}
+              error={passwordForm.formState.errors.currentPassword?.message}
+            >
+              <Input
+                type="password"
+                autoComplete="current-password"
+                {...passwordForm.register('currentPassword')}
+              />
+            </Field>
+            <Field
+              label={tAuth('newPassword')}
+              error={passwordForm.formState.errors.newPassword?.message}
+              required
+            >
+              <Input
+                type="password"
+                autoComplete="new-password"
+                {...passwordForm.register('newPassword')}
+              />
+            </Field>
+            <Button type="submit" loading={changePassword.isPending} className="self-end">
+              {t('changePassword')}
+            </Button>
+          </form>
+        </Panel>
       </div>
     </>
   );

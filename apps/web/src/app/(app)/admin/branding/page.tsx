@@ -1,14 +1,15 @@
 'use client';
+import { Save, Wand2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import { Brand } from '@/components/layout/brand';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ErrorState } from '@/components/ui/error-state';
 import { Field } from '@/components/ui/field';
 import { FileDropzone } from '@/components/ui/file-dropzone';
 import { Input, NativeSelect, Textarea } from '@/components/ui/input';
+import { Panel } from '@/components/ui/page-header';
 import { SkeletonList } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
 import { useTenantSettings, useUpdateTenant } from '@/features/admin/use-admin';
@@ -85,53 +86,50 @@ export default function AdminBrandingPage() {
     );
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-      <div className="flex flex-col gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('identity')}</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <Field label={t('name')} required>
-              <Input value={draft.name} onChange={(event) => set('name', event.target.value)} />
-            </Field>
-            <FileDropzone
-              title={logoFileId !== tenant.data?.logoFileId ? t('logoUploaded') : t('logo')}
-              browseLabel={t('browse')}
-              accept="image/png,image/jpeg,image/webp,image/gif"
-              multiple={false}
-              disabled={logo.isUploading}
-              onFiles={async ([file]) => {
-                const meta = file ? await logo.upload(file) : null;
-                if (meta) setLogoFileId(meta.id);
-              }}
+    <div className="grid grid-cols-1 gap-gutter lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="flex flex-col gap-gutter">
+        <Panel title={t('identity')} description={t('identityHint')}>
+          <Field label={t('name')} required>
+            <Input value={draft.name} onChange={(event) => set('name', event.target.value)} />
+          </Field>
+          <FileDropzone
+            title={logoFileId !== tenant.data?.logoFileId ? t('logoUploaded') : t('logo')}
+            browseLabel={t('browse')}
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            multiple={false}
+            disabled={logo.isUploading}
+            onFiles={async ([file]) => {
+              const meta = file ? await logo.upload(file) : null;
+              if (meta) setLogoFileId(meta.id);
+            }}
+          />
+          <div className="flex flex-wrap items-start gap-3 rounded-md bg-surface-muted p-4">
+            <input
+              type="color"
+              aria-label={t('colorPicker')}
+              value={parseHexColor(color) ? color : DEFAULT_BRAND_COLOR}
+              onChange={(event) => setColor(event.target.value)}
+              className="mt-6 size-11 shrink-0 cursor-pointer appearance-none rounded-full border-2 border-surface bg-transparent p-0 shadow-sm [&::-moz-color-swatch]:rounded-full [&::-moz-color-swatch]:border-0 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch]:border-0"
             />
-            <div className="flex flex-wrap items-end gap-3">
-              <Field label={t('primaryColor')} hint={t('primaryColorHint')}>
-                <Input
-                  value={color}
-                  onChange={(event) => setColor(event.target.value)}
-                  className="w-32 font-mono"
-                />
-              </Field>
-              <input
-                type="color"
-                aria-label={t('colorPicker')}
-                value={parseHexColor(color) ? color : DEFAULT_BRAND_COLOR}
+            <Field label={t('primaryColor')} hint={t('primaryColorHint')}>
+              <Input
+                value={color}
                 onChange={(event) => setColor(event.target.value)}
-                className="h-10 w-14 cursor-pointer rounded border border-border bg-surface"
+                className="w-36 font-mono uppercase"
               />
-              <Button variant="ghost" size="sm" onClick={() => applyBrandColor(color)}>
-                {t('tryInApp')}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('defaults')}</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            </Field>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="mt-6 sm:ml-auto"
+              onClick={() => applyBrandColor(color)}
+            >
+              <Wand2 aria-hidden /> {t('tryInApp')}
+            </Button>
+          </div>
+        </Panel>
+        <Panel title={t('defaults')} description={t('defaultsHint')}>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label={t('defaultLocale')}>
               <NativeSelect
                 value={draft.defaultLocale}
@@ -203,26 +201,57 @@ export default function AdminBrandingPage() {
                 }
               />
             </Field>
-          </CardContent>
-        </Card>
-        <Button className="self-end" onClick={save} loading={update.isPending}>
-          {tCommon('save')}
-        </Button>
+          </div>
+        </Panel>
+        <div className="flex justify-end">
+          <Button variant="success" onClick={save} loading={update.isPending}>
+            <Save aria-hidden /> {tCommon('save')}
+          </Button>
+        </div>
       </div>
       <aside
         aria-label={t('preview')}
         style={previewStyle(color)}
-        className="flex flex-col gap-3 self-start rounded-md border border-card-border bg-surface p-4 shadow-sm lg:sticky lg:top-[calc(var(--size-header)+1rem)]"
+        className="flex flex-col gap-4 self-start rounded-lg border border-card-border bg-surface p-5 shadow-sm sm:p-6 lg:sticky lg:top-[calc(var(--size-header)+1rem)]"
       >
-        <span className="text-xs font-semibold uppercase text-text-muted">{t('preview')}</span>
-        <Brand
-          name={draft.name}
-          logoUrl={logoFileId === tenant.data?.logoFileId ? tenant.data?.branding.logoUrl : null}
-        />
-        <Button>{t('sampleButton')}</Button>
-        <span className="rounded-full bg-primary/10 px-3 py-1 text-center text-sm text-primary">
-          {t('sampleBadge')}
-        </span>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-lg">{t('preview')}</h2>
+          <span className="flex items-center gap-1.5 rounded-full bg-surface-muted px-2.5 py-1 font-mono text-label-md text-text-muted">
+            <span className="size-3 rounded-full bg-primary" aria-hidden />
+            {parseHexColor(color) ? color.toUpperCase() : '—'}
+          </span>
+        </div>
+        <div
+          inert
+          aria-hidden
+          className="flex flex-col gap-4 rounded-md border border-border bg-background p-4"
+        >
+          <Brand
+            name={draft.name}
+            logoUrl={logoFileId === tenant.data?.logoFileId ? tenant.data?.branding.logoUrl : null}
+          />
+          <span className="inline-flex gap-1 self-start rounded-full bg-surface-muted p-1">
+            <span className="rounded-full bg-primary px-3 py-1 text-label-md text-primary-foreground">
+              {t('sampleTabActive')}
+            </span>
+            <span className="rounded-full px-3 py-1 text-label-md text-text-muted">
+              {t('sampleTab')}
+            </span>
+          </span>
+          <div className="flex flex-col gap-3 rounded-md bg-surface p-4 shadow-sm">
+            <span className="self-start rounded-full bg-primary/10 px-2.5 py-0.5 text-label-md text-primary">
+              {t('sampleBadge')}
+            </span>
+            <span className="h-2 overflow-hidden rounded-full bg-surface-container">
+              <span className="block h-full w-2/3 rounded-full bg-primary" />
+            </span>
+            <Button tabIndex={-1}>{t('sampleButton')}</Button>
+            <Button tabIndex={-1} variant="secondary">
+              {t('sampleSecondary')}
+            </Button>
+          </div>
+        </div>
+        <p className="text-xs text-text-muted">{t('previewHint')}</p>
       </aside>
     </div>
   );

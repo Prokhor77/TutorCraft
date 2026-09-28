@@ -40,7 +40,7 @@ export function HlsPlayer({ src, title, poster, className }: HlsPlayerProps) {
       preload="metadata"
       poster={poster}
       aria-label={title}
-      className={className ?? 'aspect-video w-full rounded bg-black'}
+      className={className ?? 'aspect-video w-full rounded-md bg-black'}
     />
   );
 }

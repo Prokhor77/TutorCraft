@@ -1,20 +1,42 @@
 'use client';
+import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { CourseGrades } from '@/components/grades/course-grades';
-import { PageHeader } from '@/components/ui/page-header';
+import { Button } from '@/components/ui/button';
+import { Breadcrumbs, PageHeader } from '@/components/ui/page-header';
 import { ROUTES } from '@/features/auth/routes';
+import { useMyGrades } from '@/features/grades/use-grades';
 
 export default function CourseGradesPage() {
   const { courseId } = useParams<{ courseId: string }>();
   const t = useTranslations('grades');
+  const courseTitle = useMyGrades().data?.courses.find(
+    (course) => course.courseId === courseId,
+  )?.courseTitle;
   return (
     <>
-      <Link href={ROUTES.grades} className="mb-2 inline-block text-sm text-primary hover:underline">
-        ← {t('allCourses')}
-      </Link>
-      <PageHeader title={t('courseTitle')} />
+      <PageHeader
+        breadcrumbs={
+          <Breadcrumbs
+            label={t('breadcrumbs')}
+            items={[
+              { label: t('title'), href: ROUTES.grades },
+              { label: courseTitle ?? t('courseTitle') },
+            ]}
+          />
+        }
+        title={courseTitle ?? t('courseTitle')}
+        description={courseTitle ? t('courseTitle') : undefined}
+        actions={
+          <Button asChild variant="secondary" size="sm">
+            <Link href={ROUTES.grades}>
+              <ArrowLeft aria-hidden /> {t('allCourses')}
+            </Link>
+          </Button>
+        }
+      />
       <CourseGrades courseId={courseId} />
     </>
   );

@@ -130,6 +130,13 @@
 }
 
 @layer utilities {
+  /* Horizontally scrollable nav strips: keep scrolling (wheel, trackpad, swipe) but hide the bar. */
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
   .pb-safe-nav {
     padding-bottom: calc(var(--size-bottom-nav) + env(safe-area-inset-bottom) + 1rem);
   }

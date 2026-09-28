@@ -55,6 +55,7 @@ export const queryKeys = {
 
   tenant: ['tenant'] as const,
   categories: ['categories'] as const,
+  platformTenants: ['platform', 'tenants'] as const,
   users: (params: object) => ['users', params] as const,
   usersRoot: ['users'] as const,
   auditLog: (params: object) => ['audit-log', params] as const,

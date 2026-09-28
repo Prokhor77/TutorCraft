@@ -3,6 +3,7 @@
 Платформа онлайн-обучения: удобная альтернатива Moodle и SaaS для репетиторов (создание и продажа курсов, тесты, проверка работ, Telegram-уведомления).
 
 - Требования: [`docs/SPEC.md`](docs/SPEC.md) · Архитектура: [`docs/architecture.md`](docs/architecture.md) · Статус: [`docs/ROADMAP.md`](docs/ROADMAP.md)
+- Продакшн-деплой (общий сервер с confeek): [`docs/deployment.md`](docs/deployment.md)
 - API: [`docs/api/contract.md`](docs/api/contract.md) (OpenAPI генерируется из кода: `GET /api/v1/openapi.json`, UI: `/api/docs`)
 - События Kafka: [`docs/events/README.md`](docs/events/README.md) · Права: [`docs/permissions.md`](docs/permissions.md) · Решения: [`docs/decisions`](docs/decisions)
 - Дизайн: [`design/stitch`](design/stitch) (экспорт Google Stitch) и [`design/stitch-design-system.md`](design/stitch-design-system.md)
@@ -23,9 +24,14 @@ docker compose up --build      # первый запуск ~5–10 минут: �
 | Почта (Mailpit) | http://localhost:8025 |
 | S3 (SeaweedFS) | http://localhost:9000 |
 
+### Главный администратор
+Администрирование доступно только главному администратору. Его email и пароль задаются в `.env`
+(`ADMIN_EMAIL`, `ADMIN_PASSWORD`; `scripts/init-env.sh` генерирует пароль). Учётная запись создаётся при старте core-api,
+смена пароля в `.env` применяется после перезапуска. В админке выбирается школа, которой нужно управлять.
+
 ### Демо-данные
 При `SEED_DEMO_DATA=true` (по умолчанию в dev) создаются: школа `demo`, преподаватель `teacher@demo.local`
-(администратор школы), 20 студентов `student01@demo.local` … `student20@demo.local`, демо-курс с модулями, страницей,
+(владелец школы), 20 студентов `student01@demo.local` … `student20@demo.local`, демо-курс с модулями, страницей,
 заданием, тестом из 5 вопросов и форумом. Пароль всех демо-аккаунтов — значение `SEED_DEMO_PASSWORD` из вашего `.env`.
 Витрина школы: http://localhost:3000/c/demo
 

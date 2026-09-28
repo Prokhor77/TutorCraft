@@ -2,7 +2,7 @@ package com.tutorcraft.core.shared.web;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-/** IP клиента. X-Forwarded-For обрабатывается Spring (server.forward-headers-strategy=framework). */
+/** IP клиента. X-Forwarded-For разбирает Tomcat RemoteIpValve (server.forward-headers-strategy=native). */
 public final class ClientIp {
 
     private ClientIp() {

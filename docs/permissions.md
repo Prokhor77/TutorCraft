@@ -59,9 +59,9 @@
 
 | Роль | Разрешения |
 |---|---|
-| `platform_admin` | все |
-| `tenant_admin` | все, кроме `platform.manage` |
-| `category_manager` | `category.manage`, `course.create`, `course.view`, `course.viewHidden`, `course.edit`, `course.delete`, `course.publish`, `content.view`, `enrollment.view`, `enrollment.manage`, `group.manage`, `user.view`, `report.view`, `file.upload` |
+| `platform_admin` | все (главный администратор, единственный) |
+| `tenant_admin` (владелец школы) | все, кроме админ-прав: `platform.manage`, `tenant.manage`, `tenant.branding`, `user.view`, `user.manage`, `user.import`, `user.impersonate`, `role.manage`, `category.manage`, `audit.view`, `integration.manage`, `billing.manage` |
+| `category_manager` | `course.create`, `course.view`, `course.viewHidden`, `course.edit`, `course.delete`, `course.publish`, `content.view`, `enrollment.view`, `enrollment.manage`, `group.manage`, `report.view`, `file.upload` |
 | `teacher` | `course.view`, `course.viewHidden`, `course.edit`, `course.delete`, `course.publish`, `content.view`, `enrollment.view`, `enrollment.manage`, `group.manage`, `submission.viewAll`, `submission.grade`, `grade.viewAll`, `grade.edit`, `grade.publish`, `grade.export`, `gradebook.configure`, `quiz.manage`, `quiz.viewReports`, `qbank.manage`, `forum.post`, `forum.moderate`, `forum.announce`, `completion.viewAll`, `report.view`, `file.upload` |
 | `assistant` | `course.view`, `course.viewHidden`, `content.view`, `enrollment.view`, `submission.viewAll`, `submission.grade`, `grade.viewAll`, `grade.edit`, `quiz.viewReports`, `forum.post`, `forum.moderate`, `completion.viewAll`, `file.upload` |
 | `student` | `course.view`, `content.view`, `submission.submit`, `grade.viewOwn`, `quiz.attempt`, `forum.post`, `file.upload` |
@@ -70,4 +70,18 @@
 
 Системные роли неизменяемы; `tenant_admin` создаёт кастомные роли копированием (`POST /roles` с `copyFrom`).
 
-Любой новый tenant при регистрации репетитора получает владельца с ролью `tenant_admin`.
+Любой новый tenant при регистрации репетитора получает владельца с ролью `tenant_admin`: он создаёт и ведёт курсы,
+но администрирование ему недоступно.
+
+## Главный администратор
+
+Администрирование (пользователи, категории, брендинг, аудит, продажи, интеграции) доступно только одной учётной записи —
+главному администратору с ролью `platform_admin`:
+
+- учётные данные задаются на сервере в `.env`: `ADMIN_EMAIL`, `ADMIN_PASSWORD`;
+- при каждом старте core-api создаёт служебный tenant `platform_admin` и учётную запись (или приводит пароль и статус
+  к `.env`; при смене пароля все сессии отзываются), назначает ей `platform_admin` и снимает эту роль со всех остальных;
+- выдать `platform_admin` через API или интерфейс нельзя;
+- в админке главный администратор выбирает школу; запросы идут с заголовком `X-Tenant-Id`. Заголовок учитывается
+  только при роли `platform_admin`, а сама роль перепроверяется по БД (не только по токену);
+- список школ: `GET /api/v1/platform/tenants` (`platform.manage`).

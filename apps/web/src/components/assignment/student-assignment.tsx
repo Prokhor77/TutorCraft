@@ -8,8 +8,10 @@ import { BlockEditor } from '@/components/editor/block-editor';
 import { SaveIndicator } from '@/components/editor/save-indicator';
 import { FileCard } from '@/components/media/file-preview';
 import { Alert } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Panel } from '@/components/ui/page-header';
 import { ErrorState } from '@/components/ui/error-state';
 import { FileDropzone } from '@/components/ui/file-dropzone';
 import { SkeletonList } from '@/components/ui/skeleton';
@@ -69,9 +71,8 @@ function AttemptsHistory({ submission }: { submission: Submission }) {
   const locale = useLocale();
   if (submission.history.length === 0) return null;
   return (
-    <section className="flex flex-col gap-2">
-      <h2 className="text-lg">{t('history')}</h2>
-      <TableContainer>
+    <Panel title={t('history')}>
+      <TableContainer className="rounded-md shadow-none">
         <Table>
           <THead>
             <tr>
@@ -95,7 +96,7 @@ function AttemptsHistory({ submission }: { submission: Submission }) {
           </TBody>
         </Table>
       </TableContainer>
-    </section>
+    </Panel>
   );
 }
 
@@ -161,9 +162,9 @@ function SubmissionWorkspace({
       ) : null}
       {acceptsFiles ? (
         <section className="flex flex-col gap-3" aria-labelledby="files-title">
-          <h2 id="files-title" className="text-lg">
+          <h3 id="files-title" className="text-base">
             {t('files')}
-          </h2>
+          </h3>
           <FileDropzone
             title={t('dropFiles')}
             hint={t('fileLimits', {
@@ -216,9 +217,9 @@ function SubmissionWorkspace({
       {acceptsText ? (
         <section className="flex flex-col gap-2" aria-labelledby="text-title">
           <div className="flex items-center justify-between">
-            <h2 id="text-title" className="text-lg">
+            <h3 id="text-title" className="text-base">
               {t('answer')}
-            </h2>
+            </h3>
             <SaveIndicator status={autosave.status} lastSavedAt={autosave.lastSavedAt} />
           </div>
           <BlockEditor
@@ -230,7 +231,7 @@ function SubmissionWorkspace({
           />
         </section>
       ) : null}
-      <div className="glass sticky bottom-[calc(var(--size-bottom-nav)+0.5rem)] flex flex-col gap-2 rounded-md border border-card-border p-3 shadow-md sm:flex-row sm:items-center sm:justify-between md:bottom-4">
+      <div className="glass sticky bottom-[calc(var(--size-bottom-nav)+0.5rem)] flex flex-col gap-2 rounded-lg border border-card-border p-3 shadow-md sm:flex-row sm:items-center sm:justify-between sm:rounded-full sm:pl-5 md:bottom-4">
         <span className="flex items-center gap-2 text-sm text-text-muted">
           <FileText className="size-4" aria-hidden /> {t('draftStatus', { count: files.length })}
         </span>
@@ -250,6 +251,7 @@ function SubmissionWorkspace({
 /** Student assignment screen (FR-ASSIGN-04, SPEC §10 «Сдача задания»). */
 export function StudentAssignment({ item }: { item: ItemDetail }) {
   const t = useTranslations('assignment');
+  const tWorkspace = useTranslations('workspace');
   const tCommon = useTranslations('common');
   const locale = useLocale();
   const settings = item.settings.kind === 'assignment' ? item.settings : null;
@@ -258,12 +260,12 @@ export function StudentAssignment({ item }: { item: ItemDetail }) {
   if (!settings) return null;
   const dueAt = mySubmission.data?.dueAt ?? settings.dueAt;
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       {dueAt ? <DeadlineCountdown dueAt={dueAt} /> : null}
       {item.content ? (
-        <section className="rounded-md border border-card-border bg-surface p-6 shadow-sm md:p-8">
+        <Panel title={tWorkspace('contentAssignment')} className="md:p-8">
           <BlockRenderer doc={item.content} />
-        </section>
+        </Panel>
       ) : null}
       {settings.submissionType === 'none' ? (
         <Alert tone="info" title={t('offlineAssignment')} />
@@ -278,36 +280,39 @@ export function StudentAssignment({ item }: { item: ItemDetail }) {
       ) : null}
       {mySubmission.data ? (
         <>
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge status={mySubmission.data.status} />
-            {mySubmission.data.late ? (
-              <span className="text-xs text-warning">{t('late')}</span>
-            ) : null}
-            {mySubmission.data.submittedAt ? (
-              <span className="text-xs text-text-muted">
-                {t('submittedOn', { date: formatDateTime(mySubmission.data.submittedAt, locale) })}
-              </span>
-            ) : null}
-          </div>
           <GradeCard submission={mySubmission.data} />
           {mySubmission.data.status === 'returned' ? (
             <Alert tone="warning" title={t('returnedTitle')}>
               {t('returnedText')}
             </Alert>
           ) : null}
-          {EDITABLE_STATUSES.has(mySubmission.data.status) ? (
-            <div className="rounded-md border border-card-border bg-surface p-5 shadow-sm md:p-6">
+          <Panel
+            title={t('yourWork')}
+            actions={
+              <div className="flex flex-wrap items-center gap-2">
+                <StatusBadge status={mySubmission.data.status} />
+                {mySubmission.data.late ? <Badge tone="warning">{t('late')}</Badge> : null}
+                {mySubmission.data.submittedAt ? (
+                  <span className="text-xs text-text-muted">
+                    {t('submittedOn', {
+                      date: formatDateTime(mySubmission.data.submittedAt, locale),
+                    })}
+                  </span>
+                ) : null}
+              </div>
+            }
+          >
+            {EDITABLE_STATUSES.has(mySubmission.data.status) ? (
               <SubmissionWorkspace item={item} settings={settings} submission={mySubmission.data} />
-            </div>
-          ) : (
-            <section className="flex flex-col gap-2">
-              <h2 className="text-lg">{t('yourWork')}</h2>
-              <BlockRenderer doc={mySubmission.data.text} />
-              {mySubmission.data.files.map((file) => (
-                <FileCard key={file.id} meta={file} />
-              ))}
-            </section>
-          )}
+            ) : (
+              <div className="flex flex-col gap-2">
+                <BlockRenderer doc={mySubmission.data.text} />
+                {mySubmission.data.files.map((file) => (
+                  <FileCard key={file.id} meta={file} />
+                ))}
+              </div>
+            )}
+          </Panel>
           <AttemptsHistory submission={mySubmission.data} />
         </>
       ) : null}

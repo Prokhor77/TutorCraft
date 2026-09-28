@@ -132,7 +132,10 @@ export function InviteDialog({ courseId }: { courseId: string }) {
             <h3 className="text-sm font-semibold">{t('activeLinks')}</h3>
             <ul className="flex flex-col gap-1.5">
               {links.data.map((link) => (
-                <li key={link.id} className="flex items-center gap-2 text-sm">
+                <li
+                  key={link.id}
+                  className="flex items-center gap-2 rounded-full bg-surface-muted py-1 pl-4 pr-1 text-sm"
+                >
                   <span className="flex-1">
                     {tRoles(link.role)}
                     {link.expiresAt

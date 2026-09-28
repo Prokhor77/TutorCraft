@@ -1,12 +1,15 @@
 'use client';
 import {
   ChevronRight,
+  Folder,
   FolderPlus,
   FolderTree,
   Library,
   ListChecks,
+  Pencil,
   Plus,
   Search,
+  SlidersHorizontal,
   Timer,
   Trash2,
 } from 'lucide-react';
@@ -22,7 +25,7 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input, NativeSelect } from '@/components/ui/input';
 import { LoadMore } from '@/components/ui/load-more';
-import { PageHeader } from '@/components/ui/page-header';
+import { Breadcrumbs, PageHeader } from '@/components/ui/page-header';
 import { StatCard, StatGrid } from '@/components/ui/stat-card';
 import { ROUTES } from '@/features/auth/routes';
 import { flattenModules, useOutline } from '@/features/courses/use-outline';
@@ -57,14 +60,18 @@ function CategoryTree({
             type="button"
             onClick={() => onSelect(category.id)}
             aria-current={selected === category.id ? 'true' : undefined}
-            style={{ paddingLeft: `${0.5 + depth}rem` }}
+            style={{ paddingLeft: `${0.75 + depth}rem` }}
             className={cn(
-              'flex w-full items-center justify-between rounded-full py-1.5 pr-3 text-left text-sm hover:bg-surface-muted',
-              selected === category.id && 'bg-primary-soft text-primary',
+              'flex w-full items-center gap-2 rounded-full py-2 pr-3 text-left text-sm transition-colors duration-fast hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus-ring/20',
+              selected === category.id &&
+                'bg-primary-soft font-semibold text-primary hover:bg-primary-soft',
             )}
           >
-            <span className="truncate">{category.name}</span>
-            <span className="text-xs text-text-muted">{category.questionCount}</span>
+            <Folder className="size-4 shrink-0" aria-hidden />
+            <span className="flex-1 truncate">{category.name}</span>
+            <span className="rounded-full bg-surface px-2 text-label-md text-text-muted">
+              {category.questionCount}
+            </span>
           </button>
           <CategoryTree
             categories={categories}
@@ -99,7 +106,7 @@ function CourseQuizzes({ courseId }: { courseId: string }) {
           <li key={quiz.id}>
             <Link
               href={`${ROUTES.item(courseId, quiz.id)}?tab=questions`}
-              className="lift flex h-full items-start gap-3 rounded-md border border-card-border bg-surface p-4 shadow-sm hover:border-card-border-hover hover:shadow-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus-ring/20"
+              className="lift flex h-full items-start gap-3 rounded-lg border border-card-border bg-surface p-5 shadow-sm hover:border-card-border-hover hover:shadow-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus-ring/20"
             >
               <ItemTypeIcon type="quiz" className="size-10 rounded-full" />
               <span className="flex min-w-0 flex-1 flex-col gap-1">
@@ -120,6 +127,7 @@ function CourseQuizzes({ courseId }: { courseId: string }) {
 export default function QuestionBankPage() {
   const t = useTranslations('qbank');
   const tCommon = useTranslations('common');
+  const tShell = useTranslations('shell');
   const locale = useLocale();
   const { course } = useCourseContext();
   const categories = useQCategories(course.id);
@@ -146,16 +154,25 @@ export default function QuestionBankPage() {
   const quizCount = flattenModules(outline.data?.modules ?? [])
     .flatMap((module) => module.items)
     .filter((item) => item.type === 'quiz').length;
-  const bankCount = (categories.data ?? []).reduce(
-    (sum, category) => sum + category.questionCount,
-    0,
-  );
+  // Unfiltered first page (shared cache with the list when no filter is set) → honest bank size.
+  const allQuestions = useQuestions(course.id, {});
+  const bankLoaded = flattenPages(allQuestions.data?.pages).length;
+  const bankCount = allQuestions.hasNextPage ? `${bankLoaded}+` : bankLoaded;
+  const filtered = categoryId !== null || !!type || !!tag || !!deferredQuery;
 
   return (
     <div className="flex flex-col gap-gutter">
       <PageHeader
         className="mb-0"
-        eyebrow={course.title}
+        breadcrumbs={
+          <Breadcrumbs
+            label={tShell('breadcrumbs')}
+            items={[
+              { label: course.title, href: ROUTES.course(course.id) },
+              { label: t('pageTitle') },
+            ]}
+          />
+        }
         title={t('pageTitle')}
         description={t('pageDescription')}
         actions={
@@ -166,7 +183,12 @@ export default function QuestionBankPage() {
       />
       <StatGrid className="lg:grid-cols-3">
         <StatCard label={t('statQuizzes')} icon={Timer} value={quizCount} />
-        <StatCard label={t('statQuestions')} icon={ListChecks} tone="warning" value={bankCount} />
+        <StatCard
+          label={t('statBankQuestions')}
+          icon={ListChecks}
+          tone="warning"
+          value={allQuestions.isLoading ? '…' : bankCount}
+        />
         <StatCard
           label={t('statCategories')}
           icon={FolderTree}
@@ -175,17 +197,25 @@ export default function QuestionBankPage() {
         />
       </StatGrid>
       <CourseQuizzes courseId={course.id} />
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[16rem_minmax(0,1fr)]">
-        <aside className="flex flex-col gap-3 self-start rounded-md border border-card-border bg-surface p-4 shadow-sm">
-          <h2 className="px-2 text-sm font-semibold">{t('categories')}</h2>
+      <div className="grid grid-cols-1 items-start gap-gutter lg:grid-cols-[17rem_minmax(0,1fr)]">
+        <aside
+          aria-labelledby="qbank-categories"
+          className="flex flex-col gap-3 rounded-lg border border-card-border bg-surface p-4 shadow-sm lg:sticky lg:top-[calc(var(--size-header)+1rem)]"
+        >
+          <h2 id="qbank-categories" className="flex items-center gap-2 px-2 text-lg">
+            <FolderTree className="size-5 text-primary" aria-hidden /> {t('categories')}
+          </h2>
           <button
             type="button"
             onClick={() => setCategoryId(null)}
+            aria-current={categoryId === null ? 'true' : undefined}
             className={cn(
-              'rounded px-2 py-1.5 text-left text-sm hover:bg-surface-muted',
-              categoryId === null && 'bg-primary-soft text-primary',
+              'flex items-center gap-2 rounded-full px-3 py-2 text-left text-sm transition-colors duration-fast hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus-ring/20',
+              categoryId === null &&
+                'bg-primary-soft font-semibold text-primary hover:bg-primary-soft',
             )}
           >
+            <Library className="size-4 shrink-0" aria-hidden />
             {t('allQuestions')}
           </button>
           <CategoryTree
@@ -194,7 +224,7 @@ export default function QuestionBankPage() {
             onSelect={setCategoryId}
           />
           <form
-            className="flex gap-1"
+            className="flex items-center gap-1.5 border-t border-border pt-3"
             onSubmit={(event) => {
               event.preventDefault();
               if (!newCategory.trim()) return;
@@ -209,7 +239,7 @@ export default function QuestionBankPage() {
               placeholder={t('newCategory')}
               value={newCategory}
               onChange={(event) => setNewCategory(event.target.value)}
-              className="h-8 text-xs"
+              className="h-9 text-sm"
             />
             <Button
               type="submit"
@@ -222,42 +252,56 @@ export default function QuestionBankPage() {
             </Button>
           </form>
         </aside>
-        <section className="flex min-w-0 flex-col gap-4">
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <div className="relative flex-1">
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-muted"
-                aria-hidden
-              />
+        <section aria-labelledby="qbank-questions" className="flex min-w-0 flex-col gap-4">
+          <div className="flex flex-col gap-3 rounded-lg border border-card-border bg-surface p-4 shadow-sm">
+            <div className="flex items-center gap-2 px-1">
+              <SlidersHorizontal className="size-4 text-primary" aria-hidden />
+              <h2 id="qbank-questions" className="flex-1 text-lg">
+                {t('questionsTitle')}
+              </h2>
+              {questions.isSuccess ? (
+                <span className="rounded-full bg-surface-muted px-2.5 py-0.5 text-label-md text-text-muted">
+                  {questions.hasNextPage ? `${list.length}+` : list.length}
+                  {filtered ? ` · ${t('filtered')}` : ''}
+                </span>
+              ) : null}
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="relative flex-1">
+                <Search
+                  className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-text-muted"
+                  aria-hidden
+                />
+                <Input
+                  type="search"
+                  aria-label={t('search')}
+                  placeholder={t('search')}
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <NativeSelect
+                aria-label={t('filterType')}
+                value={type}
+                onChange={(event) => setType(event.target.value)}
+                className="sm:w-52"
+              >
+                <option value="">{t('allTypes')}</option>
+                {QUESTION_TYPES.map((option) => (
+                  <option key={option} value={option}>
+                    {t(`types.${option}`)}
+                  </option>
+                ))}
+              </NativeSelect>
               <Input
-                type="search"
-                aria-label={t('search')}
-                placeholder={t('search')}
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                className="pl-9"
+                aria-label={t('filterTag')}
+                placeholder={t('filterTag')}
+                value={tag}
+                onChange={(event) => setTag(event.target.value)}
+                className="sm:w-36"
               />
             </div>
-            <NativeSelect
-              aria-label={t('filterType')}
-              value={type}
-              onChange={(event) => setType(event.target.value)}
-              className="sm:w-48"
-            >
-              <option value="">{t('allTypes')}</option>
-              {QUESTION_TYPES.map((option) => (
-                <option key={option} value={option}>
-                  {t(`types.${option}`)}
-                </option>
-              ))}
-            </NativeSelect>
-            <Input
-              aria-label={t('filterTag')}
-              placeholder={t('filterTag')}
-              value={tag}
-              onChange={(event) => setTag(event.target.value)}
-              className="sm:w-36"
-            />
           </div>
           {questions.isLoading ? <SkeletonList label={tCommon('loading')} /> : null}
           {questions.isSuccess && list.length === 0 ? (
@@ -272,23 +316,26 @@ export default function QuestionBankPage() {
               }
             />
           ) : null}
-          <ul className="flex flex-col gap-2">
+          <ul className="flex flex-col gap-3">
             {list.map((question) => (
               <li
                 key={question.id}
-                className="flex items-center gap-3 rounded-lg border border-card-border bg-surface px-5 py-4 shadow-sm transition-shadow duration-fast hover:border-card-border-hover hover:shadow-md"
+                className="group flex items-center gap-3 rounded-lg border border-card-border bg-surface py-4 pl-5 pr-3 shadow-sm transition-[box-shadow,border-color] duration-fast focus-within:border-card-border-hover hover:border-card-border-hover hover:shadow-md sm:pl-6"
               >
                 <button
                   type="button"
-                  className="flex min-w-0 flex-1 flex-col gap-1.5 text-left"
+                  className="flex min-w-0 flex-1 flex-col gap-2 rounded-sm text-left focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus-ring/20"
                   onClick={() => setEditor({ open: true, id: question.id })}
                 >
                   <QuestionTypeTag type={question.type} />
-                  <span className="truncate font-heading text-base font-semibold hover:underline">
+                  <span className="truncate font-heading text-lg font-semibold group-hover:text-primary">
                     {question.title}
                   </span>
                   <span className="flex flex-wrap items-center gap-1.5 text-xs text-text-muted">
-                    v{question.version} · {formatRelative(question.updatedAt, locale)} ·{' '}
+                    <span className="rounded-full bg-surface-muted px-2 py-0.5 text-label-md">
+                      v{question.version}
+                    </span>
+                    {formatRelative(question.updatedAt, locale)} ·{' '}
                     {t('usedIn', { count: question.usedInQuizzes })}
                     {question.tags.map((entry) => (
                       <Badge key={entry} tone="info">
@@ -300,6 +347,16 @@ export default function QuestionBankPage() {
                 <Button
                   variant="ghost"
                   size="icon-sm"
+                  className="hidden sm:inline-flex"
+                  aria-label={t('editQuestion', { title: question.title })}
+                  onClick={() => setEditor({ open: true, id: question.id })}
+                >
+                  <Pencil aria-hidden />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="hover:bg-danger-soft hover:text-danger"
                   aria-label={t('deleteQuestion', { title: question.title })}
                   onClick={() => remove.mutate(question.id)}
                 >

@@ -36,7 +36,7 @@ export function StatCard({
     <section
       aria-label={label}
       className={cn(
-        'flex min-w-0 flex-col gap-3 rounded-md border border-card-border bg-surface p-4 shadow-sm sm:p-5',
+        'flex min-w-0 flex-col gap-3 rounded-lg border border-card-border bg-surface p-5 shadow-sm transition-shadow duration-fast hover:shadow-md sm:p-6',
         className,
       )}
     >
@@ -53,7 +53,9 @@ export function StatCard({
         <h2 className="min-w-0 font-sans text-label-md uppercase text-text-muted">{label}</h2>
       </div>
       <p className="flex min-w-0 items-baseline gap-1.5">
-        <span className="truncate font-heading text-3xl font-bold tracking-tight">{value}</span>
+        <span className="truncate font-heading text-3xl font-bold tracking-tight sm:text-4xl">
+          {value}
+        </span>
         {unit ? <span className="truncate text-sm text-text-muted">{unit}</span> : null}
       </p>
       {footer ? <div className="text-xs text-text-muted">{footer}</div> : null}

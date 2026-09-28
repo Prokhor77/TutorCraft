@@ -17,9 +17,10 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { GradeCellView } from '@/components/gradebook/grade-cell';
 import { QueueCard } from '@/components/grading/queue-card';
+import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { LoadMore } from '@/components/ui/load-more';
-import { PageHeader } from '@/components/ui/page-header';
+import { Breadcrumbs, PageHeader, Panel } from '@/components/ui/page-header';
 import { Progress } from '@/components/ui/progress';
 import { StatCard, StatGrid } from '@/components/ui/stat-card';
 import { ROUTES } from '@/features/auth/routes';
@@ -135,22 +136,32 @@ function GradebookJournal() {
   const columns = book.data.columns;
 
   return (
-    <div className="flex flex-col gap-4">
-      {setup.data ? (
-        <div className="flex flex-col gap-2">
-          <p className="text-sm">
-            <span className="text-text-muted">{t('formula')}: </span>
-            <span className="font-mono">{setup.data.formula}</span>
-          </p>
+    <section
+      aria-label={t('title')}
+      className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-card-border bg-surface shadow-sm"
+    >
+      {setup.data && setup.data.warnings.length > 0 ? (
+        <div className="flex flex-col gap-2 px-5 pt-5 sm:px-6">
           {setup.data.warnings.map((warning) => (
             <Alert key={warning.code + warning.message} tone="warning" title={warning.message} />
           ))}
         </div>
       ) : null}
-      <div className="flex flex-col gap-2 md:flex-row md:items-center">
-        <div className="relative md:w-64">
+      <div className="flex flex-col gap-3 p-5 sm:p-6 md:flex-row md:flex-wrap md:items-center">
+        <div className="flex min-w-0 flex-col gap-0.5 md:mr-auto">
+          <h2 className="text-lg">{t('title')}</h2>
+          {setup.data ? (
+            <p className="text-xs text-text-muted">
+              {t('formula')}:{' '}
+              <span className="rounded-full bg-surface-muted px-2 py-0.5 font-mono text-text">
+                {setup.data.formula}
+              </span>
+            </p>
+          ) : null}
+        </div>
+        <div className="relative md:w-60">
           <Search
-            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-muted"
+            className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-text-muted"
             aria-hidden
           />
           <Input
@@ -159,14 +170,14 @@ function GradebookJournal() {
             placeholder={t('search')}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            className="pl-9"
+            className="h-10 rounded-full border-transparent bg-surface-muted pl-10"
           />
         </div>
         <NativeSelect
           aria-label={t('group')}
           value={groupId}
           onChange={(event) => setGroupId(event.target.value)}
-          className="md:w-52"
+          className="h-10 rounded-full border-transparent bg-surface-muted md:w-48"
         >
           <option value="">{t('allGroups')}</option>
           {groups.data?.map((group) => (
@@ -175,7 +186,7 @@ function GradebookJournal() {
             </option>
           ))}
         </NativeSelect>
-        <div className="flex flex-wrap gap-2 md:ml-auto">
+        <div className="flex flex-wrap gap-2">
           {can(PERMISSIONS.gradebookConfigure) && setup.data ? (
             <GradebookSetupSheet courseId={course.id} setup={setup.data} />
           ) : null}
@@ -196,15 +207,17 @@ function GradebookJournal() {
         </div>
       </div>
       {columns.length === 0 ? (
-        <EmptyState icon={Table2} title={t('emptyTitle')} description={t('emptyText')} />
+        <div className="px-5 pb-5 sm:px-6 sm:pb-6">
+          <EmptyState icon={Table2} title={t('emptyTitle')} description={t('emptyText')} />
+        </div>
       ) : (
-        <div className="max-h-[70dvh] overflow-auto rounded-md border border-card-border bg-surface shadow-sm">
+        <div className="max-h-[70dvh] overflow-auto border-t border-border">
           <table className="w-full border-separate border-spacing-0 text-sm">
             <thead>
               <tr>
                 <th
                   scope="col"
-                  className="sticky left-0 top-0 z-30 min-w-32 border-b border-r border-border bg-surface-muted px-3 py-2 text-left text-xs font-semibold uppercase text-text-muted sm:min-w-48"
+                  className="sticky left-0 top-0 z-30 min-w-40 border-b border-r border-border bg-surface-muted py-3 pl-5 pr-3 text-left text-label-md uppercase text-text-muted sm:min-w-56 sm:pl-6"
                 >
                   {t('student')}
                 </th>
@@ -214,9 +227,9 @@ function GradebookJournal() {
                     <th
                       key={column.gradeItemId}
                       scope="col"
-                      className="sticky top-0 z-20 min-w-32 border-b border-border bg-surface-muted px-3 py-2 text-right text-xs font-semibold text-text-muted"
+                      className="sticky top-0 z-20 min-w-32 border-b border-border bg-surface-muted px-3 py-3 text-center text-label-md text-text-muted"
                     >
-                      <span className="flex items-center justify-end gap-1">
+                      <span className="flex items-center justify-center gap-1">
                         <span className="line-clamp-2">{column.name}</span>
                         {sourceItemId && can(PERMISSIONS.gradePublish) ? (
                           <Button
@@ -235,7 +248,7 @@ function GradebookJournal() {
                 })}
                 <th
                   scope="col"
-                  className="sticky top-0 z-20 min-w-24 border-b border-l border-border bg-surface-muted px-3 py-2 text-right text-xs font-semibold uppercase text-text-muted sm:right-0"
+                  className="sticky top-0 z-20 min-w-32 border-b border-l border-border bg-surface-muted py-3 pl-3 pr-5 text-right text-label-md uppercase text-text-muted sm:right-0 sm:pr-6"
                 >
                   {t('final')}
                 </th>
@@ -243,17 +256,20 @@ function GradebookJournal() {
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr key={row.userId} className="hover:bg-surface-muted/50">
+                <tr key={row.userId} className="group/row">
                   <th
                     scope="row"
-                    className="sticky left-0 z-10 border-b border-r border-border bg-surface px-3 py-1.5 text-left font-medium"
+                    className="sticky left-0 z-10 border-b border-r border-border bg-surface py-2.5 pl-5 pr-3 text-left font-medium group-hover/row:bg-surface-muted sm:pl-6"
                   >
-                    {row.userName}
+                    <span className="flex items-center gap-2.5">
+                      <Avatar name={row.userName} size="sm" />
+                      <span className="truncate">{row.userName}</span>
+                    </span>
                   </th>
                   {columns.map((column) => (
                     <td
                       key={column.gradeItemId}
-                      className="border-b border-border px-2 py-1 text-right"
+                      className="border-b border-border px-3 py-2 text-center group-hover/row:bg-surface-muted/60"
                     >
                       <GradeCellView
                         target={{
@@ -278,13 +294,22 @@ function GradebookJournal() {
                       />
                     </td>
                   ))}
-                  <td className="border-b border-l border-border bg-surface px-3 py-1.5 text-right font-semibold tabular-nums sm:sticky sm:right-0">
-                    {formatPercent(row.finalPercent, locale)}
-                    {row.finalLabel ? (
-                      <span className="block text-xs font-normal text-text-muted">
-                        {row.finalLabel}
+                  <td className="border-b border-l border-border bg-surface py-2 pl-3 pr-5 text-right group-hover/row:bg-surface-muted sm:sticky sm:right-0 sm:pr-6">
+                    <span className="flex flex-col items-end gap-1">
+                      <span className="font-heading font-bold tabular-nums">
+                        {formatPercent(row.finalPercent, locale)}
                       </span>
-                    ) : null}
+                      {row.finalPercent !== null ? (
+                        <Progress
+                          value={row.finalPercent}
+                          label={t('final')}
+                          className="h-1.5 w-20"
+                        />
+                      ) : null}
+                      {row.finalLabel ? (
+                        <span className="text-xs text-text-muted">{row.finalLabel}</span>
+                      ) : null}
+                    </span>
                   </td>
                 </tr>
               ))}
@@ -292,8 +317,10 @@ function GradebookJournal() {
           </table>
         </div>
       )}
-      <p className="text-xs text-text-muted">{t('legend')}</p>
-    </div>
+      <p className="border-t border-border bg-surface-muted/60 px-5 py-3 text-xs text-text-muted sm:px-6">
+        {t('legend')}
+      </p>
+    </section>
   );
 }
 
@@ -325,7 +352,7 @@ function CourseQueue({ courseId }: { courseId: string }) {
   if (entries.length === 0)
     return <EmptyState icon={Inbox} title={t('emptyTitle')} description={t('emptyText')} />;
   return (
-    <div className="flex flex-col gap-3">
+    <Panel title={t('queue')} description={t('queueHint')}>
       <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
         {entries.map((entry) => (
           <li key={entry.id}>
@@ -339,7 +366,7 @@ function CourseQueue({ courseId }: { courseId: string }) {
         onClick={() => void queue.fetchNextPage()}
         label={tCommon('loadMore')}
       />
-    </div>
+    </Panel>
   );
 }
 
@@ -349,6 +376,7 @@ function CourseQueue({ courseId }: { courseId: string }) {
  */
 export default function AnalyticsPage() {
   const t = useTranslations('analytics');
+  const tShell = useTranslations('shell');
   const locale = useLocale();
   const router = useRouter();
   const params = useSearchParams();
@@ -374,11 +402,23 @@ export default function AnalyticsPage() {
   const avgProgress = average(reportRows.map((row) => row.percent));
   const finished = reportRows.filter((row) => row.percent >= PERCENT).length;
 
+  const changeTab = (value: string) =>
+    router.replace(`?${new URLSearchParams({ tab: value })}`, { scroll: false });
+
   return (
-    <div className="flex flex-col gap-gutter">
+    <Tabs value={tab} onValueChange={changeTab} className="flex flex-col gap-gutter">
       <PageHeader
         className="mb-0"
-        eyebrow={course.title}
+        breadcrumbs={
+          <Breadcrumbs
+            label={tShell('breadcrumbs')}
+            items={[
+              { label: tShell('myCourses'), href: ROUTES.courses },
+              { label: course.title, href: ROUTES.course(course.id) },
+              { label: tShell('analytics') },
+            ]}
+          />
+        }
         title={t('pageTitle')}
         meta={
           canGrade && queueEntries.length > 0 ? (
@@ -398,7 +438,25 @@ export default function AnalyticsPage() {
             </Button>
           ) : null
         }
-      />
+      >
+        <TabsList>
+          {tabs.map((entry) => (
+            <TabsTrigger key={entry} value={entry} className="group">
+              {t(entry)}
+              {entry === 'queue' && queueEntries.length > 0 ? (
+                <span className="min-w-5 rounded-full bg-primary px-1.5 text-center text-label-sm leading-5 text-primary-foreground group-data-[state=active]:bg-primary-foreground group-data-[state=active]:text-primary">
+                  {queueCount}
+                </span>
+              ) : null}
+              {entry === 'journal' && rows.length > 0 ? (
+                <span className="min-w-5 rounded-full bg-surface-container px-1.5 text-center text-label-sm leading-5 group-data-[state=active]:bg-primary-foreground group-data-[state=active]:text-primary">
+                  {rows.length}
+                </span>
+              ) : null}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </PageHeader>
       <StatGrid>
         <StatCard
           label={t('statAverage')}
@@ -438,34 +496,15 @@ export default function AnalyticsPage() {
           />
         ) : null}
       </StatGrid>
-      <Tabs
-        value={tab}
-        onValueChange={(value) =>
-          router.replace(`?${new URLSearchParams({ tab: value })}`, { scroll: false })
-        }
-      >
-        <TabsList>
-          {tabs.map((entry) => (
-            <TabsTrigger key={entry} value={entry}>
-              {t(entry)}
-              {entry === 'queue' && queueEntries.length > 0 ? (
-                <span className="rounded-full bg-primary px-1.5 text-label-sm text-primary-foreground">
-                  {queueCount}
-                </span>
-              ) : null}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-        <TabsContent value="queue">
-          <CourseQueue courseId={course.id} />
-        </TabsContent>
-        <TabsContent value="journal">
-          <GradebookJournal />
-        </TabsContent>
-        <TabsContent value="progress">
-          <ProgressReport courseId={course.id} />
-        </TabsContent>
-      </Tabs>
-    </div>
+      <TabsContent value="queue" className="mt-0">
+        <CourseQueue courseId={course.id} />
+      </TabsContent>
+      <TabsContent value="journal" className="mt-0">
+        <GradebookJournal />
+      </TabsContent>
+      <TabsContent value="progress" className="mt-0">
+        <ProgressReport courseId={course.id} />
+      </TabsContent>
+    </Tabs>
   );
 }

@@ -26,10 +26,18 @@ class PermissionResolverTest {
     }
 
     @Test
-    void tenantAdminHasEverythingExceptPlatform() {
+    void schoolOwnerRunsCoursesButHasNoAdministration() {
         Set<Permission> result = resolver.resolve(List.of(new RoleGrant("tenant_admin", "tenant", null)), List.of(), Optional.empty());
 
-        assertThat(result).contains(Permission.COURSE_EDIT, Permission.AUDIT_VIEW).doesNotContain(Permission.PLATFORM_MANAGE);
+        assertThat(result).contains(Permission.COURSE_CREATE, Permission.COURSE_EDIT, Permission.GRADE_EDIT)
+                .doesNotContainAnyElementsOf(SystemRole.adminOnly());
+    }
+
+    @Test
+    void platformAdminHasEverything() {
+        Set<Permission> result = resolver.resolve(List.of(new RoleGrant("platform_admin", "platform", null)), List.of(), Optional.empty());
+
+        assertThat(result).containsAll(SystemRole.adminOnly()).contains(Permission.COURSE_EDIT);
     }
 
     @Test

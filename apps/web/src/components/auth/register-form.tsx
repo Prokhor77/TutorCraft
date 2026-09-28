@@ -2,7 +2,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { AtSign, Lock } from 'lucide-react';
+import { ArrowRight, AtSign, Lock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -125,13 +125,18 @@ export function RegisterForm() {
         >
           <Input autoComplete="organization" {...form.register('schoolName')} />
         </Field>
-        <Button type="submit" size="lg" loading={register.isPending}>
-          {t('register')}
+        <Button
+          type="submit"
+          size="lg"
+          loading={register.isPending}
+          className="mt-2 h-14 text-base"
+        >
+          {t('register')} <ArrowRight aria-hidden />
         </Button>
       </form>
       <p className="mt-6 text-center text-sm text-text-muted">
         {t('haveAccount')}{' '}
-        <Link href={ROUTES.login} className="font-medium text-primary hover:underline">
+        <Link href={ROUTES.login} className="rounded-sm font-semibold text-primary hover:underline">
           {t('loginLink')}
         </Link>
       </p>

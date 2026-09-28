@@ -19,7 +19,7 @@ import { useLogout, useMe, useUpdateMe } from '@/features/auth/use-auth';
 import { roleHints, useMyCourses } from '@/features/courses/use-my-courses';
 import { LOCALES } from '@/i18n/config';
 import { THEMES, useUiStore } from '@/stores/ui-store';
-import { isTenantAdminHint } from '@/lib/access/permissions';
+import { isPlatformAdminHint } from '@/lib/access/permissions';
 import { fullName } from '@/lib/utils/format';
 
 export function UserMenu() {
@@ -35,7 +35,7 @@ export function UserMenu() {
   const { data: courses } = useMyCourses();
   const navigation = buildNavigation({
     ...roleHints(courses),
-    isAdmin: isTenantAdminHint(me?.tenantRoles),
+    isAdmin: isPlatformAdminHint(me?.tenantRoles),
   });
   if (!me) return null;
   const name = fullName(me);
@@ -107,7 +107,7 @@ export function UserMenu() {
             <Bell aria-hidden /> {t('notificationSettings')}
           </Link>
         </DropdownMenuItem>
-        {isTenantAdminHint(me.tenantRoles) ? (
+        {isPlatformAdminHint(me.tenantRoles) ? (
           <DropdownMenuItem asChild>
             <Link href={ROUTES.admin}>
               <Settings aria-hidden /> {t('admin')}

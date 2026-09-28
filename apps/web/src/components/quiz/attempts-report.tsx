@@ -1,13 +1,16 @@
 'use client';
-import { RefreshCw, UserCog } from 'lucide-react';
+import { BarChart3, RefreshCw, UserCog } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { Avatar } from '@/components/ui/avatar';
+import { Badge, type BadgeTone } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Field } from '@/components/ui/field';
 import { DateTimeInput, Input, NativeSelect } from '@/components/ui/input';
 import { LoadMore } from '@/components/ui/load-more';
+import { Panel } from '@/components/ui/page-header';
 import { SkeletonList } from '@/components/ui/skeleton';
 import { Table, TableContainer, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 import { toast } from '@/components/ui/toast';
@@ -105,6 +108,12 @@ function OverrideDialog({ itemId }: { itemId: string }) {
   );
 }
 
+const STATE_TONES: Record<string, BadgeTone> = {
+  in_progress: 'warning',
+  finished: 'success',
+  abandoned: 'neutral',
+};
+
 /** FR-QUIZ-07: attempts table, regrade all after a key fix (AC-5), overrides (FR-QUIZ-06). */
 export function AttemptsReport({ itemId }: { itemId: string }) {
   const t = useTranslations('quizReport');
@@ -115,31 +124,43 @@ export function AttemptsReport({ itemId }: { itemId: string }) {
   const regrade = useRegrade(itemId);
   const rows = flattenPages(attempts.data?.pages);
   return (
-    <div className="flex flex-col gap-4">
-      {can(PERMISSIONS.quizManage) ? (
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            loading={regrade.isPending}
-            onClick={() =>
-              regrade.mutate(undefined, {
-                onSuccess: ({ regraded }) =>
-                  toast({ tone: 'success', title: t('regraded', { count: regraded }) }),
-              })
-            }
-          >
-            <RefreshCw aria-hidden /> {t('regrade')}
-          </Button>
-          <OverrideDialog itemId={itemId} />
-        </div>
-      ) : null}
+    <Panel
+      title={
+        <span className="flex items-center gap-2.5">
+          <span className="flex size-9 items-center justify-center rounded-full bg-primary-soft text-primary">
+            <BarChart3 className="size-[1.125rem]" aria-hidden />
+          </span>
+          {t('title')}
+        </span>
+      }
+      description={t('description')}
+      actions={
+        can(PERMISSIONS.quizManage) ? (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              loading={regrade.isPending}
+              onClick={() =>
+                regrade.mutate(undefined, {
+                  onSuccess: ({ regraded }) =>
+                    toast({ tone: 'success', title: t('regraded', { count: regraded }) }),
+                })
+              }
+            >
+              <RefreshCw aria-hidden /> {t('regrade')}
+            </Button>
+            <OverrideDialog itemId={itemId} />
+          </div>
+        ) : null
+      }
+    >
       {attempts.isLoading ? <SkeletonList label={tCommon('loading')} /> : null}
       {attempts.isSuccess && rows.length === 0 ? (
         <EmptyState icon={RefreshCw} title={t('emptyTitle')} description={t('emptyText')} />
       ) : null}
       {rows.length > 0 ? (
-        <TableContainer>
+        <TableContainer className="rounded-md border-border shadow-none">
           <Table>
             <THead>
               <tr>
@@ -148,18 +169,37 @@ export function AttemptsReport({ itemId }: { itemId: string }) {
                 <TH>{t('state')}</TH>
                 <TH>{t('started')}</TH>
                 <TH>{t('finished')}</TH>
-                <TH>{t('score')}</TH>
+                <TH className="text-right">{t('score')}</TH>
               </tr>
             </THead>
             <TBody>
               {rows.map((row) => (
                 <TR key={row.id}>
-                  <TD className="font-medium">{row.userName}</TD>
-                  <TD>{row.number}</TD>
-                  <TD>{t(`states.${row.state}`)}</TD>
-                  <TD>{formatDateTime(row.startedAt, locale)}</TD>
-                  <TD>{row.finishedAt ? formatDateTime(row.finishedAt, locale) : '—'}</TD>
-                  <TD>{formatScore(row.score, row.maxScore, locale)}</TD>
+                  <TD>
+                    <span className="flex items-center gap-2.5 font-medium">
+                      <Avatar name={row.userName} size="sm" />
+                      {row.userName}
+                    </span>
+                  </TD>
+                  <TD>
+                    <span className="rounded-full bg-surface-muted px-2.5 py-0.5 text-label-md">
+                      #{row.number}
+                    </span>
+                  </TD>
+                  <TD>
+                    <Badge tone={STATE_TONES[row.state] ?? 'neutral'} dot>
+                      {t(`states.${row.state}`)}
+                    </Badge>
+                  </TD>
+                  <TD className="whitespace-nowrap text-text-muted">
+                    {formatDateTime(row.startedAt, locale)}
+                  </TD>
+                  <TD className="whitespace-nowrap text-text-muted">
+                    {row.finishedAt ? formatDateTime(row.finishedAt, locale) : '—'}
+                  </TD>
+                  <TD className="whitespace-nowrap text-right font-heading font-semibold">
+                    {formatScore(row.score, row.maxScore, locale)}
+                  </TD>
                 </TR>
               ))}
             </TBody>
@@ -172,6 +212,6 @@ export function AttemptsReport({ itemId }: { itemId: string }) {
         onClick={() => void attempts.fetchNextPage()}
         label={tCommon('loadMore')}
       />
-    </div>
+    </Panel>
   );
 }

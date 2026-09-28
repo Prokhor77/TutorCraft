@@ -10,7 +10,7 @@ export function SkeletonList({ rows = 4, label }: { rows?: number; label: string
     <div role="status" aria-live="polite" className="flex flex-col gap-3">
       <span className="sr-only">{label}</span>
       {Array.from({ length: rows }, (_, index) => (
-        <Skeleton key={index} className="h-16 w-full" />
+        <Skeleton key={index} className="h-20 w-full rounded-lg" />
       ))}
     </div>
   );

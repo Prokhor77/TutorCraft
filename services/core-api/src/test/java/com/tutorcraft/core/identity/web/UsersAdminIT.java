@@ -15,46 +15,85 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
-/** Администрирование пользователей: разрешено / запрещено / чужой tenant (DoD, AC-1). */
+/**
+ * Администрирование пользователей: только главный администратор (platform_admin), в выбранной школе через
+ * X-Tenant-Id; владелец школы и студент — 403; чужой tenant — 404 (DoD, AC-1).
+ */
 class UsersAdminIT extends IntegrationTest {
 
+    private static final String TENANT_HEADER = "X-Tenant-Id";
+
+    private UUID platformTenant;
+    private UUID platformAdmin;
     private UUID tenantA;
-    private UUID adminA;
+    private UUID ownerA;
     private UUID tenantB;
     private UUID userB;
 
     @BeforeEach
     void setUp() {
+        platformTenant = createTenant("platform");
+        platformAdmin = createPlatformAdmin(platformTenant, unique("root"));
         tenantA = createTenant("school-a");
-        adminA = createUser(tenantA, unique("admin"));
-        grantTenantRole(tenantA, adminA, "tenant_admin");
+        ownerA = createUser(tenantA, unique("owner"));
+        grantTenantRole(tenantA, ownerA, "tenant_admin");
         tenantB = createTenant("school-b");
         userB = createUser(tenantB, unique("user"));
     }
 
     @Test
-    void adminSeesUsersOfOwnTenant() throws Exception {
-        mvc.perform(get("/api/v1/users/" + adminA).header(HttpHeaders.AUTHORIZATION, bearer(tenantA, adminA)))
+    void platformAdminSeesUsersOfSelectedSchoolOnly() throws Exception {
+        String auth = platformAdminBearer(platformTenant, platformAdmin);
+
+        mvc.perform(get("/api/v1/users/" + ownerA).header(HttpHeaders.AUTHORIZATION, auth).header(TENANT_HEADER, tenantA))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.tenantRoles[0]").value("tenant_admin"));
-        mvc.perform(get("/api/v1/users").header(HttpHeaders.AUTHORIZATION, bearer(tenantA, adminA)))
+        mvc.perform(get("/api/v1/users").header(HttpHeaders.AUTHORIZATION, auth).header(TENANT_HEADER, tenantA))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.items[*].id", hasItem(adminA.toString())))
+            .andExpect(jsonPath("$.items[*].id", hasItem(ownerA.toString())))
             .andExpect(jsonPath("$.items[*].id", not(hasItem(userB.toString()))));
     }
 
     @Test
-    void userOfAnotherTenantIsNotFound() throws Exception {
-        String auth = bearer(tenantA, adminA);
+    void userOfAnotherSchoolIsNotFound() throws Exception {
+        String auth = platformAdminBearer(platformTenant, platformAdmin);
 
-        mvc.perform(get("/api/v1/users/" + userB).header(HttpHeaders.AUTHORIZATION, auth))
+        mvc.perform(get("/api/v1/users/" + userB).header(HttpHeaders.AUTHORIZATION, auth).header(TENANT_HEADER, tenantA))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.code").value("user.not_found"));
-        mvc.perform(patch("/api/v1/users/" + userB).header(HttpHeaders.AUTHORIZATION, auth)
+        mvc.perform(patch("/api/v1/users/" + userB).header(HttpHeaders.AUTHORIZATION, auth).header(TENANT_HEADER, tenantA)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"suspended\"}"))
             .andExpect(status().isNotFound());
-        mvc.perform(post("/api/v1/users/" + userB + "/invite").header(HttpHeaders.AUTHORIZATION, auth))
+        mvc.perform(post("/api/v1/users/" + userB + "/invite").header(HttpHeaders.AUTHORIZATION, auth)
+                .header(TENANT_HEADER, tenantA))
             .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void schoolOwnerHasNoAdministration() throws Exception {
+        String auth = bearer(tenantA, ownerA);
+
+        mvc.perform(get("/api/v1/users").header(HttpHeaders.AUTHORIZATION, auth))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.code").value("access.denied"));
+        mvc.perform(patch("/api/v1/tenant").header(HttpHeaders.AUTHORIZATION, auth).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Hijacked\",\"defaultLocale\":\"ru\",\"defaultTimezone\":\"Europe/Moscow\",\"version\":0}"))
+            .andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/audit-log").header(HttpHeaders.AUTHORIZATION, auth)).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/platform/tenants").header(HttpHeaders.AUTHORIZATION, auth)).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void tenantHeaderIsIgnoredForNonAdmins() throws Exception {
+        mvc.perform(get("/api/v1/users").header(HttpHeaders.AUTHORIZATION, bearer(tenantA, ownerA)).header(TENANT_HEADER, tenantB))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void forgedPlatformRoleClaimWithoutGrantIsDenied() throws Exception {
+        mvc.perform(get("/api/v1/users").header(HttpHeaders.AUTHORIZATION, platformAdminBearer(tenantA, ownerA))
+                .header(TENANT_HEADER, tenantB))
+            .andExpect(status().isForbidden());
     }
 
     @Test
@@ -65,7 +104,7 @@ class UsersAdminIT extends IntegrationTest {
         mvc.perform(get("/api/v1/users").header(HttpHeaders.AUTHORIZATION, auth))
             .andExpect(status().isForbidden())
             .andExpect(jsonPath("$.code").value("access.denied"));
-        mvc.perform(get("/api/v1/users/" + adminA).header(HttpHeaders.AUTHORIZATION, auth))
+        mvc.perform(get("/api/v1/users/" + ownerA).header(HttpHeaders.AUTHORIZATION, auth))
             .andExpect(status().isForbidden());
         mvc.perform(post("/api/v1/users").header(HttpHeaders.AUTHORIZATION, auth).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"email\":\"" + unique("new") + "\",\"firstName\":\"A\",\"lastName\":\"B\",\"sendInvite\":false}"))
@@ -76,13 +115,24 @@ class UsersAdminIT extends IntegrationTest {
     }
 
     @Test
+    void platformRoleCannotBeGrantedThroughApi() throws Exception {
+        mvc.perform(patch("/api/v1/users/" + ownerA).header(HttpHeaders.AUTHORIZATION, platformAdminBearer(platformTenant, platformAdmin))
+                .header(TENANT_HEADER, tenantA).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"tenantRoles\":[\"platform_admin\",\"tenant_admin\"]}"))
+            .andExpect(status().isBadRequest());
+        Integer platformGrants = jdbc.sql("SELECT count(*) FROM role_assignments WHERE user_id = :userId AND context_type = 'platform'")
+            .param("userId", ownerA).query(Integer.class).single();
+        org.assertj.core.api.Assertions.assertThat(platformGrants).isZero();
+    }
+
+    @Test
     void unauthenticatedRequestIsRejected() throws Exception {
         mvc.perform(get("/api/v1/users")).andExpect(status().isUnauthorized());
     }
 
     @Test
     void adminCannotSuspendSelf() throws Exception {
-        mvc.perform(patch("/api/v1/users/" + adminA).header(HttpHeaders.AUTHORIZATION, bearer(tenantA, adminA))
+        mvc.perform(patch("/api/v1/users/" + platformAdmin).header(HttpHeaders.AUTHORIZATION, platformAdminBearer(platformTenant, platformAdmin))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"suspended\"}"))
             .andExpect(status().isUnprocessableEntity())
             .andExpect(jsonPath("$.code").value("user.cannot_suspend_self"));

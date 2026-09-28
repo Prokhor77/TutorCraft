@@ -1,0 +1,169 @@
+name: Deploy to Production
+
+# Запускается после успешного ci.yml на main (образы собираются из проверенного коммита),
+# либо вручную. Собираем все четыре образа всегда: с кэшем слоёв неизменённые собираются за
+# секунды, а paths-filter поверх workflow_run — лишняя точка отказа.
+#
+# Секреты репозитория:  PROD_HOST, PROD_USER, PROD_SSH_KEY, PROD_PATH (например /opt/tutorcraft),
+#                       GHCR_PULL_USER, GHCR_PULL_TOKEN (PAT с правом read:packages — для docker pull на сервере).
+# Переменные (vars):    PROD_DOMAIN (например tutorcraft.example) — попадает в NEXT_PUBLIC_WS_URL при сборке web.
+
+on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "What to do"
+        required: true
+        default: "all"
+        type: choice
+        options: [all, deploy-only]
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    outputs:
+      ref: ${{ steps.pick.outputs.ref }}
+      build: ${{ steps.pick.outputs.build }}
+    steps:
+      - id: pick
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            echo "ref=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+            [ "${{ inputs.target }}" = "deploy-only" ] && echo "build=false" >> "$GITHUB_OUTPUT" || echo "build=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  web:
+    needs: gate
+    if: needs.gate.outputs.build == 'true'
+    uses: ./.github/workflows/_build-image.yml
+    with:
+      image: web
+      context: ./apps/web
+      ref: ${{ needs.gate.outputs.ref }}
+      build_args: |
+        NEXT_PUBLIC_WS_URL=wss://${{ vars.PROD_DOMAIN }}/ws
+
+  core-api:
+    needs: gate
+    if: needs.gate.outputs.build == 'true'
+    uses: ./.github/workflows/_build-image.yml
+    with:
+      image: core-api
+      context: ./services/core-api
+      ref: ${{ needs.gate.outputs.ref }}
+
+  media-worker:
+    needs: gate
+    if: needs.gate.outputs.build == 'true'
+    uses: ./.github/workflows/_build-image.yml
+    with:
+      image: media-worker
+      # Контекст ./services: воркеры делят services/workerkit.
+      context: ./services
+      dockerfile: services/media-worker/Dockerfile
+      ref: ${{ needs.gate.outputs.ref }}
+
+  notifier:
+    needs: gate
+    if: needs.gate.outputs.build == 'true'
+    uses: ./.github/workflows/_build-image.yml
+    with:
+      image: notifier
+      context: ./services
+      dockerfile: services/notifier/Dockerfile
+      ref: ${{ needs.gate.outputs.ref }}
+
+  deploy:
+    needs: [gate, web, core-api, media-worker, notifier]
+    # always(): deploy-only пропускает сборку, но при упавшей сборке деплоить нельзя.
+    if: always() && needs.gate.result == 'success' && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.gate.outputs.ref }}
+
+      # Схемные ошибки compose ловим на раннере, а не на сервере с уже лежащим продом.
+      - name: Validate compose file
+        # Пустой .env: compose требует наличия файла из env_file даже для `config`.
+        run: |
+          touch .env
+          docker compose -f docker-compose.prod.yml config -q
+        env:
+          POSTGRES_DB: x
+          POSTGRES_USER: x
+          POSTGRES_PASSWORD: x
+          REDIS_PASSWORD: x
+          MONGO_DB: x
+          S3_ENDPOINT: x
+          S3_BUCKET: x
+          S3_ACCESS_KEY: x
+          S3_SECRET_KEY: x
+
+      # Compose-файл и скрипт топиков всегда льём из репозитория: иначе правки лимитов/образов
+      # не доезжают до сервера до ручного git pull.
+      - name: Sync deploy files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          source: "docker-compose.prod.yml,infra/kafka/create-topics.sh,infra/deploy/backup.sh"
+          target: ${{ secrets.PROD_PATH }}
+          overwrite: true
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          GHCR_PULL_USER: ${{ secrets.GHCR_PULL_USER }}
+          GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          envs: GHCR_PULL_USER,GHCR_PULL_TOKEN
+          script: |
+            set -e
+            cd "${{ secrets.PROD_PATH }}"
+            test -f .env || { echo ".env отсутствует в $(pwd) — см. docs/deployment.md"; exit 1; }
+            chmod +x infra/deploy/backup.sh
+
+            # Логин под пользователем деплоя TutorCraft (свой ~/.docker/config.json):
+            # учётка confeek (admst-dz) в другом пользователе не затирается.
+            echo "$GHCR_PULL_TOKEN" | docker login ghcr.io -u "$GHCR_PULL_USER" --password-stdin
+
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+
+            # Ждём healthcheck'и явно: `up --wait` по-разному трактует одноразовый kafka-init
+            # в разных версиях compose. core-api стартует до ~2 минут (Flyway + прогрев).
+            for svc in tutorcraft_core_api tutorcraft_web tutorcraft_notifier tutorcraft_media_worker; do
+              for attempt in $(seq 1 60); do
+                status=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$svc" 2>/dev/null || echo missing)
+                [ "$status" = "healthy" ] && { echo "$svc: healthy"; break; }
+                if [ "$attempt" = "60" ]; then
+                  echo "$svc не поднялся (status=$status)"
+                  docker logs --tail=100 "$svc" || true
+                  exit 1
+                fi
+                sleep 5
+              done
+            done
+            # Только dangling-слои; system prune запрещён — на хосте живут образы confeek.
+            docker image prune -f

@@ -80,6 +80,12 @@ class JdbcRoleRepository implements RoleRepository {
     }
 
     @Override
+    public int deletePlatformGrantsExcept(UUID userId) {
+        return jdbc.sql("DELETE FROM role_assignments WHERE context_type = 'platform' AND user_id <> :userId")
+            .param("userId", userId).update();
+    }
+
+    @Override
     public void insertGrant(UUID tenantId, UUID userId, String roleKey, String contextType, UUID contextId, UUID actorId) {
         jdbc.sql("""
                 INSERT INTO role_assignments (id, tenant_id, user_id, role_id, context_type, context_id, created_at, created_by)

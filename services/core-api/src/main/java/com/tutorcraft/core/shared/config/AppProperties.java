@@ -25,7 +25,8 @@ public record AppProperties(
         @Valid @NotNull Payments payments,
         @Valid @NotNull Quiz quiz,
         @Valid @NotNull Trash trash,
-        @Valid @NotNull Seed seed) {
+        @Valid @NotNull Seed seed,
+        @Valid @NotNull Admin admin) {
 
     private static final int MIN_SECRET_LENGTH = 32;
 
@@ -77,5 +78,21 @@ public record AppProperties(
     }
 
     public record Seed(boolean enabled, String demoPassword) {
+    }
+
+    /**
+     * Главный администратор платформы (ADMIN_EMAIL / ADMIN_PASSWORD). Единственная учётная запись с доступом
+     * к администрированию; создаётся или обновляется при старте. Пусто — админ-аккаунт не создаётся.
+     */
+    public record Admin(String email, String password, String firstName, String lastName) {
+
+        public boolean configured() {
+            return email != null && !email.isBlank() && password != null && !password.isBlank();
+        }
+
+        @Override
+        public String toString() {
+            return "Admin[email=" + email + ", password=***]";
+        }
     }
 }

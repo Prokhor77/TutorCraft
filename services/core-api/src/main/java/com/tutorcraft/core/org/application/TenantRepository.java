@@ -16,6 +16,9 @@ public interface TenantRepository {
 
     Optional<TenantInfo> findBySlug(String slug);
 
+    /** Школы платформы (без служебного tenant главного администратора), новые сверху. */
+    List<TenantSummary> list(String query, int limit);
+
     Optional<TenantSettingsView> settings(UUID id);
 
     /** Белый список хостов встраиваний; пусто — tenant не найден или список пуст. */
@@ -30,6 +33,9 @@ public interface TenantRepository {
     record TenantSettingsView(UUID id, String slug, String name, UUID logoFileId, String primaryColor, String defaultLocale,
                               String defaultTimezone, com.tutorcraft.core.org.OrgApi.PasswordPolicy passwordPolicy,
                               List<String> embedWhitelist, long version) {
+    }
+
+    record TenantSummary(UUID id, String slug, String name, String status, java.time.Instant createdAt, long usersCount) {
     }
 
     record TenantSettingsUpdate(String name, UUID logoFileId, String primaryColor, String defaultLocale,

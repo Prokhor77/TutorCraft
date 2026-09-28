@@ -18,7 +18,7 @@ import { CourseProvider } from '@/features/courses/course-context';
 import { useCourse } from '@/features/courses/use-courses';
 import { roleHints, useMyCourses } from '@/features/courses/use-my-courses';
 import { useItem } from '@/features/items/use-item';
-import { isTenantAdminHint } from '@/lib/access/permissions';
+import { isPlatformAdminHint } from '@/lib/access/permissions';
 import type { ItemType } from '@/lib/api/schemas/common';
 import type { Course } from '@/lib/api/schemas/courses';
 import { cn } from '@/lib/utils/cn';
@@ -43,7 +43,7 @@ type PillLink = {
 /** Pill section tabs (Stitch header). */
 function PillTabs({ links, label }: { links: PillLink[]; label: string }) {
   return (
-    <nav aria-label={label} className="min-w-0 overflow-x-auto">
+    <nav aria-label={label} className="scrollbar-none min-w-0 overflow-x-auto">
       <ul className="flex items-center gap-1 rounded-full bg-surface-muted p-1">
         {links.map((link) => (
           <li key={link.href}>
@@ -107,7 +107,7 @@ function useLocationKey(): string {
 function useGlobalNavigation(): NavItem[] {
   const me = useMe();
   const { data: courses } = useMyCourses();
-  return buildNavigation({ ...roleHints(courses), isAdmin: isTenantAdminHint(me?.tenantRoles) });
+  return buildNavigation({ ...roleHints(courses), isAdmin: isPlatformAdminHint(me?.tenantRoles) });
 }
 
 function GlobalTabs() {

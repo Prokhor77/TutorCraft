@@ -50,7 +50,7 @@ import { QuickCreateItem } from '../quick-create-item';
 import { BulkBar } from './bulk-bar';
 import { MODULE_SORT_PREFIX, ModuleSection, type ModuleHandlers } from './module-section';
 import { CourseTree } from './course-tree';
-import { ItemInspector } from './item-inspector';
+import { ItemInspector, ItemInspectorStats } from './item-inspector';
 import { CanvasAddBar, ItemWorkspace } from './item-workspace';
 
 const DRAG_ACTIVATION_DISTANCE_PX = 6;
@@ -104,7 +104,7 @@ function MobileCourseSummary({
           label={learner ? t('completedLabel') : t('readinessLabel')}
         />
       </Card>
-      <nav aria-label={t('modulesNav')} className="-mx-page-x overflow-x-auto px-page-x">
+      <nav aria-label={t('modulesNav')} className="-mx-page-x overflow-x-auto px-page-x scrollbar-none">
         <ul className="flex gap-2">
           {modules.map((module, index) => {
             const count = learner ? moduleProgress(module) : publishedProgress([module]);
@@ -444,10 +444,13 @@ export function CourseOutlineView() {
                 onBack={() => inspect(null)}
               />
               {!isDesktop ? (
-                <Card className="p-5">
-                  <h2 className="mb-4 text-lg">{tBuilder('inspector')}</h2>
-                  <ItemInspector itemId={inspectedId} courseId={course.id} />
-                </Card>
+                <>
+                  <Card className="p-5">
+                    <h2 className="mb-4 text-lg">{tBuilder('inspector')}</h2>
+                    <ItemInspector itemId={inspectedId} courseId={course.id} />
+                  </Card>
+                  <ItemInspectorStats itemId={inspectedId} courseId={course.id} />
+                </>
               ) : null}
               <CanvasAddBar onAdd={addAfterWorkspace} />
             </div>
@@ -499,9 +502,14 @@ export function CourseOutlineView() {
             aria-label={tBuilder('inspector')}
             className="sticky top-[calc(var(--size-header)+1rem)] w-inspector shrink-0"
           >
-            <Card className="max-h-[calc(100dvh-var(--size-header)-2rem)] overflow-y-auto p-5">
-              <ItemInspector itemId={inspectedId} courseId={course.id} />
-            </Card>
+            <div className="flex max-h-[calc(100dvh-var(--size-header)-2rem)] flex-col gap-4 overflow-y-auto">
+              <Card className="p-5">
+                <ItemInspector itemId={inspectedId} courseId={course.id} />
+              </Card>
+              {inspectedId ? (
+                <ItemInspectorStats itemId={inspectedId} courseId={course.id} />
+              ) : null}
+            </div>
           </aside>
         ) : null}
       </div>

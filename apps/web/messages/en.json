@@ -25,7 +25,10 @@
     "notFoundTitle": "Page not found",
     "pageDescription": "We are aware of the problem. Try reloading the page.",
     "pageTitle": "This page could not be displayed",
-    "retry": "Try again"
+    "retry": "Try again",
+    "notFoundEyebrow": "Error 404",
+    "pageEyebrow": "Glitch",
+    "goToCabinet": "Open dashboard"
   },
   "offline": {
     "dropped": "A queued action could not be completed",
@@ -380,7 +383,11 @@
     "orVia": "or sign in with",
     "newTeacherTitle": "New teacher?",
     "newTeacherLink": "Create your school for free",
-    "emailPlaceholder": "teacher@example.com"
+    "emailPlaceholder": "teacher@example.com",
+    "brandEyebrow": "Tutor studio",
+    "brandTitle": "Courses, quizzes and grading — in one studio",
+    "brandSubtitle": "Build a course, open enrolment and grade homework from a single queue.",
+    "brandStudentNote": "Learning with a tutor? Sign in with the details from your invitation — your teacher sends the link."
   },
   "join": {
     "title": "Course invitation",
@@ -402,7 +409,18 @@
     "byInvitation": "Enrolment by teacher invitation",
     "enrolCode": "Enrolment key",
     "enrolCodeOptional": "Enrolment key (if any)",
-    "enrolFree": "Enrol for free"
+    "enrolFree": "Enrol for free",
+    "catalogEyebrow": "Online school",
+    "coursesHeading": "School courses",
+    "coursesCount": "{count, plural, one {# course} other {# courses}}",
+    "teachersCount": "{count, plural, one {# teacher} other {# teachers}}",
+    "modulesCount": "{count, plural, one {# module} other {# modules}}",
+    "openCourse": "Learn more",
+    "allCourses": "All school courses",
+    "aboutCourse": "About the course",
+    "priceLabel": "Price",
+    "includesTitle": "What's inside",
+    "teacherLabel": "Teacher"
   },
   "checkout": {
     "loading": "Loading order…",
@@ -418,7 +436,8 @@
     "failedTitle": "Payment failed",
     "failedHint": "You were not charged. Try again or use another payment method.",
     "goToCourse": "Go to course",
-    "goHome": "Go home"
+    "goHome": "Go home",
+    "orderSummary": "Order details"
   },
   "notifications": {
     "title": "Notifications",
@@ -431,11 +450,13 @@
     "viewAll": "All notifications",
     "settings": "Settings",
     "open": "Open",
-    "new": "New"
+    "new": "New",
+    "loadError": "Could not load notifications"
   },
   "notificationSettings": {
     "title": "Notification settings",
     "description": "Choose what to be notified about and where.",
+    "matrixTitle": "Events and channels",
     "category": "Event",
     "channels": {
       "web": "In app",
@@ -528,7 +549,9 @@
     "overdueHint": "Submit as soon as possible",
     "todayHint": "Due today",
     "weekHint": "Due this week",
-    "avgProgress": "Average progress"
+    "avgProgress": "Average progress",
+    "myCourses": "My courses",
+    "allCourses": "All courses"
   },
   "courses": {
     "pageTitle": "Courses",
@@ -572,6 +595,7 @@
     "tabMyGrades": "My grades",
     "sections": "Course sections",
     "renameCourse": "Rename course",
+    "headerCounts": "{modules, plural, one {# module} other {# modules}} · {items, plural, one {# item} other {# items}}",
     "viewAsStudent": "View as student",
     "previewBanner": "Preview mode: this is how students see the course. Hidden items and editing tools are not shown.",
     "trash": "Trash",
@@ -722,6 +746,7 @@
   },
   "trash": {
     "title": "Trash",
+    "count": "{count, plural, =0 {Empty} one {# object} other {# objects}}",
     "retention": "Deleted items are kept for 30 days, then removed permanently.",
     "emptyTitle": "Trash is empty",
     "emptyText": "Deleted modules and items appear here and can be restored.",
@@ -735,6 +760,11 @@
     }
   },
   "itemView": {
+    "backToCourse": "Back to course",
+    "backToOutline": "Course outline",
+    "prevItem": "Previous",
+    "nextItem": "Next",
+    "pagerLabel": "Course navigation",
     "breadcrumbs": "Breadcrumbs",
     "tabs": {
       "content": "Content",
@@ -745,6 +775,11 @@
       "settings": "Settings"
     },
     "contentLabel": "Item content",
+    "tabsLabel": "Item sections",
+    "lockedChip": "Locked",
+    "factsTitle": "Details",
+    "unlimited": "Unlimited",
+    "conditionsCount": "{count, plural, =0 {None} one {# condition} other {# conditions}}",
     "markComplete": "Mark as done",
     "markedComplete": "Done",
     "openLink": "Open link",
@@ -1081,14 +1116,31 @@
     "incorrect": "Incorrect",
     "correctAnswer": "Correct answer",
     "backToQuiz": "Back to quiz",
+    "rulesTitle": "Attempt rules",
+    "openNow": "Open",
+    "autosaveHint": "Answers are saved automatically — you can come back to the attempt later.",
+    "answeredOf": "{answered} of {total} answered",
+    "progressTitle": "Progress",
+    "resultEyebrow": "Attempt finished",
+    "scoreUnit": "points",
+    "pending": "Pending review",
+    "answersTitle": "Answer review",
+    "feedback": "Feedback",
     "points": "{points, plural, one {# pt} other {# pts}}",
     "questionOf": "Question {number} of {total}"
   },
   "quizSlots": {
     "addFromBank": "Add from bank",
     "addRandom": "Random questions",
+    "newQuestion": "New question",
+    "createNew": "Create a new question",
     "search": "Search questions",
-    "bankEmpty": "No questions found. Create them in the course question bank.",
+    "bankHint": "Questions from every quiz of the course. Questions created in the builder land here too.",
+    "bankEmpty": "The bank is empty. Create a new question — it is saved to the course bank and can be reused in other quizzes.",
+    "bankNoMatch": "Nothing matches the filter.",
+    "allCategories": "All categories",
+    "alreadyInQuiz": "Already in quiz",
+    "added": "{count, plural, one {# question added} other {# questions added}}",
     "addSelected": "Add ({count})",
     "randomHint": "Each attempt gets random questions from the selected category or tag.",
     "category": "Category",
@@ -1097,7 +1149,7 @@
     "count": "Count",
     "add": "Add",
     "emptyTitle": "No questions in this quiz yet",
-    "emptyText": "Add questions from the bank manually or a random selection.",
+    "emptyText": "Create a new question or add existing ones from the course bank.",
     "randomSlot": "{count, plural, one {# random question} other {# random questions}} · {source}",
     "points": "Points",
     "page": "Page",
@@ -1105,6 +1157,7 @@
     "moveDown": "Move down",
     "remove": "Remove",
     "saved": "Quiz questions saved",
+    "unsaved": "Unsaved changes",
     "drag": "Drag question {index}",
     "number": "Question {index}",
     "random": "Random question",
@@ -1131,6 +1184,8 @@
       "finished": "Finished",
       "abandoned": "Abandoned"
     },
+    "title": "Student attempts",
+    "description": "Every attempt at this quiz: state, time and score.",
     "started": "Started",
     "finished": "Finished",
     "score": "Score"
@@ -1229,6 +1284,10 @@
     "weight": "Question weight",
     "pointsUnit": "points",
     "applyChanges": "Apply changes",
+    "statBankQuestions": "Questions in bank",
+    "questionsTitle": "Bank questions",
+    "filtered": "filtered",
+    "editQuestion": "Edit question “{title}”",
     "createQuestion": "Create question",
     "pageTitle": "Quiz and question builder",
     "pageDescription": "The course question bank: categories, 8 question types, versions and answer checks. Quizzes are built from bank questions.",
@@ -1249,6 +1308,7 @@
     "emptyStudent": "Ask a question — the teacher and classmates will help.",
     "pinned": "Pinned",
     "locked": "Locked",
+    "discussion": "Discussion",
     "replies": "{count, plural, =0 {no replies} one {# reply} other {# replies}}",
     "unread": "{count} unread",
     "subscribed": "Following",
@@ -1328,7 +1388,37 @@
     "waiting": "Awaiting grade",
     "searchStudent": "Search students…",
     "allKinds": "All ({count})",
-    "upNext": "Up next"
+    "upNext": "Up next",
+    "waitingChip": "{count, plural, one {# submission awaiting grading} other {# submissions awaiting grading}}",
+    "reviewTitle": "Grading",
+    "queueHint": "Nearest due dates first",
+    "queueCount": "Queue ({count})",
+    "mobileView": "Screen mode",
+    "statQueue": "In queue",
+    "worksUnit": "{count, plural, one {item} other {items}}",
+    "coursesHint": "{count, plural, one {From # course} other {From # courses}}",
+    "statLate": "Late",
+    "ofTotal": "of {total}",
+    "lateShare": "{percent} of the queue",
+    "statOldest": "Waiting longest",
+    "ageUnits": {
+      "minutes": "{count, plural, one {minute} other {minutes}}",
+      "hours": "{count, plural, one {hour} other {hours}}",
+      "days": "{count, plural, one {day} other {days}}"
+    },
+    "statCourses": "Courses",
+    "statCoursesHint": "with work to grade",
+    "studentProfile": "Student profile",
+    "onTime": "On time",
+    "kindLabel": "Type",
+    "workLabel": "Work",
+    "submittedLabel": "Submitted",
+    "dueLabel": "Due",
+    "noDue": "No due date",
+    "attemptLabel": "Attempt",
+    "currentGrade": "Current grade",
+    "attemptHistory": "Attempt history",
+    "files": "Submission files"
   },
   "gradebook": {
     "formula": "Final grade formula",
@@ -1370,7 +1460,8 @@
     "noHistory": "No changes",
     "lock": "Lock",
     "unlock": "Unlock",
-    "legend": "Click a cell to edit the grade. Italic — not published, dot — edited manually, lock — protected from automatic recalculation.",
+    "legend": "Click a cell to edit the grade. Colour — share of the maximum (green ≥ 80%, violet ≥ 50%, amber below), italic with a dashed outline — not published, dot — edited manually, lock — protected from automatic recalculation.",
+    "title": "Gradebook",
     "loadError": "Could not load the gradebook"
   },
   "grades": {
@@ -1382,7 +1473,13 @@
     "feedback": "Teacher feedback",
     "noGradesTitle": "No grades yet",
     "noGradesText": "Grades appear here once the teacher publishes them.",
-    "loadError": "Could not load grades"
+    "loadError": "Could not load grades",
+    "coursesCount": "{count, plural, one {# course} other {# courses}}",
+    "noFinalYet": "The final grade appears after the first published grades",
+    "gradedItems": "Graded",
+    "ofTotal": "of {total}",
+    "itemsTitle": "Grades by item",
+    "breadcrumbs": "Grades navigation"
   },
   "participants": {
     "tabPeople": "Participants",
@@ -1461,7 +1558,13 @@
     "done": "Done",
     "notDone": "Not done",
     "pageTitle": "Students and participants",
-    "pageDescription": "Course enrolments, roles, groups and invitations."
+    "pageDescription": "Course enrolments, roles, groups and invitations.",
+    "progress": "Progress",
+    "progressOf": "Progress: {name}",
+    "progressTitle": "Progress by course item",
+    "progressHint": "{students, plural, one {# student} other {# students}} × {items, plural, one {# item} other {# items}}",
+    "groupsTitle": "Course groups",
+    "groupsHint": "Click a name to rename the group"
   },
   "calendar": {
     "title": "Calendar",
@@ -1490,10 +1593,18 @@
       "personal": "Personal"
     },
     "emptyTitle": "No events",
-    "emptyText": "No deadlines or events in the next 30 days."
+    "emptyText": "No deadlines or events in the next 30 days.",
+    "legend": "Event types",
+    "eventsCount": "{count, plural, =0 {No events} one {# event} other {# events}}",
+    "loadError": "Could not load the calendar",
+    "monthAgenda": "This month's events",
+    "monthEmpty": "No deadlines or events this month."
   },
   "profile": {
     "title": "Profile",
+    "description": "Name, photo, time zone, language and password",
+    "passwordDescription": "After changing the password you will need to sign in again on other devices",
+    "settingsNav": "Account settings",
     "personal": "Personal details",
     "avatar": "Drop a photo or",
     "uploadAvatar": "choose a file",
@@ -1508,8 +1619,9 @@
     "otherSessionsRevoked": "You will need to log in again on other devices."
   },
   "admin": {
+    "adminChip": "Main administrator",
     "title": "Administration",
-    "description": "School users, categories, branding, audit, sales and integrations",
+    "description": "Users, categories, branding, audit, sales and integrations of the selected school",
     "sections": "Administration sections",
     "nav": {
       "users": "Users",
@@ -1518,9 +1630,31 @@
       "audit": "Audit log",
       "orders": "Sales",
       "integrations": "Integrations"
+    },
+    "tenant": {
+      "label": "School",
+      "placeholder": "Choose a school",
+      "search": "Search schools",
+      "empty": "No schools found",
+      "users": "{count, plural, one {# user} other {# users}}",
+      "choose": "Choose a school to manage its users, categories and settings",
+      "suspended": "Suspended",
+      "loadError": "Could not load schools"
+    },
+    "forbidden": {
+      "title": "No access",
+      "description": "Administration is available only to the platform main administrator."
     }
   },
   "adminUsers": {
+    "user": "User",
+    "shownCount": "Showing: {count}",
+    "panelHint": "School students and teachers: statuses, roles and invitations",
+    "statusFilters": {
+      "active": "Active",
+      "suspended": "Suspended",
+      "invited": "Invited"
+    },
     "search": "Search by name or email",
     "status": "Status",
     "allStatuses": "All statuses",
@@ -1530,13 +1664,13 @@
       "invited": "Invited"
     },
     "tenantRoles": {
-      "platform_admin": "Platform admin",
-      "tenant_admin": "Administrator",
+      "platform_admin": "Main administrator",
+      "tenant_admin": "School owner",
       "category_manager": "Category manager"
     },
     "create": "Add user",
     "createTitle": "New user",
-    "makeAdmin": "Make school administrator",
+    "makeAdmin": "School owner (can create courses)",
     "sendInvite": "Send an email invitation",
     "import": "Import CSV",
     "importTitle": "Import users",
@@ -1564,12 +1698,18 @@
     "actionsFor": "Actions: {name}",
     "activate": "Activate",
     "suspend": "Suspend",
-    "grantAdmin": "Make administrator",
-    "revokeAdmin": "Revoke administrator",
+    "grantAdmin": "Make school owner",
+    "revokeAdmin": "Revoke owner role",
     "resendInvite": "Resend invitation",
     "inviteSent": "Invitation sent"
   },
   "adminCategories": {
+    "statTotal": "Categories",
+    "statRoots": "Top level",
+    "statRootsHint": "Root sections of the catalog",
+    "statEmpty": "Empty",
+    "statEmptyHint": "No courses or subcategories — safe to delete",
+    "panelHint": "Drag categories to reorder them; click a name to rename it",
     "newCategory": "Category name",
     "create": "Create",
     "newCategoryName": "New category",
@@ -1586,6 +1726,12 @@
     "deleteNamed": "Delete category {name}"
   },
   "adminBranding": {
+    "identityHint": "School name, logo and primary colour",
+    "defaultsHint": "Language, time zone, password policy and embedding",
+    "sampleTabActive": "Courses",
+    "sampleTab": "Calendar",
+    "sampleSecondary": "Secondary button",
+    "previewHint": "The preview updates instantly; the app picks up the colour after you save.",
     "identity": "Name and appearance",
     "name": "School name",
     "logo": "Drop a logo (PNG, JPEG, WebP)",
@@ -1610,6 +1756,8 @@
     "loadError": "Could not load school settings"
   },
   "adminAudit": {
+    "shownCount": "Showing: {count}",
+    "panelHint": "Who changed what in the school, when and from where",
     "objectType": "Object type",
     "from": "From",
     "to": "To",
@@ -1626,6 +1774,8 @@
     "emptyText": "Try changing the filters."
   },
   "adminOrders": {
+    "shownCount": "Showing: {count}",
+    "panelHint": "Paid course purchases and their payment statuses",
     "created": "Date",
     "course": "Course",
     "buyer": "Buyer",
@@ -1644,6 +1794,8 @@
     "emptyText": "Set a price in the course settings and share the landing page link."
   },
   "adminIntegrations": {
+    "tokensHint": "Tokens for accessing the school API",
+    "webhooksHint": "Outgoing event notifications to your server",
     "tokens": "API tokens",
     "newToken": "New token",
     "tokenName": "Name",
@@ -1736,6 +1888,8 @@
     "tabSettings": "Settings",
     "tabConditions": "Conditions",
     "previewAsStudent": "Preview as student",
+    "completionTitle": "Completion conditions",
+    "typeParams": "Settings: {type}",
     "statsTitle": "Item statistics",
     "statsCompleted": "Completed the item",
     "statsValue": "{percent}% ({done}/{total})",
@@ -1743,6 +1897,9 @@
     "moduleChip": "Module {number}"
   },
   "media": {
+    "metaType": "Type",
+    "metaModule": "Module",
+    "metaStatus": "Status",
     "title": "Media library",
     "filters": "Media filters",
     "all": "All materials",
@@ -1831,7 +1988,8 @@
     "openPage": "Open page",
     "addBar": "Add an item after the current one",
     "moreTypes": "Other item types",
-    "addElement": "Add item"
+    "addElement": "Add item",
+    "openInBuilder": "Open in builder"
   },
   "quizBuilder": {
     "params": "Quiz parameters",
@@ -1853,6 +2011,14 @@
     "statAttempts": "Attempts",
     "attemptsUnit": "{count, plural, one {attempt} other {attempts}}",
     "structure": "Question structure",
+    "unsaved": "Unsaved",
+    "summary": "Quiz summary",
+    "pointsDefault": "bank defaults",
+    "panes": "Builder section",
+    "paneEditor": "Editor",
+    "paneStructure": "Structure",
+    "paneParams": "Settings",
+    "inQuiz": "{count} in quiz",
     "selectTitle": "Select a question",
     "selectText": "Click a bank question in the structure on the left to edit its wording, answer key and check it here."
   }

@@ -2,6 +2,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { billingApi } from '@/lib/api/endpoints/billing';
 import { integrationsApi } from '@/lib/api/endpoints/integrations';
+import { platformApi } from '@/lib/api/endpoints/platform';
 import {
   orgApi,
   type AuditQuery,
@@ -155,4 +156,9 @@ export function useDeliveries(webhookId: string | null) {
     getNextPageParam: getNextCursor,
     enabled: !!webhookId,
   });
+}
+
+/** Schools the platform administrator can manage (tenant picker in /admin). */
+export function usePlatformTenants(enabled = true) {
+  return useQuery({ queryKey: queryKeys.platformTenants, queryFn: platformApi.tenants, enabled });
 }

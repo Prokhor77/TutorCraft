@@ -67,7 +67,7 @@ public class MyCoursesService {
                 .filter(course -> roles.get(course.id()) == CourseRole.STUDENT).map(CourseRef::id).toList());
         Map<UUID, String> covers = coverUrls(user.tenantId(), visible);
         return visible.stream()
-                .map(course -> card(course, roles.get(course.id()), percents.get(course.id()), covers.get(course.coverFileId())))
+                .map(course -> card(course, roles.get(course.id()), percents.get(course.id()), course.coverFileId() == null ? null : covers.get(course.coverFileId())))
                 .toList();
     }
 

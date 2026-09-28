@@ -51,7 +51,10 @@ export function useQbankMutations(courseId: string) {
     }),
     create: useMutation({
       mutationFn: (input: QuestionInput) => quizApi.createQuestion(courseId, input),
-      onSuccess: invalidate,
+      onSuccess: (question) => {
+        queryClient.setQueryData(queryKeys.question(question.id), question);
+        invalidate();
+      },
     }),
     update: useMutation({
       mutationFn: ({ id, input }: { id: string; input: QuestionInput }) =>

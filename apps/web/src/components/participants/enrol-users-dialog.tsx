@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useDeferredValue, useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Avatar } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
@@ -55,7 +56,7 @@ export function EnrolUsersDialog({ courseId }: { courseId: string }) {
         <ul className="flex max-h-72 flex-col gap-1 overflow-y-auto">
           {list.map((user) => (
             <li key={user.id}>
-              <label className="flex items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-surface-muted">
+              <label className="flex items-center gap-2.5 rounded-full px-3 py-1.5 text-sm hover:bg-surface-muted">
                 <Checkbox
                   checked={selected.has(user.id)}
                   onCheckedChange={(checked) =>
@@ -67,10 +68,13 @@ export function EnrolUsersDialog({ courseId }: { courseId: string }) {
                     })
                   }
                 />
-                <span className="flex-1">
-                  {user.firstName} {user.lastName}
+                <Avatar name={`${user.firstName} ${user.lastName}`} size="sm" />
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate font-medium">
+                    {user.firstName} {user.lastName}
+                  </span>
+                  <span className="truncate text-xs text-text-muted">{user.email}</span>
                 </span>
-                <span className="text-xs text-text-muted">{user.email}</span>
               </label>
             </li>
           ))}

@@ -19,5 +19,8 @@ public interface RoleRepository {
 
     void deleteTenantGrants(UUID tenantId, UUID userId);
 
+    /** Снимает platform-назначения со всех пользователей, кроме указанного. @return число снятых назначений */
+    int deletePlatformGrantsExcept(UUID userId);
+
     void insertGrant(UUID tenantId, UUID userId, String roleKey, String contextType, UUID contextId, UUID actorId);
 }

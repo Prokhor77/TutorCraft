@@ -25,6 +25,7 @@ import { useQbankMutations, useQuestion, useQuestionVersions } from '@/features/
 import {
   QUESTION_TYPES,
   type PreviewCheckResult,
+  type Question,
   type QCategory,
   type QuestionInput as QuestionInputData,
   type QuestionResponse,
@@ -41,6 +42,8 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   categories: QCategory[];
   defaultCategoryId: string | null;
+  /** Called with the saved question before the sheet closes. */
+  onSaved?: (question: Question) => void;
 };
 
 function PreviewCheck({ questionId, input }: { questionId: string; input: QuestionInputData }) {
@@ -97,7 +100,9 @@ type FormProps = {
   categories: QCategory[];
   defaultCategoryId: string | null;
   /** Called after a successful create / new version. */
-  onSaved?: (questionId: string) => void;
+  onSaved?: (question: Question) => void;
+  /** Shows a «Cancel» button next to save (quiz builder create flow). */
+  onCancel?: () => void;
   /** Number shown in the Stitch card header («3 · Редактор задания»). */
   number?: number;
   /** `card` = inline Stitch question card (quiz builder, bank); `plain` = inside a sheet. */
@@ -119,7 +124,7 @@ function TypePills({
     <div
       role="radiogroup"
       aria-label={t('type')}
-      className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1"
+      className="-mx-1 flex gap-1.5 overflow-x-auto px-1 scrollbar-none"
     >
       {QUESTION_TYPES.map((type) => {
         const Icon = QUESTION_TYPE_ICONS[type];
@@ -155,6 +160,7 @@ export function QuestionForm({
   categories,
   defaultCategoryId,
   onSaved,
+  onCancel,
   number,
   variant = 'plain',
 }: FormProps) {
@@ -184,9 +190,9 @@ export function QuestionForm({
   const save = () => {
     setShowIssues(true);
     if (issues.length > 0) return;
-    const onSuccess = (saved: { id: string }) => {
+    const onSuccess = (saved: Question) => {
       toast({ tone: 'success', title: questionId ? t('savedNewVersion') : t('created') });
-      onSaved?.(saved.id);
+      onSaved?.(saved);
     };
     if (questionId) update.mutate({ id: questionId, input }, { onSuccess });
     else create.mutate(input, { onSuccess });
@@ -306,7 +312,12 @@ export function QuestionForm({
           </ul>
         </details>
       ) : null}
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        {onCancel ? (
+          <Button variant="ghost" onClick={onCancel}>
+            {tCommon('cancel')}
+          </Button>
+        ) : null}
         <Button onClick={save} loading={create.isPending || update.isPending}>
           <Save aria-hidden /> {questionId ? t('applyChanges') : t('createQuestion')}
         </Button>
@@ -330,6 +341,7 @@ export function QuestionEditor({
   onOpenChange,
   categories,
   defaultCategoryId,
+  onSaved,
 }: Props) {
   const t = useTranslations('qbank');
   const tCommon = useTranslations('common');
@@ -347,7 +359,10 @@ export function QuestionEditor({
             questionId={questionId}
             categories={categories}
             defaultCategoryId={defaultCategoryId}
-            onSaved={() => onOpenChange(false)}
+            onSaved={(question) => {
+              onSaved?.(question);
+              onOpenChange(false);
+            }}
           />
         ) : null}
       </SheetContent>

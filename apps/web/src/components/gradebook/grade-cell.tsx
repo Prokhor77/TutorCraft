@@ -54,6 +54,18 @@ function HistoryPopover({
   );
 }
 
+const HIGH_SHARE = 0.8;
+const MID_SHARE = 0.5;
+
+/** Chip tint by share of the column maximum: ≥80 % emerald, ≥50 % violet, below — amber; empty cells stay plain. */
+export function scoreTone(score: number | null, maxScore: number): string {
+  if (score === null) return 'text-text-muted';
+  const share = maxScore > 0 ? score / maxScore : 0;
+  if (share >= HIGH_SHARE) return 'bg-success-soft text-success';
+  if (share >= MID_SHARE) return 'bg-primary-soft text-primary';
+  return 'bg-warning-soft text-warning';
+}
+
 type Props = {
   target: CellTarget;
   maxScore: number;
@@ -88,7 +100,7 @@ export function GradeCellView({ target, maxScore, label, editable, onSave }: Pro
           if (event.key === 'Enter') commit();
           if (event.key === 'Escape') setEditing(false);
         }}
-        className="h-8 w-16 rounded-xs border border-primary bg-surface px-1.5 text-right text-sm focus:outline-none focus:ring-2 focus:ring-focus-ring/40"
+        className="h-8 w-16 rounded-full border border-primary bg-surface px-2.5 text-center text-sm tabular-nums focus:outline-none focus:ring-4 focus:ring-focus-ring/20"
       />
     );
   }
@@ -103,8 +115,12 @@ export function GradeCellView({ target, maxScore, label, editable, onSave }: Pro
           setEditing(true);
         }}
         className={cn(
-          'min-w-10 rounded-xs px-1.5 py-1 text-right tabular-nums hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:cursor-default disabled:hover:bg-transparent',
-          cell && !cell.published && cell.score !== null && 'italic text-text-muted',
+          'inline-flex h-7 min-w-11 items-center justify-center rounded-full border border-transparent px-2.5 text-label-md tabular-nums transition-[box-shadow,background-color] duration-fast hover:ring-2 hover:ring-accent/30 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus-ring/25 disabled:cursor-default disabled:hover:ring-0',
+          scoreTone(cell?.score ?? null, maxScore),
+          cell &&
+            !cell.published &&
+            cell.score !== null &&
+            'border-dashed border-outline-variant bg-transparent italic text-text-muted',
         )}
       >
         {cell?.score ?? '—'}

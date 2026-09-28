@@ -1,5 +1,5 @@
 'use client';
-import { Languages, Monitor, Moon, Sun } from 'lucide-react';
+import { Monitor, Moon, Sun } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { LOCALES } from '@/i18n/config';
+import { cn } from '@/lib/utils/cn';
 import { persistLocale } from '@/features/app/locale';
 import { THEMES, useUiStore, type ThemePreference } from '@/stores/ui-store';
 
@@ -59,25 +60,31 @@ export function LanguageMenu({ onChange }: { onChange?: (locale: 'ru' | 'en') =>
     router.refresh();
   };
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label={t('language')}>
-          <Languages aria-hidden />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuLabel>{t('language')}</DropdownMenuLabel>
-        {LOCALES.map((option) => (
-          <DropdownMenuItem
+    <div
+      role="radiogroup"
+      aria-label={t('language')}
+      className="inline-flex h-8 items-center rounded-full bg-accent/10 p-0.5"
+    >
+      {LOCALES.map((option) => {
+        const active = locale === option;
+        return (
+          <button
             key={option}
-            onSelect={() => select(option)}
-            role="menuitemradio"
-            aria-checked={locale === option}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            aria-label={t(`languages.${option}`)}
+            title={t(`languages.${option}`)}
+            onClick={() => !active && select(option)}
+            className={cn(
+              'h-7 min-w-9 rounded-full px-2 text-label-md font-semibold uppercase transition-[background-color,color] duration-fast focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus-ring/25',
+              active ? 'bg-primary text-primary-foreground shadow-sm' : 'text-text-muted hover:text-primary',
+            )}
           >
-            {t(`languages.${option}`)}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+            {option}
+          </button>
+        );
+      })}
+    </div>
   );
 }

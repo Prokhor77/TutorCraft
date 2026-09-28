@@ -1,11 +1,18 @@
 'use client';
-import { BookOpen, CalendarClock, ClipboardCheck, MessagesSquare } from 'lucide-react';
+import {
+  BookOpen,
+  CalendarClock,
+  ChevronRight,
+  ClipboardCheck,
+  MessagesSquare,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
+import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CountBadge } from '@/components/ui/badge';
 import { ErrorState } from '@/components/ui/error-state';
+import { Panel } from '@/components/ui/page-header';
 import { SkeletonList } from '@/components/ui/skeleton';
 import { StatCard, StatGrid } from '@/components/ui/stat-card';
 import { ROUTES } from '@/features/auth/routes';
@@ -14,6 +21,12 @@ import { useTeacherHome } from '@/features/dashboard/use-dashboard';
 import { COUNTER_NAMES, useUiStore } from '@/stores/ui-store';
 import { formatRelative } from '@/lib/utils/format';
 import { TaskRow } from './task-row';
+
+function EmptyLine({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="rounded-md bg-surface-muted/60 px-4 py-3 text-sm text-text-muted">{children}</p>
+  );
+}
 
 /** FR-DASH-02: to-grade counters, upcoming deadlines, recent posts. */
 export function TeacherHome() {
@@ -36,7 +49,7 @@ export function TeacherHome() {
   const total = liveTotal ?? data.toGradeTotal;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4 md:gap-gutter">
       <StatGrid>
         <StatCard
           label={t('toGrade')}
@@ -66,83 +79,92 @@ export function TeacherHome() {
           footer={t('coursesHint')}
         />
       </StatGrid>
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              {t('toGrade')}{' '}
+      <div className="grid grid-cols-1 gap-4 md:gap-gutter lg:grid-cols-2">
+        <Panel
+          title={
+            <span className="flex items-center gap-2">
+              {t('toGrade')}
               <CountBadge count={total} label={t('toGradeCount', { count: total })} />
-            </CardTitle>
+            </span>
+          }
+          actions={
             <Button asChild size="sm">
               <Link href={ROUTES.grading}>
                 <ClipboardCheck aria-hidden /> {t('openInbox')}
               </Link>
             </Button>
-          </CardHeader>
-          <CardContent>
-            {data.toGrade.length === 0 ? (
-              <p className="text-sm text-text-muted">{t('allGraded')}</p>
-            ) : null}
-            <ul className="flex flex-col gap-1">
+          }
+        >
+          {data.toGrade.length === 0 ? (
+            <EmptyLine>{t('allGraded')}</EmptyLine>
+          ) : (
+            <ul className="flex flex-col gap-2">
               {data.toGrade.map((entry) => (
                 <li key={entry.courseId}>
                   <Link
                     href={`${ROUTES.gradingReview}?courseId=${entry.courseId}`}
-                    className="flex items-center justify-between gap-3 rounded-full px-4 py-2.5 transition-colors duration-fast hover:bg-accent/5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus-ring/20"
+                    className="group flex items-center gap-3 rounded-full border border-transparent bg-surface-muted/50 py-2 pl-2 pr-4 transition-[background-color,border-color,box-shadow] duration-fast hover:border-card-border-hover hover:bg-surface hover:shadow-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus-ring/20"
                   >
-                    <span className="truncate text-sm font-medium">{entry.courseTitle}</span>
-                    <span className="shrink-0 rounded-full bg-warning-soft px-2.5 py-0.5 text-label-md text-warning">
-                      {entry.count}
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
+                      <BookOpen className="size-4" aria-hidden />
                     </span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+                      {entry.courseTitle}
+                    </span>
+                    <span className="shrink-0 rounded-full bg-warning-soft px-2.5 py-0.5 text-label-md text-warning">
+                      {t('toGradeCount', { count: entry.count })}
+                    </span>
+                    <ChevronRight
+                      className="size-4 shrink-0 text-outline group-hover:text-primary"
+                      aria-hidden
+                    />
                   </Link>
                 </li>
               ))}
             </ul>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('upcomingDeadlines')}</CardTitle>
-          </CardHeader>
-          <CardContent className="px-2">
-            {data.upcomingDeadlines.length === 0 ? (
-              <p className="px-3 text-sm text-text-muted">{t('noUpcoming')}</p>
-            ) : null}
-            <ul>
+          )}
+        </Panel>
+        <Panel title={t('upcomingDeadlines')}>
+          {data.upcomingDeadlines.length === 0 ? (
+            <EmptyLine>{t('noUpcoming')}</EmptyLine>
+          ) : (
+            <ul className="flex flex-col gap-2">
               {data.upcomingDeadlines.map((task) => (
                 <li key={task.itemId}>
                   <TaskRow task={task} />
                 </li>
               ))}
             </ul>
-          </CardContent>
-        </Card>
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>{t('recentPosts')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {data.recentPosts.length === 0 ? (
-              <p className="text-sm text-text-muted">{t('noPosts')}</p>
-            ) : null}
-            <ul className="flex flex-col gap-1">
+          )}
+        </Panel>
+        <Panel title={t('recentPosts')} className="lg:col-span-2">
+          {data.recentPosts.length === 0 ? (
+            <EmptyLine>{t('noPosts')}</EmptyLine>
+          ) : (
+            <ul className="flex flex-col gap-2">
               {data.recentPosts.map((post) => (
-                <li key={post.discussionId} className="flex items-center gap-3 rounded px-3 py-2">
-                  <MessagesSquare className="size-4 text-text-muted" aria-hidden />
-                  <Link
-                    href={ROUTES.course(post.courseId)}
-                    className="min-w-0 flex-1 truncate text-sm font-medium hover:underline"
-                  >
-                    {post.title}
-                  </Link>
-                  <span className="shrink-0 text-xs text-text-muted">
-                    {post.authorName} · {formatRelative(post.createdAt, locale)}
+                <li
+                  key={post.discussionId}
+                  className="relative flex items-center gap-3 rounded-md px-2 py-2 transition-colors duration-fast focus-within:bg-surface-muted hover:bg-surface-muted"
+                >
+                  <Avatar name={post.authorName} size="md" />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <Link
+                      href={ROUTES.course(post.courseId)}
+                      className="truncate text-sm font-semibold after:absolute after:inset-0 after:rounded-md focus-visible:outline-none"
+                    >
+                      {post.title}
+                    </Link>
+                    <span className="truncate text-xs text-text-muted">
+                      {post.authorName} · {formatRelative(post.createdAt, locale)}
+                    </span>
                   </span>
+                  <MessagesSquare className="size-4 shrink-0 text-outline" aria-hidden />
                 </li>
               ))}
             </ul>
-          </CardContent>
-        </Card>
+          )}
+        </Panel>
       </div>
     </div>
   );

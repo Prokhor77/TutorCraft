@@ -7,7 +7,16 @@ import java.util.UUID;
 /** Публичный API модуля org для других модулей. */
 public interface OrgApi {
 
+    /**
+     * Служебный tenant главного администратора. Подчёркивание не порождается SlugGenerator, поэтому slug
+     * не может совпасть со школой, зарегистрированной пользователем.
+     */
+    String PLATFORM_TENANT_SLUG = "platform_admin";
+
     TenantInfo createTenant(String name, String slugHint);
+
+    /** Служебный tenant главного администратора; создаётся при первом вызове. */
+    TenantInfo ensurePlatformTenant();
 
     Optional<TenantInfo> findBySlug(String slug);
 

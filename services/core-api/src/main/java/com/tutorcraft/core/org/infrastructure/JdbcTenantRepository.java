@@ -1,6 +1,7 @@
 package com.tutorcraft.core.org.infrastructure;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.tutorcraft.core.org.OrgApi;
 import com.tutorcraft.core.org.OrgApi.PasswordPolicy;
 import com.tutorcraft.core.org.OrgApi.TenantInfo;
 import com.tutorcraft.core.org.application.TenantRepository;
@@ -58,6 +59,24 @@ class JdbcTenantRepository implements TenantRepository {
     public Optional<TenantInfo> findBySlug(String slug) {
         return jdbc.sql("SELECT " + COLUMNS + " FROM tenants WHERE slug = :slug").param("slug", slug)
                 .query((rs, n) -> toInfo(rs)).optional();
+    }
+
+    @Override
+    public List<TenantSummary> list(String query, int limit) {
+        String pattern = query == null || query.isBlank() ? null : "%" + query.trim().toLowerCase() + "%";
+        return jdbc.sql("""
+                SELECT t.id, t.slug, t.name, t.status, t.created_at,
+                       (SELECT count(*) FROM users u WHERE u.tenant_id = t.id) AS users_count
+                FROM tenants t
+                WHERE t.slug <> :platformSlug
+                  AND (CAST(:pattern AS TEXT) IS NULL OR lower(t.name) LIKE :pattern OR t.slug LIKE :pattern)
+                ORDER BY t.created_at DESC, t.id
+                LIMIT :limit
+                """)
+            .param("platformSlug", OrgApi.PLATFORM_TENANT_SLUG).param("pattern", pattern).param("limit", limit)
+            .query((rs, n) -> new TenantSummary(rs.getObject("id", UUID.class), rs.getString("slug"), rs.getString("name"),
+                    rs.getString("status"), rs.getTimestamp("created_at").toInstant(), rs.getLong("users_count")))
+            .list();
     }
 
     @Override

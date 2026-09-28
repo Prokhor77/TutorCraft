@@ -78,7 +78,7 @@ export function QuestionDataEditor({ value, onChange }: Props) {
                   aria-label={t('optionText', { index: index + 1 })}
                   value={option.text}
                   onChange={(event) => setOption(index, { text: event.target.value })}
-                  className="flex-1"
+                  className="bg-surface sm:flex-1"
                 />
                 <Input
                   aria-label={t('optionFeedback', { index: index + 1 })}

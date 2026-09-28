@@ -4,7 +4,7 @@ export function TableContainer({ className, ...props }: React.HTMLAttributes<HTM
   return (
     <div
       className={cn(
-        'w-full overflow-auto rounded-md border border-card-border bg-surface shadow-sm',
+        'w-full overflow-auto rounded-lg border border-card-border bg-surface shadow-sm',
         className,
       )}
       {...props}
@@ -40,11 +40,11 @@ export function TH({ className, ...props }: React.ThHTMLAttributes<HTMLTableCell
   return (
     <th
       scope="col"
-      className={cn('whitespace-nowrap px-3 py-2.5 font-semibold', className)}
+      className={cn('whitespace-nowrap px-4 py-3 font-semibold first:pl-6 last:pr-6', className)}
       {...props}
     />
   );
 }
 export function TD({ className, ...props }: React.TdHTMLAttributes<HTMLTableCellElement>) {
-  return <td className={cn('px-3 py-2.5 align-middle', className)} {...props} />;
+  return <td className={cn('px-4 py-3 align-middle first:pl-6 last:pr-6', className)} {...props} />;
 }

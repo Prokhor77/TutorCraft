@@ -24,7 +24,7 @@ export function FilePreview({ meta }: { meta: FileMeta }) {
         data={meta.url}
         type="application/pdf"
         aria-label={meta.name}
-        className={`w-full rounded border border-border ${PREVIEW_HEIGHT_CLASS}`}
+        className={`w-full rounded-md border border-border ${PREVIEW_HEIGHT_CLASS}`}
       >
         <FileCard meta={meta} />
       </object>
@@ -32,7 +32,7 @@ export function FilePreview({ meta }: { meta: FileMeta }) {
   }
   if (meta.mime.startsWith('image/')) {
     // eslint-disable-next-line @next/next/no-img-element -- pre-signed storage URL, not optimizable by next/image
-    return <img src={meta.url} alt={meta.name} className="max-h-[70dvh] max-w-full rounded" />;
+    return <img src={meta.url} alt={meta.name} className="max-h-[70dvh] max-w-full rounded-md" />;
   }
   if (meta.mime.startsWith('audio/'))
     return <audio controls src={meta.url} aria-label={meta.name} className="w-full" />;
@@ -42,7 +42,7 @@ export function FilePreview({ meta }: { meta: FileMeta }) {
         controls
         src={meta.url}
         aria-label={meta.name}
-        className="aspect-video w-full rounded bg-black"
+        className="aspect-video w-full rounded-md bg-black"
       />
     );
   return <FileCard meta={meta} />;
@@ -53,7 +53,7 @@ export function VideoProcessing() {
   return (
     <div
       role="status"
-      className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded bg-surface-muted text-sm text-text-muted"
+      className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed border-accent/20 bg-dropzone text-sm text-text-muted"
     >
       <Loader2 className="size-6 animate-spin" aria-hidden />
       {t('videoProcessing')}
@@ -65,10 +65,12 @@ export function FileCard({ meta }: { meta: FileMeta }) {
   const t = useTranslations('files');
   const locale = useLocale();
   return (
-    <div className="flex items-center gap-3 rounded border border-card-border bg-surface p-3 shadow-sm">
-      <FileText className="size-8 shrink-0 text-primary" aria-hidden />
+    <div className="flex flex-wrap items-center gap-3 rounded-md border border-card-border bg-surface p-3 shadow-sm">
+      <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
+        <FileText className="size-5" aria-hidden />
+      </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{meta.name}</p>
+        <p className="truncate text-sm font-semibold">{meta.name}</p>
         <p className="text-xs text-text-muted">{formatFileSize(meta.size, locale)}</p>
       </div>
       {meta.url ? (
@@ -94,7 +96,7 @@ export function FileById({
   const { data, isLoading, isError } = useFileMeta(fileId);
   if (isLoading)
     return (
-      <div className="h-16 animate-shimmer rounded bg-surface-muted" aria-label={t('loading')} />
+      <div className="h-16 animate-shimmer rounded-md bg-surface-muted" aria-label={t('loading')} />
     );
   if (isError || !data) return <p className="text-sm text-danger">{t('unavailable')}</p>;
   return mode === 'card' ? <FileCard meta={data} /> : <FilePreview meta={data} />;

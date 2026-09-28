@@ -6,12 +6,14 @@ import {
   FileQuestion,
   MessagesSquare,
   MoreHorizontal,
+  NotebookPen,
   Plus,
   Timer,
+  type LucideIcon,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { ContentEditor } from '@/components/items/content-editor';
 import { ResourceView } from '@/components/items/resource-views';
 import { Badge } from '@/components/ui/badge';
@@ -27,7 +29,7 @@ import { useQuizSlots } from '@/features/quiz/use-quiz';
 import type { ItemType } from '@/lib/api/schemas/common';
 import type { ItemDetail } from '@/lib/api/schemas/courses';
 import { SECONDS_PER_MINUTE } from '@/lib/utils/time';
-import { DueLabel, ITEM_TYPE_ICONS, ItemTypeIcon } from '../item-meta';
+import { DueLabel, ITEM_TYPE_ICONS } from '../item-meta';
 import { ItemTypePicker } from '../item-type-picker';
 import { StatusChip } from '../status-chip';
 
@@ -62,16 +64,40 @@ function usePositionLabel(
   return { module: moduleIndex + 1, element: elementIndex + 1 };
 }
 
+/** Stitch canvas block: white 2rem card with an icon chip + headline title row («Видеолекция», «Конспект»). */
+function CanvasCard({
+  icon: Icon,
+  title,
+  actions,
+  children,
+}: {
+  icon: LucideIcon;
+  title: string;
+  actions?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <Card className="flex flex-col gap-4 p-5 sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
+            <Icon className="size-4" aria-hidden />
+          </span>
+          <h3 className="text-xl">{title}</h3>
+        </div>
+        {actions}
+      </div>
+      {children}
+    </Card>
+  );
+}
+
 function QuizCard({ item }: { item: ItemDetail }) {
   const t = useTranslations('workspace');
   const slots = useQuizSlots(item.id);
   const summary = slots.data ? quizSummary(slots.data.slots) : null;
   return (
-    <Card className="flex flex-col gap-4 p-6">
-      <div className="flex items-center gap-2">
-        <FileQuestion className="size-5 text-primary" aria-hidden />
-        <h3 className="text-lg">{t('quizQuestions')}</h3>
-      </div>
+    <CanvasCard icon={FileQuestion} title={t('quizQuestions')}>
       {summary ? (
         <p className="text-sm text-text-muted">
           {t('quizSummary', {
@@ -86,34 +112,30 @@ function QuizCard({ item }: { item: ItemDetail }) {
           <FileQuestion aria-hidden /> {t('openQuizBuilder')}
         </Link>
       </Button>
-    </Card>
+    </CanvasCard>
   );
 }
 
 function LinkCard({
-  icon: Icon,
+  icon,
   title,
   text,
   href,
   action,
 }: {
-  icon: typeof ClipboardCheck;
+  icon: LucideIcon;
   title: string;
   text: string;
   href: string;
   action: string;
 }) {
   return (
-    <Card className="flex flex-col gap-3 p-6">
-      <div className="flex items-center gap-2">
-        <Icon className="size-5 text-primary" aria-hidden />
-        <h3 className="text-lg">{title}</h3>
-      </div>
+    <CanvasCard icon={icon} title={title}>
       <p className="text-sm text-text-muted">{text}</p>
       <Button asChild variant="secondary" className="self-start">
         <Link href={href}>{action}</Link>
       </Button>
-    </Card>
+    </CanvasCard>
   );
 }
 
@@ -125,14 +147,12 @@ function WorkspaceBody({ item }: { item: ItemDetail }) {
   return (
     <>
       {hasResource ? (
-        <Card className="flex flex-col gap-4 p-6">
-          <h3 className="text-lg">{t('material')}</h3>
+        <CanvasCard icon={ITEM_TYPE_ICONS[item.type]} title={t('material')}>
           <ResourceView item={{ ...item, content: null }} />
-        </Card>
+        </CanvasCard>
       ) : null}
       {item.type !== 'forum' ? (
-        <Card className="flex flex-col gap-4 p-6">
-          <h3 className="text-lg">{t(contentHeading(item.type))}</h3>
+        <CanvasCard icon={NotebookPen} title={t(contentHeading(item.type))}>
           <ContentEditor
             key={item.id}
             draftKey={`item:${item.id}:content`}
@@ -140,7 +160,7 @@ function WorkspaceBody({ item }: { item: ItemDetail }) {
             label={t(contentHeading(item.type))}
             save={(content) => patch({ content })}
           />
-        </Card>
+        </CanvasCard>
       ) : null}
       {item.type === 'quiz' ? <QuizCard item={item} /> : null}
       {item.type === 'assignment' ? (
@@ -186,13 +206,14 @@ export function ItemWorkspace({
   const position = usePositionLabel(courseId, item.data?.moduleId, itemId);
   if (item.isLoading || !item.data) return <SkeletonList label={tCommon('loading')} rows={4} />;
   const data = item.data;
+  const TypeIcon = ITEM_TYPE_ICONS[data.type];
   const timeLimit =
     data.settings.kind === 'quiz' && data.settings.timeLimitSec
       ? Math.round(data.settings.timeLimitSec / SECONDS_PER_MINUTE)
       : null;
   return (
     <div className="flex flex-col gap-4">
-      <Card className="flex flex-col gap-4 p-6">
+      <Card className="flex flex-col gap-4 p-5 sm:p-6">
         <div className="flex flex-wrap items-center gap-2">
           {position ? (
             <Badge tone="primary">
@@ -205,22 +226,25 @@ export function ItemWorkspace({
               <Timer aria-hidden /> {t('minutes', { minutes: timeLimit })}
             </Badge>
           ) : null}
-          <DueLabel dueAt={data.dueAt} className="text-xs" />
+          {data.dueAt ? (
+            <span className="inline-flex items-center rounded-full bg-surface-muted px-2.5 py-0.5">
+              <DueLabel dueAt={data.dueAt} />
+            </span>
+          ) : null}
         </div>
-        <div className="flex items-start gap-3">
-          <ItemTypeIcon type={data.type} className="size-11 rounded-full" />
-          <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <span className="text-label-md uppercase text-text-muted">{tTypes(data.type)}</span>
-            <h2 className="text-xl md:text-2xl">
-              <InlineEdit
-                value={data.title}
-                label={t('rename', { title: data.title })}
-                onSave={(title) => void patch({ title }).catch(() => undefined)}
-              />
-            </h2>
-          </div>
+        <div className="flex flex-col gap-1">
+          <span className="flex items-center gap-1.5 text-label-md uppercase text-text-muted">
+            <TypeIcon className="size-4" aria-hidden /> {tTypes(data.type)}
+          </span>
+          <h2 className="text-2xl md:text-3xl">
+            <InlineEdit
+              value={data.title}
+              label={t('rename', { title: data.title })}
+              onSave={(title) => void patch({ title }).catch(() => undefined)}
+            />
+          </h2>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 border-t border-outline-variant/40 pt-4">
           <Button variant="ghost" size="sm" onClick={onBack}>
             <ArrowLeft aria-hidden /> {t('backToStructure')}
           </Button>

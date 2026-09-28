@@ -101,6 +101,8 @@ self-hosted variable fonts from npm. `cn()` knows the custom sizes (`src/lib/uti
   «Конструктор / Структура / Предпросмотр».
 - **Public pages** (landing, auth, catalog, course landing, checkout, invites): `SiteHeader` + `SiteFooter` from
   `src/components/landing`.
+- **Page rhythm:** every app page is a stack of white 2rem panels on `--background`: header card → KPI `StatGrid`
+  (real data only) → content panels; lists inside panels are rounded rows with avatars and status chips.
 
 ## 6. Components (in `src/components/ui` unless noted)
 
@@ -110,8 +112,10 @@ self-hosted variable fonts from npm. `cn()` knows the custom sizes (`src/lib/uti
   placeholders. `IconInput` (leading icon), `PasswordInput` (show/hide with `aria-pressed`), `NativeSelect`.
 - **Field** — label + control + hint + error with aria wiring; `labelVariant="caps"` for auth forms.
 - **Checkbox / Radio / Switch** — 0.5rem checkbox with pop-in check; radio ring with bouncing violet dot.
-- **Card**, **StatCard / StatGrid** (uppercase label, tinted icon chip, headline value, footer), **PageHeader**
-  (eyebrow, title, status meta, actions), **Tabs** / **Segmented** (pill tracks), **Badge** (label-md pill,
+- **Card** and **Panel** (white 2rem section panel with title/description/actions), **StatCard / StatGrid** (uppercase
+  label, tinted icon chip, headline value, footer), **PageHeader** — a white 2rem header card with `breadcrumbs`
+  (`Breadcrumbs`), eyebrow, title, status `meta`, actions and a bottom toolbar row (`children`: tabs, filters);
+  `plain` drops the card. **Tabs** (inset pill track, active tab filled violet) / **Segmented** (white thumb), **Badge** (label-md pill,
   optional status dot), **StatusChip** (`src/components/course`): Опубликовано · Черновик · Запланировано.
 - **FileDropzone** — dashed `accent/30`, 2rem radius, `--dropzone` fill, copy «Перетащите аудио, видео или
   материалы урока сюда» + browse button; `layout="inline"` strip variant.

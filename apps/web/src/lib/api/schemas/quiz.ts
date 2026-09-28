@@ -15,11 +15,21 @@ export const QUESTION_TYPES = [
 export const questionTypeSchema = z.enum(QUESTION_TYPES);
 export type QuestionType = z.infer<typeof questionTypeSchema>;
 
+// The API serialises unset optional fields as `null`; the client model uses `undefined`.
+const optionalString = z
+  .string()
+  .nullish()
+  .transform((value) => value ?? undefined);
+const optionalNumber = z
+  .number()
+  .nullish()
+  .transform((value) => value ?? undefined);
+
 const choiceOption = z.object({
   id: z.string(),
   text: z.string(),
   correct: z.boolean(),
-  feedback: z.string().optional(),
+  feedback: optionalString,
 });
 export const MC_SCORING = ['all_or_nothing', 'partial', 'partial_with_penalty'] as const;
 
@@ -50,8 +60,8 @@ export const questionDataSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('essay'),
     responseFormat: z.enum(['text', 'text_and_files']),
-    minWords: z.number().optional(),
-    maxWords: z.number().optional(),
+    minWords: optionalNumber,
+    maxWords: optionalNumber,
   }),
   z.object({
     type: z.literal('matching'),
@@ -128,19 +138,25 @@ export const previewCheckResultSchema = z.object({
 });
 export type PreviewCheckResult = z.infer<typeof previewCheckResultSchema>;
 
+// The API sends `null` for unset points / page / random filters; normalise to the client shape.
+const slotPoints = optionalNumber;
+const slotPage = z
+  .number()
+  .nullish()
+  .transform((value) => value ?? 0);
 const fixedSlot = z.object({
   questionId: idSchema,
-  points: z.number().optional(),
-  page: z.number(),
+  points: slotPoints,
+  page: slotPage,
 });
 const randomSlot = z.object({
   random: z.object({
-    categoryId: idSchema.optional(),
-    tag: z.string().optional(),
+    categoryId: idSchema.nullish().transform((value) => value ?? undefined),
+    tag: optionalString,
     count: z.number(),
   }),
-  points: z.number().optional(),
-  page: z.number(),
+  points: slotPoints,
+  page: slotPage,
 });
 export const quizSlotSchema = z.union([fixedSlot, randomSlot]);
 export type QuizSlot = z.infer<typeof quizSlotSchema>;
@@ -200,8 +216,8 @@ export const attemptResultSchema = z.object({
       points: z.number(),
       correct: z.boolean().nullable(),
       response: questionResponseSchema.nullable(),
-      correctResponse: questionResponseSchema.optional(),
-      feedback: z.string().optional(),
+      correctResponse: questionResponseSchema.nullish().transform((value) => value ?? undefined),
+      feedback: optionalString,
     }),
   ),
 });

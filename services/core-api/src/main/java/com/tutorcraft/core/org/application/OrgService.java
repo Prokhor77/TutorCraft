@@ -19,6 +19,7 @@ class OrgService implements OrgApi, CategoryAncestry {
 
     private static final int SLUG_SUFFIX_BOUND = 10_000;
     private static final int MAX_SLUG_ATTEMPTS = 20;
+    private static final String PLATFORM_TENANT_NAME = "TutorCraft — администрирование";
 
     private final TenantRepository tenants;
     private final CategoryRepository categories;
@@ -36,6 +37,16 @@ class OrgService implements OrgApi, CategoryAncestry {
         UUID id = Ids.newId();
         tenants.insert(id, slug, name);
         return require(id);
+    }
+
+    @Override
+    @Transactional
+    public TenantInfo ensurePlatformTenant() {
+        return tenants.findBySlug(PLATFORM_TENANT_SLUG).orElseGet(() -> {
+            UUID id = Ids.newId();
+            tenants.insert(id, PLATFORM_TENANT_SLUG, PLATFORM_TENANT_NAME);
+            return require(id);
+        });
     }
 
     @Override

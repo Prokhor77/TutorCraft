@@ -72,8 +72,8 @@ function ItemStats({ item, courseId }: { item: ItemDetail; courseId: string }) {
   const done = report.data.rows.filter((row) => row.completed.includes(item.id)).length;
   const percent = Math.round((done / total) * PERCENT);
   return (
-    <section className="flex flex-col gap-2 rounded bg-surface-muted p-4">
-      <h3 className="font-sans text-label-md uppercase text-text-muted">{t('statsTitle')}</h3>
+    <section className="flex flex-col gap-3 rounded-lg border border-card-border bg-surface p-5 shadow-sm">
+      <h2 className="text-lg">{t('statsTitle')}</h2>
       <p className="flex items-baseline justify-between gap-2 text-sm">
         <span>{t('statsCompleted')}</span>
         <span className="font-semibold text-success">
@@ -90,6 +90,9 @@ const PERCENT = 100;
 function numberOrNull(raw: string): number | null {
   return raw === '' ? null : Number(raw);
 }
+
+const KEY_SETTINGS_KINDS = new Set(['assignment', 'quiz', 'forum', 'url', 'video']);
+const hasKeySettings = (settings: ItemSettings) => KEY_SETTINGS_KINDS.has(settings.kind);
 
 /** 2–4 key settings per type (UX-01); everything else stays behind «Все настройки». */
 function KeySettings({
@@ -293,6 +296,7 @@ function InspectorForm({
           </TabsTrigger>
         </TabsList>
         <TabsContent value="settings" className="flex flex-col gap-4">
+          <h3 className="text-lg">{tSettings('basics')}</h3>
           <Field label={tSettings('title')} required>
             <Input value={draft.title} onChange={(event) => set('title', event.target.value)} />
           </Field>
@@ -316,12 +320,18 @@ function InspectorForm({
               />
             </Field>
           ) : null}
-          <KeySettings
-            settings={draft.settings}
-            onChange={(settings) => set('settings', settings)}
-          />
+          {hasKeySettings(draft.settings) ? (
+            <>
+              <h3 className="mt-2 text-lg">{t('typeParams', { type: tTypes(item.type) })}</h3>
+              <KeySettings
+                settings={draft.settings}
+                onChange={(settings) => set('settings', settings)}
+              />
+            </>
+          ) : null}
         </TabsContent>
         <TabsContent value="conditions" className="flex flex-col gap-4">
+          <h3 className="text-lg">{t('completionTitle')}</h3>
           <Field label={tSettings('completionMode')}>
             <NativeSelect
               value={draft.completionRule.mode}
@@ -350,8 +360,8 @@ function InspectorForm({
               }
             />
           ) : null}
-          <div className="flex flex-col gap-2">
-            <span className="text-sm font-semibold">{tSettings('conditions')}</span>
+          <div className="mt-2 flex flex-col gap-3">
+            <h3 className="text-lg">{tSettings('conditions')}</h3>
             <ConditionsEditor
               value={draft.conditions}
               onChange={(conditions) => set('conditions', conditions)}
@@ -361,7 +371,7 @@ function InspectorForm({
           </div>
         </TabsContent>
       </Tabs>
-      <Button type="submit" variant="success" loading={isSaving} disabled={!dirty}>
+      <Button type="submit" size="lg" loading={isSaving} disabled={!dirty}>
         <Save aria-hidden /> {t('saveChanges')}
       </Button>
       <div className="grid grid-cols-2 gap-2">
@@ -393,7 +403,6 @@ function InspectorForm({
       <Button type="button" variant="secondary" onClick={() => setViewAsStudent(true)}>
         <Eye aria-hidden /> {t('previewAsStudent')}
       </Button>
-      <ItemStats item={item} courseId={courseId} />
     </form>
   );
 }
@@ -426,4 +435,11 @@ export function ItemInspector({
   return (
     <InspectorForm key={item.data.id} item={item.data} courseId={courseId} onClose={onClose} />
   );
+}
+
+/** Stitch «Статистика» card under the inspector: rendered only when the progress report has real rows. */
+export function ItemInspectorStats({ itemId, courseId }: { itemId: string; courseId: string }) {
+  const item = useItem(itemId);
+  if (!item.data) return null;
+  return <ItemStats item={item.data} courseId={courseId} />;
 }

@@ -1,5 +1,5 @@
 'use client';
-import { ShoppingCart, UserPlus } from 'lucide-react';
+import { MailOpen, ShoppingCart, UserPlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { useState } from 'react';
@@ -56,22 +56,38 @@ export function CourseCta({ courseId, price, selfEnrolEnabled }: Props) {
 
   if (price) {
     return (
-      <Button size="lg" className="w-full sm:w-auto" loading={createOrder.isPending} onClick={buy}>
+      <Button
+        size="lg"
+        className="h-14 w-full text-base"
+        loading={createOrder.isPending}
+        onClick={buy}
+      >
         <ShoppingCart aria-hidden /> {t('buyFor', { price: formatMoney(price, locale) })}
       </Button>
     );
   }
-  if (!selfEnrolEnabled) return <p className="text-sm text-text-muted">{t('byInvitation')}</p>;
+  if (!selfEnrolEnabled) {
+    return (
+      <p className="flex items-start gap-3 rounded-md bg-surface-muted p-4 text-sm text-text-muted">
+        <MailOpen className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+        {t('byInvitation')}
+      </p>
+    );
+  }
   return (
-    <div className="flex flex-col gap-2 sm:flex-row">
+    <div className="flex flex-col gap-3">
       <Input
         aria-label={t('enrolCode')}
         placeholder={t('enrolCodeOptional')}
         value={code}
         onChange={(event) => setCode(event.target.value)}
-        className="sm:w-48"
       />
-      <Button size="lg" loading={selfEnrol.isPending} onClick={enrol}>
+      <Button
+        size="lg"
+        className="h-14 w-full text-base"
+        loading={selfEnrol.isPending}
+        onClick={enrol}
+      >
         <UserPlus aria-hidden /> {t('enrolFree')}
       </Button>
     </div>
