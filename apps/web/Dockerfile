@@ -15,6 +15,10 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Public build-time config (inlined into the client bundle and the CSP connect-src).
 ARG NEXT_PUBLIC_WS_URL=""
 ENV NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL}
+# Origin of the S3 gateway the browser uploads to directly. Must be set whenever S3 lives on
+# another origin than the app, otherwise the production CSP blocks pre-signed PUT/GET.
+ARG NEXT_PUBLIC_S3_ORIGIN=""
+ENV NEXT_PUBLIC_S3_ORIGIN=${NEXT_PUBLIC_S3_ORIGIN}
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build

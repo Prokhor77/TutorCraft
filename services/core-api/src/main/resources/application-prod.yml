@@ -1,0 +1,45 @@
+# Профиль prod: сокращение публичной поверхности атаки и информации о внутреннем устройстве.
+# Активируется через SPRING_PROFILES_ACTIVE=prod (docker-compose.prod.yml).
+#
+# Почему это здесь, а не только в nginx: BFF-прокси Next.js (`/api/v1/[...path]`) пересылает в
+# core-api ЛЮБОЙ путь под /api/v1/, включая /api/v1/openapi.json. Блокировка на nginx — второй
+# рубеж (infra/deploy/nginx/tutorcraft-ip.conf), но выключать спецификацию надо в приложении.
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Пусто = /actuator/** не отдаётся по HTTP вообще.
+        # Healthcheck'и контейнеров не страдают: HealthController (/health/live, /health/ready)
+        # ходит в бин HealthEndpoint напрямую, минуя web-слой Actuator.
+        include: ""
+  info:
+    env: { enabled: false }
+    java: { enabled: false }
+    os: { enabled: false }
+
+server:
+  tomcat:
+    # За nginx доверяем X-Forwarded-* только loopback и докер-сетям (в паре с
+    # forward-headers-strategy: native из application.yml). Иначе клиент подделает
+    # X-Forwarded-For и обойдёт троттлинг входа, подставляя на каждую попытку новый IP.
+    remoteip:
+      internal-proxies: "127\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|::1|172\\.(1[6-9]|2\\d|3[01])\\.\\d{1,3}\\.\\d{1,3}|10\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}"
+    # Slowloris: не держать соединение и приём заголовков бесконечно.
+    connection-timeout: 20s
+    max-http-form-post-size: 2MB
+    max-swallow-size: 2MB
+  max-http-request-header-size: 16KB
+
+logging:
+  level:
+    root: WARN
+    com.tutorcraft: INFO
+    # Стектрейсы Spring Security при отказе в доступе шумят и раскрывают внутренние пути.
+    org.springframework.security: WARN

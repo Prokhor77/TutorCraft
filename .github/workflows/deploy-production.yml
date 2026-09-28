@@ -6,7 +6,16 @@ name: Deploy to Production
 #
 # Секреты репозитория:  PROD_HOST, PROD_USER, PROD_SSH_KEY, PROD_PATH (например /opt/tutorcraft),
 #                       GHCR_PULL_USER, GHCR_PULL_TOKEN (PAT с правом read:packages — для docker pull на сервере).
-# Переменные (vars):    PROD_DOMAIN (например tutorcraft.example) — попадает в NEXT_PUBLIC_WS_URL при сборке web.
+# Переменные (vars):    PROD_WS_URL — адрес WebSocket для браузера, вшивается в бандл при сборке web.
+#                       Текущий деплой (голый IP, HTTP):  ws://91.149.179.186/ws
+#                       При переезде на домен с TLS:      wss://<домен>/ws
+#                       Схема обязана совпадать со схемой страницы: браузер не откроет ws://
+#                       со страницы https:// (mixed content), и наоборот wss:// требует сертификата.
+#
+#                       PROD_S3_ORIGIN — origin S3-шлюза, куда браузер льёт файлы напрямую.
+#                       Текущий деплой: http://91.149.179.186:9000
+#                       Попадает в CSP connect-src; при пустом значении загрузка файлов
+#                       будет блокироваться браузером с ошибкой Content-Security-Policy.
 
 on:
   workflow_run:
@@ -57,7 +66,8 @@ jobs:
       context: ./apps/web
       ref: ${{ needs.gate.outputs.ref }}
       build_args: |
-        NEXT_PUBLIC_WS_URL=wss://${{ vars.PROD_DOMAIN }}/ws
+        NEXT_PUBLIC_WS_URL=${{ vars.PROD_WS_URL }}
+        NEXT_PUBLIC_S3_ORIGIN=${{ vars.PROD_S3_ORIGIN }}
 
   core-api:
     needs: gate
@@ -104,7 +114,7 @@ jobs:
         # Пустой .env: compose требует наличия файла из env_file даже для `config`.
         run: |
           touch .env
-          docker compose -f docker-compose.prod.yml config -q
+          docker compose -f docker-compose.prod.yml -f docker-compose.ip.yml config -q
         env:
           POSTGRES_DB: x
           POSTGRES_USER: x
@@ -124,7 +134,9 @@ jobs:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_USER }}
           key: ${{ secrets.PROD_SSH_KEY }}
-          source: "docker-compose.prod.yml,infra/kafka/create-topics.sh,infra/deploy/backup.sh"
+          # infra/s3/*.sh монтируются в контейнер SeaweedFS, nginx-конфиги — справочно,
+          # чтобы правки vhost доезжали до сервера вместе с релизом.
+          source: "docker-compose.prod.yml,docker-compose.ip.yml,infra/kafka/create-topics.sh,infra/s3/start-prod.sh,infra/s3/init.sh,infra/deploy/backup.sh,infra/deploy/nginx/tutorcraft-ip.conf,infra/deploy/nginx/tutorcraft-proxy.conf"
           target: ${{ secrets.PROD_PATH }}
           overwrite: true
 
@@ -141,19 +153,21 @@ jobs:
           script: |
             set -e
             cd "${{ secrets.PROD_PATH }}"
-            test -f .env || { echo ".env отсутствует в $(pwd) — см. docs/deployment.md"; exit 1; }
-            chmod +x infra/deploy/backup.sh
+            test -f .env || { echo ".env отсутствует в $(pwd) — запустите infra/deploy/bootstrap-ip.sh"; exit 1; }
+            chmod +x infra/deploy/backup.sh infra/s3/start-prod.sh infra/s3/init.sh
+
+            COMPOSE="docker compose -f docker-compose.prod.yml -f docker-compose.ip.yml"
 
             # Логин под пользователем деплоя TutorCraft (свой ~/.docker/config.json):
             # учётка confeek (admst-dz) в другом пользователе не затирается.
             echo "$GHCR_PULL_TOKEN" | docker login ghcr.io -u "$GHCR_PULL_USER" --password-stdin
 
-            docker compose -f docker-compose.prod.yml pull
-            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            $COMPOSE pull
+            $COMPOSE up -d --remove-orphans
 
             # Ждём healthcheck'и явно: `up --wait` по-разному трактует одноразовый kafka-init
             # в разных версиях compose. core-api стартует до ~2 минут (Flyway + прогрев).
-            for svc in tutorcraft_core_api tutorcraft_web tutorcraft_notifier tutorcraft_media_worker; do
+            for svc in tutorcraft_s3 tutorcraft_core_api tutorcraft_web tutorcraft_notifier tutorcraft_media_worker; do
               for attempt in $(seq 1 60); do
                 status=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$svc" 2>/dev/null || echo missing)
                 [ "$status" = "healthy" ] && { echo "$svc: healthy"; break; }

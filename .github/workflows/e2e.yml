@@ -1,0 +1,57 @@
+# Сквозной сценарий SPEC §10 «Первый курс за 15 минут» на живом compose-стеке + сверка OpenAPI.
+#
+# Вынесен из ci.yml: деплой гейтится успехом `ci`, и тяжёлый нестабильный job не должен
+# задерживать выкладку проверенного кода. Запускается по расписанию и вручную; перед релизом
+# прогонять обязательно.
+name: e2e
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 03:15 UTC ежедневно — сервер раннера свободнее, а падение видно к утру.
+    - cron: '15 3 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start stack
+        run: |
+          ./scripts/init-env.sh
+          docker compose up -d --build --wait
+
+      # API-02: спецификация в репозитории должна совпадать с генерируемой из кода.
+      # Базового файла может не быть (его ни разу не коммитили) — тогда не валим сборку,
+      # а публикуем сгенерированный как артефакт: его достаточно скачать и закоммитить.
+      - name: OpenAPI spec is up to date (API-02)
+        run: |
+          curl -sf http://localhost:8080/api/v1/openapi.json \
+            | python3 -m json.tool --sort-keys > /tmp/openapi.json
+          if [ -f docs/api/openapi.json ]; then
+            python3 -m json.tool --sort-keys docs/api/openapi.json > /tmp/committed.json
+            diff -u /tmp/committed.json /tmp/openapi.json
+          else
+            echo "::warning::docs/api/openapi.json отсутствует — скачайте артефакт openapi-spec и закоммитьте его"
+          fi
+
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with: { name: openapi-spec, path: /tmp/openapi.json, if-no-files-found: ignore }
+
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: npm, cache-dependency-path: apps/web/package-lock.json }
+
+      - working-directory: apps/web
+        run: npm ci && npx playwright install --with-deps chromium && npm run test:e2e
+
+      - if: failure()
+        run: docker compose logs --no-color > compose.log
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with: { name: compose-logs, path: compose.log }

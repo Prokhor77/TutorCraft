@@ -29,13 +29,23 @@ x-logging: &logging
     max-size: "20m"
     max-file: "3"
 
+# Инфраструктурным контейнерам (postgres/mongo/redis/kafka) нужны CHOWN/SETUID/SETGID для
+# сброса привилегий на старте — им только no-new-privileges.
+x-hardening: &hardening
+  security_opt: ["no-new-privileges:true"]
+
+# Все четыре образа приложения собраны с USER non-root и не делают setuid/mount/ptrace,
+# поэтому им можно снять вообще все capabilities.
 x-app-image: &app-image
   pull_policy: always
   restart: unless-stopped
   logging: *logging
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: [ALL]
 
 services:
   postgres:
+    <<: *hardening
     image: postgres:16-alpine
     container_name: tutorcraft_postgres
     restart: unless-stopped
@@ -55,6 +65,7 @@ services:
     healthcheck: { <<: *hc, test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"] }
 
   mongo:
+    <<: *hardening
     image: mongo:7
     container_name: tutorcraft_mongo
     restart: unless-stopped
@@ -71,6 +82,7 @@ services:
       test: ["CMD", "mongosh", "--quiet", "--eval", "try { rs.status().ok } catch (e) { rs.initiate({_id:'rs0',members:[{_id:0,host:'mongo:27017'}]}).ok }"]
 
   redis:
+    <<: *hardening
     image: redis:7-alpine
     container_name: tutorcraft_redis
     restart: unless-stopped
@@ -84,6 +96,7 @@ services:
     healthcheck: { <<: *hc, test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"] }
 
   kafka:
+    <<: *hardening
     image: apache/kafka:3.8.0
     container_name: tutorcraft_kafka
     restart: unless-stopped
@@ -120,6 +133,7 @@ services:
 
   # Идемпотентно создаёт топики (infra/kafka/create-topics.sh едет на сервер вместе с compose-файлом).
   kafka-init:
+    <<: *hardening
     image: apache/kafka:3.8.0
     container_name: tutorcraft_kafka_init
     logging: *logging

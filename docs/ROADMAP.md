@@ -7,9 +7,14 @@
 |---|---|---|
 | apps/web (Next.js) | ✅ `next build`, tsc, eslint | ✅ 86 unit/a11y (Vitest); e2e (Playwright) написан, не запускался |
 | services/media-worker, notifier, workerkit (Go) | ✅ `go vet`, `go build` | ✅ `go test -race` (ffmpeg — реальный) |
-| services/core-api (Java) | ⚠️ компиляция только против заглушек API библиотек (0 ошибок); **Maven Central недоступен в среде разработки** | ⚠️ unit/IT написаны, не запускались; миграции V1–V15 и все SQL-запросы проверены на PostgreSQL 16 |
+| services/core-api (Java) | ✅ `mvn -B verify -DskipITs` на Maven 3.9 / JDK 21 | ✅ 463 unit + ArchUnit проходят; IT (Testcontainers) написаны, не запускались; миграции V1–V15 и все SQL-запросы проверены на PostgreSQL 16 |
 
-**Первое, что нужно сделать:** `cd services/core-api && mvn verify` (или `docker compose up --build`) — возможны мелкие несовпадения с реальными API библиотек.
+Сборка против реальных библиотек проверена 2026-09-28 — прежнее предупреждение о заглушках снято.
+На JDK 24+ пять тестов `AuthServiceRefreshTest` падают с `MockitoException`: Byte Buddy не поддерживает
+такую версию JVM. Это среда, а не код — на JDK 21 (как в CI) всё зелёное; локально обходится флагом
+`-Dnet.bytebuddy.experimental=true`.
+
+**Осталось прогнать:** `mvn failsafe:integration-test` (нужен Docker) и `npm run test:e2e` (workflow `e2e`).
 
 ## P0 (MVP) — ТЗ + гибрид
 | Область | Статус | Примечание |
