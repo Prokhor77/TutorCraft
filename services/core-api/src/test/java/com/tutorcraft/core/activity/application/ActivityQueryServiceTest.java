@@ -82,7 +82,8 @@ class ActivityQueryServiceTest {
         ArgumentCaptor<TrailQuery> query = ArgumentCaptor.forClass(TrailQuery.class);
         verify(repository).trail(any(), query.capture());
         assertThat(query.getValue().userId()).isEqualTo(USER);
-        assertThat(query.getValue().sessionId()).isEqualTo("tab-12345678");
+        assertThat(query.getValue().sessionId()).as("user anchor must not widen the trail to the tab").isNull();
+        assertThat(query.getValue().ip()).isNull();
         assertThat(query.getValue().from()).isEqualTo(NOW.minus(Duration.ofMinutes(30)));
         assertThat(trail.anchor()).isEqualTo("user");
         assertThat(trail.truncated()).isTrue();
