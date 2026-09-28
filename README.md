@@ -25,7 +25,7 @@ docker compose up --build      # первый запуск ~5–10 минут: �
 
 ### Демо-данные
 При `SEED_DEMO_DATA=true` (по умолчанию в dev) создаются: школа `demo`, преподаватель `teacher@demo.local`
-(администратор школы), 20 студентов `student1@demo.local` … `student20@demo.local`, демо-курс с модулями, страницей,
+(администратор школы), 20 студентов `student01@demo.local` … `student20@demo.local`, демо-курс с модулями, страницей,
 заданием, тестом из 5 вопросов и форумом. Пароль всех демо-аккаунтов — значение `SEED_DEMO_PASSWORD` из вашего `.env`.
 Витрина школы: http://localhost:3000/c/demo
 

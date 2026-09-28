@@ -1,7 +1,7 @@
 // AC-10 / NFR-PERF-02: 500 виртуальных студентов проходят тест из 30 вопросов
 // с автосохранением каждые 10 с в течение 30 минут. Запуск:
 //   k6 run -e BASE_URL=http://localhost:3000 -e ITEM_ID=<quizItemId> -e PASSWORD=<SEED_DEMO_PASSWORD> loadtests/quiz-autosave.js
-// Пользователи: loadstudent{N}@demo.local (создаются scripts/seed-load-users.sh или импортом CSV).
+// Пользователи: loadstudent{N}@demo.local (создайте CSV-импортом в админке: email,firstName,lastName,courseShortName).
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { uuidv4 } from 'https://jslib.k6.io/k6-utils/1.4.0/index.js';
