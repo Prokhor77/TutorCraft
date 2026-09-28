@@ -11,7 +11,8 @@ function currentLocale(): string | undefined {
 
 /** Admin pages act in the school the platform administrator picked; every other page uses the own tenant. */
 function adminTenantOverride(): string | undefined {
-  if (typeof window === 'undefined' || !window.location.pathname.startsWith('/admin')) return undefined;
+  if (typeof window === 'undefined' || !window.location.pathname.startsWith('/admin'))
+    return undefined;
   return useAdminTenantStore.getState().tenantId ?? undefined;
 }
 

@@ -74,7 +74,7 @@ export function FilterChips<T extends string>({
     <div
       role="radiogroup"
       aria-label={label}
-      className={cn('flex max-w-full gap-1.5 overflow-x-auto scrollbar-none', className)}
+      className={cn('scrollbar-none flex max-w-full gap-1.5 overflow-x-auto', className)}
     >
       {options.map((option) => {
         const active = option.value === value;

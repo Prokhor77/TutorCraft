@@ -60,7 +60,10 @@ export function TenantPicker({
                   }}
                 >
                   <Check
-                    className={cn('size-4 text-primary', tenant.id === value ? 'opacity-100' : 'opacity-0')}
+                    className={cn(
+                      'size-4 text-primary',
+                      tenant.id === value ? 'opacity-100' : 'opacity-0',
+                    )}
                     aria-hidden
                   />
                   <span className="flex min-w-0 flex-col">

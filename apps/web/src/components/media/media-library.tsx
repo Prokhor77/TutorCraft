@@ -567,7 +567,7 @@ export function MediaLibrary() {
             </SidebarGroup>
           </div>
           {/* Phones/tablets: Stitch chip row filters. */}
-          <ul className="-mx-page-x flex gap-2 overflow-x-auto px-page-x scrollbar-none xl:hidden">
+          <ul className="scrollbar-none -mx-page-x flex gap-2 overflow-x-auto px-page-x xl:hidden">
             {([null, ...MEDIA_TYPES] as const).map((type) => {
               const active = filters.type === type && !filters.moduleId && !filters.draftsOnly;
               return (

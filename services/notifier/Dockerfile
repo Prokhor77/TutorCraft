@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # Build context: ./services (the service depends on ../workerkit), see docker-compose.yml.
 
-FROM golang:1.24-alpine AS build
+FROM golang:1.27-alpine AS build
 WORKDIR /src
 COPY workerkit/go.mod workerkit/go.sum ./workerkit/
 COPY notifier/go.mod notifier/go.sum ./notifier/

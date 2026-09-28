@@ -104,7 +104,10 @@ function MobileCourseSummary({
           label={learner ? t('completedLabel') : t('readinessLabel')}
         />
       </Card>
-      <nav aria-label={t('modulesNav')} className="-mx-page-x overflow-x-auto px-page-x scrollbar-none">
+      <nav
+        aria-label={t('modulesNav')}
+        className="scrollbar-none -mx-page-x overflow-x-auto px-page-x"
+      >
         <ul className="flex gap-2">
           {modules.map((module, index) => {
             const count = learner ? moduleProgress(module) : publishedProgress([module]);

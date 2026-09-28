@@ -78,7 +78,9 @@ export function LanguageMenu({ onChange }: { onChange?: (locale: 'ru' | 'en') =>
             onClick={() => !active && select(option)}
             className={cn(
               'h-7 min-w-9 rounded-full px-2 text-label-md font-semibold uppercase transition-[background-color,color] duration-fast focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus-ring/25',
-              active ? 'bg-primary text-primary-foreground shadow-sm' : 'text-text-muted hover:text-primary',
+              active
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-text-muted hover:text-primary',
             )}
           >
             {option}

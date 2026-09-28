@@ -124,7 +124,7 @@ function TypePills({
     <div
       role="radiogroup"
       aria-label={t('type')}
-      className="-mx-1 flex gap-1.5 overflow-x-auto px-1 scrollbar-none"
+      className="scrollbar-none -mx-1 flex gap-1.5 overflow-x-auto px-1"
     >
       {QUESTION_TYPES.map((type) => {
         const Icon = QUESTION_TYPE_ICONS[type];

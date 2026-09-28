@@ -18,7 +18,7 @@ export function SettingsTabs() {
   const pathname = usePathname();
   return (
     <nav aria-label={tProfile('settingsNav')}>
-      <ul className="inline-flex max-w-full items-center gap-1 overflow-x-auto scrollbar-none rounded-full bg-surface-muted p-1 shadow-inner">
+      <ul className="scrollbar-none inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-full bg-surface-muted p-1 shadow-inner">
         {TABS.map(({ href, key, icon: Icon }) => {
           const active = pathname === href;
           return (

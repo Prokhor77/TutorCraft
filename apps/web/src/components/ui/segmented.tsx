@@ -22,7 +22,7 @@ export function Segmented<T extends string>({
       role="radiogroup"
       aria-label={label}
       className={cn(
-        'inline-flex max-w-full overflow-x-auto scrollbar-none rounded-full bg-surface-muted p-1 shadow-inner',
+        'scrollbar-none inline-flex max-w-full overflow-x-auto rounded-full bg-surface-muted p-1 shadow-inner',
         className,
       )}
     >

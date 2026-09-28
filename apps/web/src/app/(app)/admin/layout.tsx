@@ -57,7 +57,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const me = useAuthStore(selectMe);
   if (!isPlatformAdminHint(me?.tenantRoles)) {
     return (
-      <EmptyState icon={Lock} title={t('forbidden.title')} description={t('forbidden.description')} />
+      <EmptyState
+        icon={Lock}
+        title={t('forbidden.title')}
+        description={t('forbidden.description')}
+      />
     );
   }
   return <PlatformAdminLayout>{children}</PlatformAdminLayout>;
@@ -130,11 +134,18 @@ function PlatformAdminLayout({ children }: { children: ReactNode }) {
         description={t('description')}
         actions={
           tenants.data?.length ? (
-            <TenantPicker tenants={tenants.data} value={selected?.id ?? null} onChange={switchTenant} />
+            <TenantPicker
+              tenants={tenants.data}
+              value={selected?.id ?? null}
+              onChange={switchTenant}
+            />
           ) : null
         }
       >
-        <nav aria-label={t('sections')} className="-mx-1 max-w-full overflow-x-auto px-1 scrollbar-none">
+        <nav
+          aria-label={t('sections')}
+          className="scrollbar-none -mx-1 max-w-full overflow-x-auto px-1"
+        >
           <ul className="inline-flex gap-1 rounded-full bg-surface-muted p-1 shadow-inner">
             {SECTIONS.map((section) => {
               const active = section === current;

@@ -28,7 +28,7 @@ export function FilterPills<T extends string>({
       role="group"
       aria-label={label}
       className={cn(
-        'flex max-w-full items-center overflow-x-auto scrollbar-none',
+        'scrollbar-none flex max-w-full items-center overflow-x-auto',
         track ? 'gap-1 rounded-full bg-surface-muted p-1 shadow-inner' : 'flex-wrap gap-1.5',
         className,
       )}

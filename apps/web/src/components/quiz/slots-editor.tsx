@@ -27,13 +27,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import {
-  useDeferredValue,
-  useEffect,
-  useImperativeHandle,
-  useState,
-  type Ref,
-} from 'react';
+import { useDeferredValue, useEffect, useImperativeHandle, useState, type Ref } from 'react';
 import { QuestionEditor } from '@/components/qbank/question-editor';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

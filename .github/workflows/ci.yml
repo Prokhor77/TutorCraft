@@ -30,7 +30,9 @@ jobs:
       - name: Integration tests (Testcontainers)
         run: mvn -B failsafe:integration-test failsafe:verify
       - name: Dependency vulnerability scan (NFR-SEC-10)
-        uses: aquasecurity/trivy-action@0.28.0
+        # Теги этого action идут с префиксом v (v0.28.0, v0.33.1, …). Без него job падал
+        # за 2 секунды на разрешении action, так и не дойдя до Maven.
+        uses: aquasecurity/trivy-action@v0.33.1
         with: { scan-type: fs, scan-ref: services/core-api, severity: 'HIGH,CRITICAL', exit-code: '1', ignore-unfixed: true }
 
   go-workers:
@@ -45,14 +47,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
-        with: { go-version: '1.24' }
+        # 1.27, а не 1.24: ветка 1.24 вышла из поддержки и не получает патчей stdlib.
+        # На последней 1.24.13 govulncheck находит 10 уязвимостей со статусом
+        # «Fixed in go1.25.x» — в 1.24 их не бэкпортируют, и job падал бы при любом коде.
+        # Директива `go 1.24` в go.mod оставлена: это нижняя планка языка, не тулчейн.
+        with: { go-version: '1.27' }
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: go vet ./...
       - run: go test -race ./...
       - uses: golang/govulncheck-action@v1
         with:
           work-dir: services/${{ matrix.module }}
-          go-version-input: '1.24'
+          go-version-input: '1.27'
 
   web:
     runs-on: ubuntu-latest

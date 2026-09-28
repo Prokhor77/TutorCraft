@@ -6,6 +6,10 @@
   "engines": {
     "node": ">=22"
   },
+  "//overrides": "next тянет собственную вложенную копию postcss (node_modules/next/node_modules/postcss), и уязвимой считается вся линейка <=8.5.22 — патча внутри next@15 нет, npm audit fix предлагает только мажорный прыжок на next@16. Форсируем 8.5.23+ (семвер-патч, API не меняется), иначе `npm audit --audit-level=high` валит CI.",
+  "overrides": {
+    "postcss": "^8.5.28"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
