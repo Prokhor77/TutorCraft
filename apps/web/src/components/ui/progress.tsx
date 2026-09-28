@@ -25,7 +25,7 @@ export function Progress({
       <ProgressPrimitive.Indicator
         className={cn(
           'h-full rounded-full transition-transform duration-base',
-          tone === 'success' ? 'bg-success' : 'bg-primary',
+          tone === 'success' ? 'bg-success' : 'bg-gradient-to-r from-primary to-accent',
         )}
         style={{ transform: `translateX(-${PERCENT_MAX - clamped}%)` }}
       />

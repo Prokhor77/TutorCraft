@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSaveStore } from '@/stores/save-store';
 
 /** UX-03: drafts are saved at least every 10 s; we use 8 s to stay inside the budget with latency. */
 export const AUTOSAVE_INTERVAL_MS = 8000;
@@ -95,6 +96,7 @@ export function useAutosave<T>({
       .then(() => {
         savedSnapshot.current = snapshot;
         setLastSavedAt(new Date());
+        useSaveStore.getState().markSaved();
         setStatus(JSON.stringify(latest.current) === snapshot ? 'saved' : 'dirty');
         if (draftKey && JSON.stringify(latest.current) === snapshot) clearLocalDraft(draftKey);
       })

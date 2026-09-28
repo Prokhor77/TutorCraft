@@ -56,7 +56,7 @@ export function BulkBar({ courseId, outline, selectedIds, onClear }: Props) {
     <div
       role="region"
       aria-label={t('label')}
-      className="sticky bottom-[calc(var(--size-bottom-nav)+0.5rem)] z-20 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface p-3 shadow-lg md:bottom-4"
+      className="glass sticky bottom-[calc(var(--size-bottom-nav)+0.5rem)] z-20 flex flex-wrap items-center gap-2 rounded-md border border-card-border p-3 shadow-lg md:bottom-4"
     >
       <span className="text-sm font-medium" aria-live="polite">
         {t('selected', { count: selectedIds.length })}

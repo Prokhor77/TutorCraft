@@ -22,7 +22,6 @@ class JdbcFileRepository implements FileRepository {
     private static final String COLUMNS = """
             id, tenant_id, uploaded_by, name, size_bytes, declared_mime, mime, purpose, status, storage_key, sha256, created_at
             """;
-    private static final long BYTES_PER_MB = 1024L * 1024;
 
     private final JdbcClient jdbc;
 
@@ -97,14 +96,6 @@ class JdbcFileRepository implements FileRepository {
         return jdbc.sql("SELECT CAST(COALESCE(SUM(size_bytes), 0) AS bigint) FROM files WHERE tenant_id = :tenantId AND status <> 'rejected'")
                 .param("tenantId", tenantId)
                 .query(Long.class).single();
-    }
-
-    @Override
-    public Optional<Long> storageQuotaBytes(UUID tenantId) {
-        return jdbc.sql("SELECT quota_storage_mb FROM tenants WHERE id = :tenantId AND quota_storage_mb IS NOT NULL")
-                .param("tenantId", tenantId)
-                .query((rs, n) -> rs.getLong("quota_storage_mb") * BYTES_PER_MB)
-                .optional();
     }
 
     @Override

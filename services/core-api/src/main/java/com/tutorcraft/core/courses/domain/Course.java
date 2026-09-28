@@ -55,7 +55,8 @@ public record Course(UUID id, UUID tenantId, UUID categoryId, String title, Stri
 
     public CourseRef toRef() {
         return new CourseRef(id, tenantId, title, shortName, slug, categoryId, visibility, publishAt, startsAt, endsAt, price,
-                completionRule.requiredItemIds(), completionRule.minFinalPercent(), groupMode.key(), createdBy);
+                completionRule.requiredItemIds(), completionRule.minFinalPercent(), groupMode.key(), createdBy,
+                coverFileId);
     }
 
     public Builder toBuilder() {

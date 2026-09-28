@@ -152,3 +152,12 @@ export function useGradebookMutations(courseId: string) {
     }),
   };
 }
+
+/** FR-REPORT-01 student × item completion (shared by the progress matrix, analytics cards and inspector stats). */
+export function useProgressReport(courseId: string, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.progressReport(courseId),
+    queryFn: () => gradebookApi.progressReport(courseId),
+    enabled: enabled && !!courseId,
+  });
+}

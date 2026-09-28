@@ -3,6 +3,7 @@ package com.tutorcraft.core.assessment.assignment.application;
 import com.tutorcraft.core.access.AccessService;
 import com.tutorcraft.core.access.domain.AccessContext;
 import com.tutorcraft.core.access.domain.Permission;
+import com.tutorcraft.core.assessment.AssessmentEvents.SubmissionGraded;
 import com.tutorcraft.core.assessment.assignment.application.BlockDocInput.SanitizedText;
 import com.tutorcraft.core.assessment.assignment.application.SubmissionViews.Perspective;
 import com.tutorcraft.core.assessment.assignment.domain.AssignmentErrors;
@@ -31,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,11 +57,13 @@ public class GradingService {
     private final FilesApi files;
     private final GradebookApi gradebook;
     private final AuditLog audit;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
     GradingService(CurrentUserProvider currentUser, AccessService access, AssignmentItems items,
                    SubmissionRepository submissions, SubmissionAccess submissionAccess, SubmissionViews views,
-                   BlockDocInput blockDocs, FilesApi files, GradebookApi gradebook, AuditLog audit, Clock clock) {
+                   BlockDocInput blockDocs, FilesApi files, GradebookApi gradebook, AuditLog audit,
+                   ApplicationEventPublisher events, Clock clock) {
         this.currentUser = currentUser;
         this.access = access;
         this.items = items;
@@ -70,6 +74,7 @@ public class GradingService {
         this.files = files;
         this.gradebook = gradebook;
         this.audit = audit;
+        this.events = events;
         this.clock = clock;
     }
 
@@ -81,7 +86,7 @@ public class GradingService {
         submissionAccess.requireStaff(user, assignment, submission, Permission.SUBMISSION_GRADE);
         Submission locked = lockCurrent(submission);
         validateScore(command.score(), assignment.settings().maxScore());
-        SanitizedText text = blockDocs.sanitize(command.feedback(), FEEDBACK_FIELD);
+        SanitizedText text = blockDocs.sanitize(user.tenantId(), command.feedback(), FEEDBACK_FIELD);
         List<FileRef> feedbackFiles = feedbackFiles(user, command.feedbackFileIds(), text);
         Instant now = clock.instant();
         boolean publish = assignment.settings().autoPublishGrades() || alreadyPublished(assignment, locked);
@@ -95,6 +100,7 @@ public class GradingService {
         recordGrades(assignment, graded, command.score(), user.userId(), publish);
         audit.record(AuditRecord.of(user.tenantId(), user.userId(), "submission.graded", "submission", locked.id().toString())
                 .withDiff(gradeDiff(command, graded.status())));
+        events.publishEvent(new SubmissionGraded(user.tenantId(), locked.courseId(), locked.itemId(), locked.id(), user.userId()));
         return views.build(assignment, submissionAccess.require(user.tenantId(), locked.id()),
                 assignment.settings().dueAt(), Perspective.STAFF);
     }

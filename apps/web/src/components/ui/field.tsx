@@ -14,11 +14,24 @@ type FieldProps = {
   error?: string;
   required?: boolean;
   className?: string;
+  /** `caps` = Stitch auth labels (uppercase label-md). */
+  labelVariant?: 'default' | 'caps';
+  /** Content on the label row's right (e.g. «Забыли пароль?»). */
+  labelAside?: ReactNode;
   children: ReactElement<Record<string, unknown>>;
 };
 
 /** Label + control + hint + error with correct aria wiring (NFR-A11Y-01). */
-export function Field({ label, hint, error, required, className, children }: FieldProps) {
+export function Field({
+  label,
+  hint,
+  error,
+  required,
+  className,
+  labelVariant = 'default',
+  labelAside,
+  children,
+}: FieldProps) {
   const generatedId = useId();
   const controlId =
     (isValidElement(children) && (children.props.id as string | undefined)) || generatedId;
@@ -27,14 +40,20 @@ export function Field({ label, hint, error, required, className, children }: Fie
   const describedBy = [hintId, errorId].filter(Boolean).join(' ') || undefined;
   return (
     <div className={cn('flex flex-col gap-1.5', className)}>
-      <Label htmlFor={controlId}>
-        {label}
-        {required ? (
-          <span aria-hidden className="ml-0.5 text-danger">
-            *
-          </span>
-        ) : null}
-      </Label>
+      <div className="flex items-baseline justify-between gap-2">
+        <Label
+          htmlFor={controlId}
+          className={cn(labelVariant === 'caps' && 'text-label-md uppercase text-text-muted')}
+        >
+          {label}
+          {required ? (
+            <span aria-hidden className="ml-0.5 text-danger">
+              *
+            </span>
+          ) : null}
+        </Label>
+        {labelAside}
+      </div>
       {cloneElement(children, {
         id: controlId,
         'aria-describedby': describedBy,

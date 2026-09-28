@@ -30,10 +30,18 @@ class TelegramLinkedListener {
     @KafkaListener(topics = Topics.TELEGRAM_LINKED)
     void onMessage(String message) {
         EventEnvelope<TelegramLinked> envelope = parse(message);
-        if (envelope == null || envelope.eventId() == null || envelope.payload() == null) {
+        if (envelope == null || !supported(envelope) || envelope.eventId() == null || envelope.payload() == null) {
             return;
         }
         telegramLinks.completeLink(envelope.eventId(), envelope.payload());
+    }
+
+    private boolean supported(EventEnvelope<?> envelope) {
+        if (envelope.supportedVersion()) {
+            return true;
+        }
+        log.warn("{} event {} skipped: unsupported envelope version {}", Topics.TELEGRAM_LINKED, envelope.eventId(), envelope.version());
+        return false;
     }
 
     /** Нечитаемое сообщение не может быть обработано повторно — логируем и пропускаем. */

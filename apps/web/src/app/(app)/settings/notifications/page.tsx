@@ -58,7 +58,7 @@ export default function NotificationSettingsPage() {
   return (
     <>
       <PageHeader title={t('title')} description={t('description')} />
-      <div className="mb-6 flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-6 flex flex-col gap-3 rounded-md border border-card-border bg-surface p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-1">
           <span className="flex items-center gap-2 font-medium">
             Telegram{' '}
@@ -85,7 +85,7 @@ export default function NotificationSettingsPage() {
       {!me?.telegramLinked ? (
         <Alert tone="info" className="mb-4" title={t('telegramDisabledColumn')} />
       ) : null}
-      <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+      <div className="overflow-x-auto rounded-md border border-card-border bg-surface shadow-sm">
         <table className="w-full text-sm">
           <caption className="sr-only">{t('title')}</caption>
           <thead className="bg-surface-muted text-xs uppercase text-text-muted">

@@ -14,6 +14,7 @@ com.tutorcraft.core.<module>/
 ```
 - Другие модули используются **только** через их публичные классы корня пакета (`CoursesApi`, `ItemRef`, события) и `spi`. Запрещено импортировать чужие `application/infrastructure/web/domain`. Исключение: `access.domain` (Permission, AccessContext, CourseRole, TenantRole) — общий словарь прав. Проверяется `ModuleBoundariesTest` (ArchUnit).
 - Реализация своего `<Module>Api` — класс в `application` с видимостью package-private.
+- Исключение из правила импорта: `com.tutorcraft.core.seed` (сид демо-данных, только профиль `dev`) вызывает use case-сервисы модулей (`CourseCommandService`, `AccountProvisioner`, …), чтобы демо-данные проходили те же проверки, что и REST; SQL и репозитории чужих модулей в нём запрещены.
 - Циклы бинов недопустимы: реализации SPI для access (`CourseLocator`, `CourseMembershipResolver`) зависят только от репозиториев.
 
 ## Код
@@ -24,6 +25,7 @@ com.tutorcraft.core.<module>/
 - Авторизация — **в application-слое** каждого use case: `access.require(Permission.X, AccessContext.course(courseId))`. Объект чужого tenant → 404 (репозитории всегда фильтруют по `tenant_id`/`tenantId`).
 - Текущий пользователь — `CurrentUserProvider.require()` (userId, tenantId).
 - Время — внедрённый `java.time.Clock`, никогда `Instant.now()` напрямую.
+- Аудит: `AuditLog.record` — в транзакции изменения; `AuditLog.recordIndependently` — отдельная транзакция (REQUIRES_NEW) для событий безопасности, сопровождающих отказ (AC-1: чужой tenant → 404 + запись). `@Transactional(noRollbackFor = …)` для сохранения аудита не использовать.
 - ID — `Ids.newId()` (UUIDv7).
 - Входные данные: Bean Validation на DTO (`@NotBlank`, `@Size`) + доменная валидация через `shared.domain.Validator`.
 
@@ -45,9 +47,9 @@ com.tutorcraft.core.<module>/
 | V5 | files | files, file_links, videos |
 | V6 | courses | courses (+ индексы каталога) |
 | V7 | enrollment | enrollments, course_invite_links, course_groups, course_group_members |
-| V8 | assessment.assignment | submissions, submission_files, submission_feedback, item_overrides |
+| V8 | assessment.assignment | submissions, submission_members, submission_files, submission_feedback, item_overrides |
 | V9 | gradebook | grade_categories, grade_items, grades, grade_history, scales, gradebook_settings |
-| V10 | communication.notifications | notifications, notification_preferences, calendar_personal_events, ical_tokens |
+| V10 | communication.notifications | notifications, notification_deliveries, notification_preferences, calendar_personal_events, ical_tokens |
 | V11 | billing | orders, payment_events |
 | V12 | assessment.quiz | quiz_attempts, attempt_answers, quiz_overrides, quiz_grade_releases |
 | V13 | progress | completion_states, course_completions, item_views |
@@ -85,13 +87,14 @@ return idempotency.execute(new IdempotencyScope(tenantId, userId, "submission.su
 ## Где что реализовано (владельцы публичных API)
 | Интерфейс | Модуль-реализатор |
 |---|---|
-| `AccessService`, `AuditLog`, `OrgApi`, `CategoryAncestry` | access / audit / org (готово) |
+| `AccessService`, `AuditLog`, `OrgApi` (в т.ч. `embedWhitelist`, `storageQuotaMb`), `CategoryAncestry` | access / audit / org (готово) |
 | `UsersApi`, `FilesApi`, `FileOwnerAccess('user')` | identity / files |
 | `CoursesApi`, `CourseLocator`, `ActivityType(page,file,url,folder,video)`, `FileOwnerAccess('item','course')` | courses |
 | `EnrollmentApi`, `CourseMembershipResolver` | enrollment |
 | `GradebookApi` | gradebook |
 | `ActivityType(assignment)`, `ItemStatusProvider(assignment)`, `GradingQueueSource(submission)`, `FileOwnerAccess('submission','feedback')` | assessment.assignment |
 | `ActivityType(quiz)`, `ItemStatusProvider(quiz)`, `GradingQueueSource(essay)`, `FileOwnerAccess('attempt','question')` | assessment.quiz |
-| `NotificationsApi` | communication.notifications |
+| `NotificationsApi` (в т.ч. `pushCounter` — счётчики WebSocket), порт `DueItemsSource` → `CoursesApi.itemsDueBetween` | communication.notifications |
+| `courses.spi.CourseDataOwner` (удержание курса при очистке корзины, ADR-010) | enrollment, assessment.assignment, assessment.quiz, gradebook, billing, progress |
 | `ActivityType(forum)`, `FileOwnerAccess('post')`, `dashboard.spi.RecentPostsSource` | communication.forum |
 | `LearnerStateProvider`, `ProgressApi`, `LearnerAccess`, `ConditionSchema` (статическая валидация условий) | progress |

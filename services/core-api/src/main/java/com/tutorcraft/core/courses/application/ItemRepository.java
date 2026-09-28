@@ -46,6 +46,9 @@ public interface ItemRepository {
     /** Удалённые элементы курса, удалённые после since. */
     List<CourseItem> deletedSince(UUID tenantId, UUID courseId, Instant since);
 
+    /** Системный (все tenant): не удалённые элементы со сроком сдачи в интервале (fromExclusive, toInclusive]. */
+    List<CourseItem> dueBetween(Instant fromExclusive, Instant toInclusive);
+
     /** Системный: физически удаляет элементы, удалённые раньше cutoff. */
     long purgeDeletedBefore(Instant cutoff);
 

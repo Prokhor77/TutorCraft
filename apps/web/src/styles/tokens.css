@@ -1,143 +1,238 @@
 /*
- * TutorCraft design tokens (UX-10, ARCH-07).
- * Every visual decision lives here; components only reference roles.
- * Colors are "R G B" channel triplets so Tailwind can apply alpha (`bg-primary/10`).
- * Tenant branding overrides --primary / --primary-foreground / --primary-soft at runtime (FR-ADMIN-01).
- * To re-skin from design mockups, edit this file only.
+ * TutorCraft Studio design tokens — source: Google Stitch design system (design/stitch-design-system.md).
+ * «Boutique tactile minimalism»: violet = focus & actions, emerald = done/published, amber = draft/needs review,
+ * slate = neutral borders & metadata.
+ *
+ * Every visual decision lives here; components only reference roles (UX-10).
+ * Colors are "R G B" channel triplets so Tailwind can apply alpha (`bg-accent/10`).
+ * Tenant branding overrides --primary / --primary-foreground / --primary-soft / --accent / --focus-ring at runtime.
+ * Contrast of all text/fill pairs is verified by `npm run contrast:check` (WCAG 2.2 AA) in both themes.
  */
 :root {
-  /* ---- color roles: light ---- */
-  --background: 248 249 252;
-  --surface: 255 255 255;
-  --surface-muted: 241 243 248;
-  --border: 222 226 235;
-  --text: 22 27 45;
-  --text-muted: 88 96 118;
-  --primary: 79 70 229;
+  /* ---- surfaces (Material surface roles) ---- */
+  --background: 248 249 255; /* surface #f8f9ff */
+  --canvas: 250 250 253; /* #fafafd */
+  --surface: 255 255 255; /* surface-container-lowest: cards */
+  --surface-muted: 239 244 255; /* surface-container-low #eff4ff */
+  --surface-container: 229 238 255; /* #e5eeff */
+  --surface-container-high: 220 233 255; /* #dce9ff */
+  --surface-subtle: 241 243 251; /* #f1f3fb */
+  --dropzone: 248 249 254; /* #f8f9fe */
+  --border: 226 232 240; /* border-subtle #e2e8f0 */
+  --outline: 118 117 134; /* #767586 */
+  --outline-variant: 199 196 215; /* #c7c4d7 */
+
+  /* ---- content ---- */
+  --text: 11 28 48; /* on-surface #0b1c30 */
+  --text-muted: 70 69 84; /* on-surface-variant #464554 */
+  /* Stitch placeholder is #94a3b8 (2.6:1 on white); darkened to slate-500 to meet AA 4.5:1. */
+  --placeholder: 100 116 139;
+
+  /* ---- violet (primary) ---- */
+  --primary: 70 72 212; /* #4648d4 */
   --primary-foreground: 255 255 255;
-  --primary-soft: 238 237 253;
-  --success: 21 128 61;
-  --success-soft: 222 247 232;
-  --warning: 161 98 7;
-  --warning-soft: 254 243 214;
-  --danger: 200 30 30;
+  --primary-container: 96 99 238; /* #6063ee */
+  --primary-soft: 225 224 255; /* primary-fixed #e1e0ff */
+  --accent: 99 102 241; /* brand accent #6366f1: glows, rings, tints */
+  --focus-ring: 99 102 241;
+
+  /* ---- emerald (secondary): done / published / saved ---- */
+  --success: 0 108 73; /* #006c49 */
+  --success-foreground: 255 255 255;
+  --success-accent: 16 185 129; /* #10b981 */
+  --success-soft: 225 246 239; /* rgba(16,185,129,.12) on white */
+
+  /* ---- amber (tertiary): draft / needs review / hints ---- */
+  --warning: 130 81 0; /* #825100 (Stitch chip text #d97706 is 2.9:1 → role color used) */
+  --warning-foreground: 255 255 255;
+  --warning-accent: 245 158 11; /* #f59e0b */
+  --warning-soft: 254 243 225; /* rgba(245,158,11,.12) on white */
+
+  /* ---- neutral draft chip ---- */
+  --draft: 241 245 249; /* #f1f5f9 */
+  --draft-foreground: 71 85 105; /* #475569 */
+
+  /* ---- error ---- */
+  --danger: 186 26 26; /* #ba1a1a */
   --danger-foreground: 255 255 255;
-  --danger-soft: 254 228 228;
-  --info: 3 105 161;
-  --info-soft: 224 242 254;
-  --focus-ring: 79 70 229;
-  --overlay: 15 18 30;
+  --danger-soft: 255 218 214; /* error-container #ffdad6 */
+
+  /* ---- info (violet family) ---- */
+  --info: 70 72 212;
+  --info-soft: 225 224 255;
+
+  --overlay: 11 28 48;
+
+  /* ---- component surfaces ---- */
+  --card-border: rgb(99 102 241 / 0.08);
+  --card-border-hover: rgb(99 102 241 / 0.3);
+  --glass: rgb(255 255 255 / 0.82);
 
   /* ---- radius ---- */
-  --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
-  --radius-full: 9999px;
+  --radius-xs: 0.375rem;
+  --radius-sm: 0.5rem;
+  --radius: 1rem; /* inputs */
+  --radius-md: 1.5rem; /* cards */
+  --radius-lg: 2rem; /* question cards, dropzone, dialogs */
+  --radius-xl: 3rem;
+  --radius-full: 9999px; /* buttons, chips, tree nodes */
 
-  /* ---- elevation ---- */
-  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.06);
-  --shadow-md: 0 4px 12px -2px rgb(16 24 40 / 0.08), 0 2px 4px -2px rgb(16 24 40 / 0.04);
-  --shadow-lg: 0 16px 40px -8px rgb(16 24 40 / 0.18);
+  /* ---- elevation (violet-tinted) ---- */
+  --shadow-sm: 0 2px 8px -2px rgb(15 23 42 / 0.04), 0 1px 3px rgb(15 23 42 / 0.02); /* L1 card */
+  --shadow-md:
+    0 8px 24px -4px rgb(99 102 241 / 0.12), 0 2px 6px -1px rgb(99 102 241 / 0.06); /* L2 hover/focus */
+  --shadow-lg:
+    0 20px 32px -8px rgb(15 23 42 / 0.16), 0 8px 16px -4px rgb(99 102 241 / 0.18); /* L3 drag / overlays */
+  --shadow-glow: 0 8px 20px -6px rgb(var(--accent) / 0.55);
 
-  /* ---- typography (fluid-free, 4px grid line-heights) ---- */
-  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* ---- typography ---- */
+  --font-heading: 'Bricolage Grotesque Variable', 'Geologica Variable', system-ui, sans-serif;
+  --font-sans:
+    'Work Sans Variable', 'Onest Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
-  --text-xs: 0.75rem;
-  --leading-xs: 1rem;
-  --text-sm: 0.875rem;
-  --leading-sm: 1.25rem;
-  --text-base: 1rem;
-  --leading-base: 1.5rem;
-  --text-lg: 1.125rem;
-  --leading-lg: 1.75rem;
-  --text-xl: 1.25rem;
+  /* body (Work Sans) */
+  --text-xs: 0.75rem; /* body-sm 12/18 */
+  --leading-xs: 1.125rem;
+  --text-sm: 0.875rem; /* body-md 14/22 */
+  --leading-sm: 1.375rem;
+  --text-base: 1rem; /* body-lg 16/26 */
+  --leading-base: 1.625rem;
+  /* headlines (Bricolage) */
+  --text-lg: 1.125rem; /* headline-sm 18/24 */
+  --leading-lg: 1.5rem;
+  --text-xl: 1.375rem; /* headline-md 22/28 */
   --leading-xl: 1.75rem;
-  --text-2xl: 1.5rem;
+  --text-2xl: 1.5rem; /* headline-lg mobile 24/32 */
   --leading-2xl: 2rem;
-  --text-3xl: 1.875rem;
-  --leading-3xl: 2.25rem;
-  --text-4xl: 2.5rem;
+  --text-3xl: 2rem; /* headline-lg 32/40 */
+  --leading-3xl: 2.5rem;
+  --text-4xl: 2.5rem; /* headline-xl 40/48 */
   --leading-4xl: 3rem;
+  --text-hero-mobile: 1.875rem; /* headline-xl mobile 30/38 */
+  --leading-hero-mobile: 2.375rem;
 
-  /* ---- layout & spacing ---- */
+  /* ---- layout & spacing (xs 4, sm 8, md 16, lg 24, xl 36; gutter 20, margin 28) ---- */
   --space-page-x: 1rem;
   --space-page-y: 1.5rem;
+  --space-gutter: 1.25rem;
   --size-sidebar: 16rem;
-  --size-header: 3.75rem;
-  --size-bottom-nav: 4rem;
-  --size-content: 72rem;
+  --size-header: 4rem;
+  --size-bottom-nav: 4.25rem;
+  --size-content: 90rem;
   --size-prose: 46rem;
+  --size-tree: 18.5rem; /* 280–340px */
+  --size-canvas: 53.75rem; /* 860px */
+  --size-inspector: 20rem; /* 320px */
 
   /* ---- motion ---- */
-  --motion-fast: 120ms;
-  --motion-base: 200ms;
+  --motion-fast: 140ms;
+  --motion-base: 220ms;
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
 
   color-scheme: light;
 }
 
 @media (min-width: 768px) {
   :root {
-    --space-page-x: 2rem;
+    --space-page-x: 1.75rem; /* margin 28 */
     --space-page-y: 2rem;
   }
 }
 
-/* ---- dark theme: explicit toggle ---- */
+/*
+ * Dark theme derived from the same hues: navy on-surface as the base, lighter violet/emerald/amber roles
+ * with dark "on-*" colors (Material dark pattern) so filled buttons and chips stay ≥ 4.5:1.
+ */
 :root[data-theme='dark'] {
-  --background: 13 16 26;
-  --surface: 22 26 40;
-  --surface-muted: 30 35 52;
-  --border: 46 53 75;
-  --text: 235 238 247;
-  --text-muted: 160 168 190;
-  --primary: 139 132 255;
-  --primary-foreground: 15 15 35;
-  --primary-soft: 40 38 80;
-  --success: 74 222 128;
-  --success-soft: 20 55 38;
-  --warning: 250 204 21;
-  --warning-soft: 66 52 14;
-  --danger: 248 113 113;
-  --danger-foreground: 15 15 35;
-  --danger-soft: 70 26 30;
-  --info: 56 189 248;
-  --info-soft: 16 48 70;
-  --focus-ring: 165 160 255;
+  --background: 10 17 32;
+  --canvas: 10 17 32;
+  --surface: 17 26 46;
+  --surface-muted: 23 34 58;
+  --surface-container: 29 42 70;
+  --surface-container-high: 36 50 82;
+  --surface-subtle: 20 30 52;
+  --dropzone: 20 30 55;
+  --border: 44 57 86;
+  --outline: 142 141 162;
+  --outline-variant: 70 70 92;
+  --text: 232 238 255;
+  --text-muted: 181 188 214;
+  --placeholder: 140 151 178;
+  --primary: 165 166 255;
+  --primary-foreground: 20 20 90;
+  --primary-container: 60 62 180;
+  --primary-soft: 40 42 96;
+  --accent: 129 131 248;
+  --focus-ring: 129 131 248;
+  --success: 78 222 163;
+  --success-foreground: 0 56 36;
+  --success-accent: 52 211 153;
+  --success-soft: 18 58 50;
+  --warning: 255 185 94;
+  --warning-foreground: 70 42 0;
+  --warning-accent: 251 191 36;
+  --warning-soft: 64 45 18;
+  --draft: 34 44 66;
+  --draft-foreground: 190 200 220;
+  --danger: 255 180 171;
+  --danger-foreground: 105 0 5;
+  --danger-soft: 90 22 24;
+  --info: 165 166 255;
+  --info-soft: 40 42 96;
   --overlay: 0 0 0;
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
-  --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.5);
-  --shadow-lg: 0 16px 40px -8px rgb(0 0 0 / 0.6);
+  --card-border: rgb(129 131 248 / 0.14);
+  --card-border-hover: rgb(129 131 248 / 0.45);
+  --glass: rgb(17 26 46 / 0.82);
+  --shadow-sm: 0 2px 8px -2px rgb(0 0 0 / 0.4), 0 1px 3px rgb(0 0 0 / 0.3);
+  --shadow-md: 0 8px 24px -4px rgb(129 131 248 / 0.18), 0 2px 6px -1px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 20px 32px -8px rgb(0 0 0 / 0.6), 0 8px 16px -4px rgb(129 131 248 / 0.22);
   color-scheme: dark;
 }
 
-/* ---- dark theme: system preference when no explicit choice ---- */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --background: 13 16 26;
-    --surface: 22 26 40;
-    --surface-muted: 30 35 52;
-    --border: 46 53 75;
-    --text: 235 238 247;
-    --text-muted: 160 168 190;
-    --primary: 139 132 255;
-    --primary-foreground: 15 15 35;
-    --primary-soft: 40 38 80;
-    --success: 74 222 128;
-    --success-soft: 20 55 38;
-    --warning: 250 204 21;
-    --warning-soft: 66 52 14;
-    --danger: 248 113 113;
-    --danger-foreground: 15 15 35;
-    --danger-soft: 70 26 30;
-    --info: 56 189 248;
-    --info-soft: 16 48 70;
-    --focus-ring: 165 160 255;
+    --background: 10 17 32;
+    --canvas: 10 17 32;
+    --surface: 17 26 46;
+    --surface-muted: 23 34 58;
+    --surface-container: 29 42 70;
+    --surface-container-high: 36 50 82;
+    --surface-subtle: 20 30 52;
+    --dropzone: 20 30 55;
+    --border: 44 57 86;
+    --outline: 142 141 162;
+    --outline-variant: 70 70 92;
+    --text: 232 238 255;
+    --text-muted: 181 188 214;
+    --placeholder: 140 151 178;
+    --primary: 165 166 255;
+    --primary-foreground: 20 20 90;
+    --primary-container: 60 62 180;
+    --primary-soft: 40 42 96;
+    --accent: 129 131 248;
+    --focus-ring: 129 131 248;
+    --success: 78 222 163;
+    --success-foreground: 0 56 36;
+    --success-accent: 52 211 153;
+    --success-soft: 18 58 50;
+    --warning: 255 185 94;
+    --warning-foreground: 70 42 0;
+    --warning-accent: 251 191 36;
+    --warning-soft: 64 45 18;
+    --draft: 34 44 66;
+    --draft-foreground: 190 200 220;
+    --danger: 255 180 171;
+    --danger-foreground: 105 0 5;
+    --danger-soft: 90 22 24;
+    --info: 165 166 255;
+    --info-soft: 40 42 96;
     --overlay: 0 0 0;
-    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
-    --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.5);
-    --shadow-lg: 0 16px 40px -8px rgb(0 0 0 / 0.6);
+    --card-border: rgb(129 131 248 / 0.14);
+    --card-border-hover: rgb(129 131 248 / 0.45);
+    --glass: rgb(17 26 46 / 0.82);
+    --shadow-sm: 0 2px 8px -2px rgb(0 0 0 / 0.4), 0 1px 3px rgb(0 0 0 / 0.3);
+    --shadow-md: 0 8px 24px -4px rgb(129 131 248 / 0.18), 0 2px 6px -1px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 20px 32px -8px rgb(0 0 0 / 0.6), 0 8px 16px -4px rgb(129 131 248 / 0.22);
     color-scheme: dark;
   }
 }

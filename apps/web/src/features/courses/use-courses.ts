@@ -22,10 +22,11 @@ export function useCourseList(params: Omit<CoursesQuery, 'cursor'>) {
   });
 }
 
-export function useCourse(courseId: string) {
+export function useCourse(courseId: string, enabled = true) {
   return useQuery({
     queryKey: queryKeys.course(courseId),
     queryFn: () => coursesApi.get(courseId),
+    enabled: enabled && !!courseId,
   });
 }
 

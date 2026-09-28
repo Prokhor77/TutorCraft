@@ -94,7 +94,7 @@ export function AttemptResultView({
                 </p>
               ) : null}
               {question.feedback ? (
-                <p className="rounded-md bg-surface-muted p-2 text-sm">{question.feedback}</p>
+                <p className="rounded bg-surface-muted p-2 text-sm">{question.feedback}</p>
               ) : null}
             </Card>
           </li>

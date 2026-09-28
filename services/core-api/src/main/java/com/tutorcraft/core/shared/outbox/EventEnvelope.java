@@ -7,4 +7,9 @@ import java.util.UUID;
 public record EventEnvelope<T>(UUID eventId, String type, int version, Instant occurredAt, UUID tenantId, T payload) {
 
     public static final int CURRENT_VERSION = 1;
+
+    /** Версия конверта, которую понимает core-api (иные версии консьюмеры пропускают с записью в журнал). */
+    public boolean supportedVersion() {
+        return version == CURRENT_VERSION;
+    }
 }

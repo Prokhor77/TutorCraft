@@ -9,7 +9,7 @@ export function TaskRow({ task }: { task: TaskEntry }) {
   return (
     <Link
       href={ROUTES.item(task.courseId, task.itemId)}
-      className="flex items-center gap-3 rounded-md px-3 py-3 transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+      className="flex items-center gap-3 rounded px-3 py-3 transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
     >
       <ItemTypeIcon type={task.itemType} />
       <span className="flex min-w-0 flex-1 flex-col">

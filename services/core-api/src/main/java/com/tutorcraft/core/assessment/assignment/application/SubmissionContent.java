@@ -38,7 +38,7 @@ class SubmissionContent {
     Submission apply(StudentContext context, Submission current, DraftCommand command, Instant now) {
         SanitizedText text = command.text() == null
                 ? new SanitizedText(current.text(), Set.of())
-                : blockDocs.sanitize(command.text(), TEXT_FIELD);
+                : blockDocs.sanitize(context.tenantId(), command.text(), TEXT_FIELD);
         List<UUID> fileIds = command.fileIds() == null ? current.fileIds() : distinct(command.fileIds());
         if (fileIds.size() > AssignmentSettingsParser.MAX_FILES_LIMIT) {
             throw ValidationException.single(FILES_FIELD, "too_many_files", "Too many files");

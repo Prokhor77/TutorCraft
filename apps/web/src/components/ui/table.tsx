@@ -3,7 +3,10 @@ import { cn } from '@/lib/utils/cn';
 export function TableContainer({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn('w-full overflow-auto rounded-lg border border-border bg-surface', className)}
+      className={cn(
+        'w-full overflow-auto rounded-md border border-card-border bg-surface shadow-sm',
+        className,
+      )}
       {...props}
     />
   );
@@ -15,7 +18,7 @@ export function THead({ className, ...props }: React.HTMLAttributes<HTMLTableSec
   return (
     <thead
       className={cn(
-        'sticky top-0 z-10 bg-surface-muted text-left text-xs font-semibold uppercase tracking-wide text-text-muted',
+        'sticky top-0 z-10 bg-surface-muted text-left text-label-md uppercase text-text-muted',
         className,
       )}
       {...props}

@@ -1,5 +1,6 @@
 package com.tutorcraft.core.assessment.assignment.application;
 
+import com.tutorcraft.core.org.OrgApi;
 import com.tutorcraft.core.shared.content.BlockDocs;
 import com.tutorcraft.core.shared.domain.ValidationException;
 import com.tutorcraft.core.shared.persistence.JsonCodec;
@@ -10,28 +11,28 @@ import org.springframework.stereotype.Component;
 
 /**
  * Санитизация блочных документов из ввода студентов и проверяющих (белый список блоков, NFR-SEC).
- * Встраивания (embed) в ответах и отзывах не разрешены — пустой белый список доменов.
+ * Встраивания (embed) — только с доменов белого списка tenant (OrgApi.embedWhitelist).
  */
 @Component
 class BlockDocInput {
 
     static final int MAX_SERIALIZED_LENGTH = 500_000;
-    private static final Set<String> NO_EMBEDS = Set.of();
-
     private final JsonCodec json;
+    private final OrgApi org;
 
-    BlockDocInput(JsonCodec json) {
+    BlockDocInput(JsonCodec json, OrgApi org) {
         this.json = json;
+        this.org = org;
     }
 
-    SanitizedText sanitize(Map<String, Object> doc, String field) {
+    SanitizedText sanitize(UUID tenantId, Map<String, Object> doc, String field) {
         if (doc == null) {
             return new SanitizedText(null, Set.of());
         }
         if (json.write(doc).length() > MAX_SERIALIZED_LENGTH) {
             throw ValidationException.single(field, "too_long", "Document is too large");
         }
-        BlockDocs.SanitizedDoc sanitized = BlockDocs.sanitize(doc, NO_EMBEDS, field);
+        BlockDocs.SanitizedDoc sanitized = BlockDocs.sanitize(doc, org.embedWhitelist(tenantId), field);
         return new SanitizedText(sanitized.doc(), Set.copyOf(sanitized.fileIds()));
     }
 

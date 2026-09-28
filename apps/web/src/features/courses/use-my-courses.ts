@@ -24,3 +24,9 @@ export function roleHints(courses: CourseCard[] | undefined): {
     learns: [...roles].some((role) => role !== null && LEARNING_ROLES.has(role)),
   };
 }
+
+/** Number of courses where the user teaches (teacher home stat card). */
+export function teachingCourseCount(courses: CourseCard[] | undefined): number {
+  return (courses ?? []).filter((course) => course.role !== null && TEACHING_ROLES.has(course.role))
+    .length;
+}

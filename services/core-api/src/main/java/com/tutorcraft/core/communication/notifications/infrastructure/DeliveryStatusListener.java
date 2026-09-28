@@ -30,10 +30,18 @@ class DeliveryStatusListener {
     @KafkaListener(topics = Topics.NOTIFY_DELIVERED)
     void onMessage(String message) {
         EventEnvelope<DeliveryReport> envelope = parse(message);
-        if (envelope == null || envelope.eventId() == null || envelope.payload() == null) {
+        if (envelope == null || !supported(envelope) || envelope.eventId() == null || envelope.payload() == null) {
             return;
         }
         deliveries.record(envelope.eventId(), envelope.payload());
+    }
+
+    private boolean supported(EventEnvelope<?> envelope) {
+        if (envelope.supportedVersion()) {
+            return true;
+        }
+        log.warn("{} event {} skipped: unsupported envelope version {}", Topics.NOTIFY_DELIVERED, envelope.eventId(), envelope.version());
+        return false;
     }
 
     /** Нечитаемое сообщение повторно не обработать — логируем тип ошибки (без содержимого) и пропускаем. */

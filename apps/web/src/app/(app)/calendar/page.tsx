@@ -193,7 +193,7 @@ export default function CalendarPage() {
           <div
             role="grid"
             aria-label={title}
-            className="grid min-w-[42rem] grid-cols-7 overflow-hidden rounded-lg border border-border bg-border [gap:1px]"
+            className="grid min-w-[42rem] grid-cols-7 overflow-hidden rounded-md border border-border bg-border [gap:1px]"
           >
             {weekdayNames.map((name) => (
               <div
@@ -248,7 +248,7 @@ export default function CalendarPage() {
             <li
               key={day.toISOString()}
               className={cn(
-                'flex min-h-32 flex-col gap-1 rounded-lg border border-border bg-surface p-2',
+                'flex min-h-32 flex-col gap-1 rounded-md border border-border bg-surface p-2',
                 sameLocalDay(day, today) && 'border-primary',
               )}
             >
@@ -272,7 +272,7 @@ export default function CalendarPage() {
               .map((event) => (
                 <li
                   key={event.id}
-                  className="flex items-center gap-3 rounded-md border border-border bg-surface px-3 py-2"
+                  className="flex items-center gap-3 rounded border border-card-border bg-surface px-3 py-2 shadow-sm"
                 >
                   <span className="w-28 shrink-0 text-sm text-text-muted">
                     {formatDate(event.startsAt, locale)}

@@ -1,10 +1,10 @@
 'use client';
 import { ClipboardCheck, Inbox, Keyboard } from 'lucide-react';
 import Link from 'next/link';
-import { useLocale, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
-import { DueLabel } from '@/components/course/item-meta';
-import { Badge, CountBadge } from '@/components/ui/badge';
+import { QueueCard } from '@/components/grading/queue-card';
+import { CountBadge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
@@ -17,7 +17,6 @@ import { useGradingQueue } from '@/features/assessment/use-assessment';
 import { useMyCourses } from '@/features/courses/use-my-courses';
 import { flattenPages } from '@/lib/api/pagination';
 import { QUEUE_KINDS } from '@/lib/api/schemas/assessment';
-import { formatRelative } from '@/lib/utils/format';
 import { COUNTER_NAMES, useUiStore } from '@/stores/ui-store';
 
 const TEACHING_ROLES = new Set(['teacher', 'assistant']);
@@ -26,7 +25,6 @@ const TEACHING_ROLES = new Set(['teacher', 'assistant']);
 export default function GradingInboxPage() {
   const t = useTranslations('grading');
   const tCommon = useTranslations('common');
-  const locale = useLocale();
   const [courseId, setCourseId] = useState('');
   const [type, setType] = useState('');
   const courses = useMyCourses();
@@ -66,7 +64,7 @@ export default function GradingInboxPage() {
           ) : null
         }
       />
-      <div className="mb-4 flex flex-col gap-2 sm:flex-row">
+      <div className="mb-4 flex flex-col gap-2 rounded-md border border-card-border bg-surface p-3 shadow-sm sm:flex-row sm:items-center">
         <NativeSelect
           aria-label={t('filterCourse')}
           value={courseId}
@@ -108,30 +106,10 @@ export default function GradingInboxPage() {
       {queue.isSuccess && entries.length === 0 ? (
         <EmptyState icon={Inbox} title={t('emptyTitle')} description={t('emptyText')} />
       ) : null}
-      <ul className="flex flex-col gap-2">
+      <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         {entries.map((entry) => (
           <li key={entry.id}>
-            <Link
-              href={reviewHref(entry.id)}
-              className="flex flex-col gap-1 rounded-md border border-border bg-surface px-4 py-3 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring sm:flex-row sm:items-center sm:gap-4"
-            >
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate font-medium">{entry.userName}</span>
-                <span className="truncate text-sm text-text-muted">
-                  {entry.itemTitle} · {entry.courseTitle}
-                </span>
-              </span>
-              <span className="flex flex-wrap items-center gap-2">
-                <Badge tone={entry.kind === 'essay' ? 'info' : 'primary'}>
-                  {t(`kinds.${entry.kind}`)}
-                </Badge>
-                {entry.late ? <Badge tone="warning">{t('late')}</Badge> : null}
-                <span className="text-xs text-text-muted">
-                  {t('submitted', { when: formatRelative(entry.submittedAt, locale) })}
-                </span>
-                <DueLabel dueAt={entry.dueAt} />
-              </span>
-            </Link>
+            <QueueCard entry={entry} href={reviewHref(entry.id)} showCourse chevron />
           </li>
         ))}
       </ul>

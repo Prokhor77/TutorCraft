@@ -41,7 +41,7 @@ function MembersDialog({ courseId, group }: { courseId: string; group: Group }) 
         <ul className="flex max-h-80 flex-col gap-1 overflow-y-auto">
           {flattenPages(students.data?.pages).map((enrollment) => (
             <li key={enrollment.user.id}>
-              <label className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-surface-muted">
+              <label className="flex items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-surface-muted">
                 <Checkbox
                   checked={members.has(enrollment.user.id)}
                   onCheckedChange={(checked) =>
@@ -174,7 +174,7 @@ export function GroupsPanel({ courseId }: { courseId: string }) {
         {groups.data?.map((group) => (
           <li
             key={group.id}
-            className="flex items-center gap-3 rounded-md border border-border bg-surface px-3 py-2"
+            className="flex items-center gap-3 rounded border border-card-border bg-surface px-3 py-2 shadow-sm"
           >
             <span className="min-w-0 flex-1 font-medium">
               <InlineEdit

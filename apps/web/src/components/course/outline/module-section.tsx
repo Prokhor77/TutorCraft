@@ -46,6 +46,9 @@ export type ModuleHandlers = {
   onDuplicateItem: (itemId: string) => void;
   onDeleteItem: (itemId: string, title: string) => void;
   onInsertItem: (moduleId: string, type: ItemType, position: number) => void;
+  /** Builder inspector (Stitch 3-pane layout). */
+  inspectedId?: string | null;
+  onInspectItem?: (itemId: string) => void;
 };
 
 type Props = {
@@ -79,10 +82,7 @@ function ModuleBody({ courseId, module, editMode, handlers }: Omit<Props, 'neste
     );
   }
   return (
-    <div
-      ref={setNodeRef}
-      className={cn('flex flex-col rounded-md', isOver && 'bg-primary-soft/40')}
-    >
+    <div ref={setNodeRef} className={cn('flex flex-col rounded', isOver && 'bg-primary-soft/40')}>
       <SortableContext
         items={module.items.map((item) => item.id)}
         strategy={verticalListSortingStrategy}
@@ -113,6 +113,10 @@ function ModuleBody({ courseId, module, editMode, handlers }: Omit<Props, 'neste
                   ),
                 onDuplicate: () => handlers.onDuplicateItem(item.id),
                 onDelete: () => handlers.onDeleteItem(item.id, item.title),
+                inspected: handlers.inspectedId === item.id,
+                onInspect: handlers.onInspectItem
+                  ? () => handlers.onInspectItem?.(item.id)
+                  : undefined,
               }}
             />
             {index < module.items.length - 1 ? (
@@ -158,8 +162,8 @@ export function ModuleSection({ courseId, module, editMode, handlers, nested }: 
         }}
         aria-labelledby={`module-title-${module.id}`}
         className={cn(
-          'scroll-mt-24 rounded-lg border border-border bg-surface shadow-sm',
-          nested && 'border-dashed shadow-none',
+          'scroll-mt-24 rounded-md border border-card-border bg-surface shadow-sm',
+          nested && 'border-dashed border-accent/25 shadow-none',
           sortable.isDragging && 'z-10 shadow-lg',
         )}
       >
@@ -191,7 +195,7 @@ export function ModuleSection({ courseId, module, editMode, handlers, nested }: 
           </Collapsible.Trigger>
           <h2
             id={`module-title-${module.id}`}
-            className={cn('min-w-0 flex-1 text-base font-semibold', hidden && 'text-text-muted')}
+            className={cn('min-w-0 flex-1 text-lg', hidden && 'text-text-muted')}
           >
             <InlineEdit
               value={module.title}

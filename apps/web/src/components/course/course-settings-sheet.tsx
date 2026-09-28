@@ -54,7 +54,17 @@ function draftFromCourse(course: Course): Draft {
 }
 
 /** Course settings (title, dates, cover, self-enrol, price, completion rule, group mode). */
-export function CourseSettingsSheet() {
+type SheetControl = {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  withTrigger?: boolean;
+};
+
+export function CourseSettingsSheet({
+  open: controlledOpen,
+  onOpenChange,
+  withTrigger = true,
+}: SheetControl = {}) {
   const t = useTranslations('courseSettings');
   const tCommon = useTranslations('common');
   const { course, can } = useCourseContext();
@@ -62,7 +72,12 @@ export function CourseSettingsSheet() {
   const update = useUpdateCourse(course.id);
   const setPrice = useSetCoursePrice(course.id);
   const cover = useFileUpload('cover');
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = controlledOpen ?? uncontrolledOpen;
+  const setOpen = (next: boolean) => {
+    setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  };
   const [draft, setDraft] = useState<Draft>(() => draftFromCourse(course));
   useEffect(() => {
     if (open) setDraft(draftFromCourse(course));
@@ -106,11 +121,13 @@ export function CourseSettingsSheet() {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button variant="secondary" size="sm">
-          <Settings aria-hidden /> {t('open')}
-        </Button>
-      </SheetTrigger>
+      {withTrigger ? (
+        <SheetTrigger asChild>
+          <Button variant="secondary" size="sm">
+            <Settings aria-hidden /> {t('open')}
+          </Button>
+        </SheetTrigger>
+      ) : null}
       <SheetContent title={t('title')} closeLabel={tCommon('close')}>
         <form
           className="flex flex-col gap-5"
@@ -149,7 +166,7 @@ export function CourseSettingsSheet() {
               <img
                 src={course.coverUrl}
                 alt=""
-                className="aspect-[16/7] w-full rounded-md object-cover"
+                className="aspect-[16/7] w-full rounded object-cover"
               />
             ) : null}
             <FileDropzone
@@ -190,7 +207,7 @@ export function CourseSettingsSheet() {
               </Field>
             ) : null}
           </div>
-          <fieldset className="flex flex-col gap-3 rounded-md border border-border p-4">
+          <fieldset className="flex flex-col gap-3 rounded-md bg-surface-muted p-4">
             <legend className="px-1 text-sm font-medium">{t('selfEnrol')}</legend>
             <div className="flex items-center justify-between gap-3">
               <Label htmlFor="self-enrol">{t('selfEnrolEnabled')}</Label>
@@ -238,7 +255,7 @@ export function CourseSettingsSheet() {
             ) : null}
           </fieldset>
           {can(PERMISSIONS.coursePublish) ? (
-            <fieldset className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-md border border-border p-4">
+            <fieldset className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-md bg-surface-muted p-4">
               <legend className="px-1 text-sm font-medium">{t('price')}</legend>
               <Field label={t('priceAmount')} hint={t('priceHint')}>
                 <Input
@@ -264,7 +281,7 @@ export function CourseSettingsSheet() {
               </Field>
             </fieldset>
           ) : null}
-          <fieldset className="flex flex-col gap-3 rounded-md border border-border p-4">
+          <fieldset className="flex flex-col gap-3 rounded-md bg-surface-muted p-4">
             <legend className="px-1 text-sm font-medium">{t('completion')}</legend>
             <Field label={t('minFinalPercent')} hint={t('minFinalHint')}>
               <Input

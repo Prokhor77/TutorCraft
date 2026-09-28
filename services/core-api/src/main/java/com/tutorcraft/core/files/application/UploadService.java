@@ -7,6 +7,7 @@ import com.tutorcraft.core.files.domain.FileStatus;
 import com.tutorcraft.core.files.domain.MimeTypes;
 import com.tutorcraft.core.files.domain.StorageKeys;
 import com.tutorcraft.core.files.domain.StoredFile;
+import com.tutorcraft.core.org.OrgApi;
 import com.tutorcraft.core.shared.config.AppProperties;
 import com.tutorcraft.core.shared.domain.BusinessRuleException;
 import com.tutorcraft.core.shared.domain.Ids;
@@ -38,15 +39,17 @@ public class UploadService {
     private static final long BYTES_PER_MB = 1024L * 1024;
 
     private final FileRepository files;
+    private final OrgApi org;
     private final ObjectStorage storage;
     private final CurrentUserProvider currentUser;
     private final Clock clock;
     private final Duration uploadTtl;
     private final long maxVideoBytes;
 
-    public UploadService(FileRepository files, ObjectStorage storage, CurrentUserProvider currentUser, Clock clock,
+    public UploadService(FileRepository files, OrgApi org, ObjectStorage storage, CurrentUserProvider currentUser, Clock clock,
                          AppProperties properties) {
         this.files = files;
+        this.org = org;
         this.storage = storage;
         this.currentUser = currentUser;
         this.clock = clock;
@@ -85,7 +88,7 @@ public class UploadService {
     }
 
     private void ensureQuota(UUID tenantId, long size) {
-        files.storageQuotaBytes(tenantId).ifPresent(quota -> {
+        org.storageQuotaMb(tenantId).map(megabytes -> megabytes * BYTES_PER_MB).ifPresent(quota -> {
             if (files.usedBytes(tenantId) + size > quota) {
                 throw new BusinessRuleException(FilesErrors.QUOTA_EXCEEDED, "Storage quota exceeded");
             }

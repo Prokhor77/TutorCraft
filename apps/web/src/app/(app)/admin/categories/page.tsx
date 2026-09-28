@@ -61,7 +61,7 @@ function CategoryRow({
         transition: sortable.transition,
         marginLeft: `${node.depth * 1.5}rem`,
       }}
-      className="flex items-center gap-2 rounded-md border border-border bg-surface px-2 py-1.5"
+      className="flex items-center gap-2 rounded border border-card-border bg-surface px-2 py-1.5 shadow-sm"
     >
       <button
         type="button"

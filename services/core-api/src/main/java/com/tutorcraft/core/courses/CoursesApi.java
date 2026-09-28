@@ -34,6 +34,14 @@ public interface CoursesApi {
     /** Элементы указанных типов во всех перечисленных курсах. */
     List<ItemRef> itemsOfCourses(UUID tenantId, Collection<UUID> courseIds, Set<ItemType> types);
 
+    /**
+     * Системный запрос (все tenant, без текущего пользователя): элементы со сроком сдачи в интервале
+     * (fromExclusive, toInclusive] — для напоминаний о дедлайнах (FR-NOTIF-01). Элементы и модули в корзине и элементы
+     * курсов в корзине не возвращаются. Видимость студентам (публикация курса/модуля/элемента) НЕ проверяется —
+     * вызывающий код проверяет её через {@link #isVisibleToLearners(UUID, ItemRef)} в момент отправки.
+     */
+    List<ItemRef> itemsDueBetween(Instant fromExclusive, Instant toInclusive);
+
     /** Элемент виден студенту: курс, модуль (и родитель) и элемент опубликованы (без условий доступа). */
     boolean isVisibleToLearners(UUID tenantId, ItemRef item);
 

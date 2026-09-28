@@ -62,7 +62,7 @@ public class GradingQueueService {
             throw ValidationException.single("type", "invalid", "Unknown queue entry type");
         }
         List<UUID> courseIds = gradableCourses(user, courseId);
-        List<QueueEntry> pending = pendingEntries(user, courseIds, kind);
+        List<QueueEntry> pending = pendingEntries(user.tenantId(), user.userId(), courseIds, kind);
         Optional<QueueEntry> after = QueueCursor.decode(cursor);
         List<QueueEntry> remaining = pending.stream()
                 .filter(entry -> after.isEmpty() || QueueCursor.ORDER.compare(entry, after.get()) > 0)
@@ -70,6 +70,18 @@ public class GradingQueueService {
         List<QueueEntry> pageEntries = remaining.stream().limit(page.limit()).toList();
         String nextCursor = remaining.size() > page.limit() ? QueueCursor.encode(pageEntries.get(pageEntries.size() - 1)) : null;
         return new PageResponse<>(enrich(user.tenantId(), pageEntries), nextCursor);
+    }
+
+    /**
+     * Размер очереди проверки произвольного пользователя (для счётчика реального времени, AC-8): те же курсы и
+     * фильтры, что и у {@link #queue}, но права вычисляются для {@code userId}, а не для текущего пользователя.
+     */
+    @Transactional(readOnly = true)
+    public int pendingCount(UUID tenantId, UUID userId) {
+        List<UUID> courseIds = enrollment.activeCourseIds(tenantId, userId, GRADER_ROLES).stream()
+                .filter(id -> access.permissionsOf(tenantId, userId, AccessContext.course(id)).contains(Permission.SUBMISSION_GRADE))
+                .toList();
+        return pendingEntries(tenantId, userId, courseIds, null).size();
     }
 
     private List<UUID> gradableCourses(CurrentUser user, UUID courseId) {
@@ -83,31 +95,31 @@ public class GradingQueueService {
     }
 
     /** Записи источников по существующим (не удалённым) элементам, в порядке очереди. */
-    private List<QueueEntry> pendingEntries(CurrentUser user, List<UUID> courseIds, String kind) {
+    private List<QueueEntry> pendingEntries(UUID tenantId, UUID userId, List<UUID> courseIds, String kind) {
         if (courseIds.isEmpty()) {
             return List.of();
         }
-        Map<UUID, Set<UUID>> restrictions = assistantRestrictions(user, courseIds);
+        Map<UUID, Set<UUID>> restrictions = assistantRestrictions(tenantId, userId, courseIds);
         List<QueueEntry> entries = sources.stream()
-                .flatMap(source -> source.pending(user.tenantId(), courseIds).stream())
+                .flatMap(source -> source.pending(tenantId, courseIds).stream())
                 .filter(entry -> kind == null || kind.equals(entry.kind()))
                 .filter(entry -> !restrictions.containsKey(entry.courseId())
                         || restrictions.get(entry.courseId()).contains(entry.userId()))
                 .toList();
-        Set<UUID> liveItems = courses.findItems(user.tenantId(), entries.stream().map(QueueEntry::itemId).distinct().toList())
+        Set<UUID> liveItems = courses.findItems(tenantId, entries.stream().map(QueueEntry::itemId).distinct().toList())
                 .keySet();
         return entries.stream().filter(entry -> liveItems.contains(entry.itemId())).sorted(QueueCursor.ORDER).toList();
     }
 
     /** Ассистент в курсе с режимом «separate» видит только работы участников своих групп. */
-    private Map<UUID, Set<UUID>> assistantRestrictions(CurrentUser user, List<UUID> courseIds) {
-        List<UUID> assisted = enrollment.activeCourseIds(user.tenantId(), user.userId(), Set.of(CourseRole.ASSISTANT));
-        Map<UUID, CourseRef> refs = courses.findCourses(user.tenantId(), assisted.stream().filter(courseIds::contains).toList());
+    private Map<UUID, Set<UUID>> assistantRestrictions(UUID tenantId, UUID userId, List<UUID> courseIds) {
+        List<UUID> assisted = enrollment.activeCourseIds(tenantId, userId, Set.of(CourseRole.ASSISTANT));
+        Map<UUID, CourseRef> refs = courses.findCourses(tenantId, assisted.stream().filter(courseIds::contains).toList());
         Map<UUID, Set<UUID>> restrictions = new HashMap<>();
         refs.values().stream().filter(course -> SEPARATE_GROUPS.equals(course.groupMode())).forEach(course -> {
-            Set<UUID> groups = enrollment.groupIds(user.tenantId(), course.id(), user.userId());
+            Set<UUID> groups = enrollment.groupIds(tenantId, course.id(), userId);
             restrictions.put(course.id(), groups.isEmpty() ? Set.of()
-                    : enrollment.membersOfGroups(user.tenantId(), course.id(), groups));
+                    : enrollment.membersOfGroups(tenantId, course.id(), groups));
         });
         return restrictions;
     }

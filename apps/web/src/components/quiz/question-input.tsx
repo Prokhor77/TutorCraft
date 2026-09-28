@@ -3,7 +3,7 @@ import { ArrowDown, ArrowUp } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Checkbox, Radio } from '@/components/ui/checkbox';
 import { Input, NativeSelect, Textarea } from '@/components/ui/input';
 import {
   currentOrder,
@@ -25,7 +25,7 @@ type Props = {
 };
 
 const choiceClass =
-  'flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3 text-base transition-colors hover:border-primary/60 has-[:checked]:border-primary has-[:checked]:bg-primary-soft has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-focus-ring';
+  'flex min-h-14 cursor-pointer items-center gap-3 rounded-md border-[1.5px] border-border bg-surface px-5 py-3 text-base transition-[border-color,background-color,box-shadow] duration-fast hover:border-accent/50 has-[:checked]:border-accent has-[:checked]:bg-primary-soft/60 has-[:checked]:shadow-md has-[:focus-visible]:ring-4 has-[:focus-visible]:ring-focus-ring/20';
 
 /** Large, single-column answer areas per question type (SPEC §10 «Прохождение теста»). */
 export function QuestionInput({ question, response, onChange, disabled }: Props) {
@@ -42,10 +42,9 @@ export function QuestionInput({ question, response, onChange, disabled }: Props)
           <legend className="sr-only">{question.title}</legend>
           {(question.options ?? []).map((option) => (
             <label key={option.id} className={choiceClass}>
-              <input
-                type="radio"
+              <Radio
                 name={name}
-                className="size-5 accent-[rgb(var(--primary))]"
+
                 checked={!!response && 'optionId' in response && response.optionId === option.id}
                 onChange={() => onChange({ optionId: option.id }, false)}
               />
@@ -82,10 +81,9 @@ export function QuestionInput({ question, response, onChange, disabled }: Props)
           <legend className="sr-only">{question.title}</legend>
           {[true, false].map((value) => (
             <label key={String(value)} className={cn(choiceClass, 'justify-center')}>
-              <input
-                type="radio"
+              <Radio
                 name={name}
-                className="size-5 accent-[rgb(var(--primary))]"
+
                 checked={!!response && 'value' in response && response.value === value}
                 onChange={() => onChange({ value }, false)}
               />
@@ -167,7 +165,7 @@ export function QuestionInput({ question, response, onChange, disabled }: Props)
           {effective.map((id, index) => (
             <li
               key={id}
-              className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2"
+              className="flex items-center gap-2 rounded-md border border-card-border bg-surface px-3 py-2 shadow-sm"
             >
               <span className="w-6 text-sm font-semibold text-text-muted">{index + 1}.</span>
               <span className="flex-1 text-base">{byId.get(id)}</span>

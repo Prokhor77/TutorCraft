@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils/cn';
 export function Command({ className, ...props }: React.ComponentProps<typeof CommandPrimitive>) {
   return (
     <CommandPrimitive
-      className={cn('flex w-full flex-col overflow-hidden rounded-md bg-surface', className)}
+      className={cn('flex w-full flex-col overflow-hidden rounded bg-surface', className)}
       {...props}
     />
   );
@@ -68,7 +68,7 @@ export function CommandItem({
   return (
     <CommandPrimitive.Item
       className={cn(
-        'flex cursor-pointer select-none items-center gap-3 rounded-sm px-2.5 py-2 text-sm outline-none data-[selected=true]:bg-primary-soft data-[selected=true]:text-primary',
+        'flex cursor-pointer select-none items-center gap-3 rounded-full px-3 py-2 text-sm outline-none data-[selected=true]:bg-accent/10 data-[selected=true]:text-primary',
         className,
       )}
       {...props}

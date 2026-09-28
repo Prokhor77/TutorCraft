@@ -21,7 +21,7 @@ export function Segmented<T extends string>({
     <div
       role="radiogroup"
       aria-label={label}
-      className={cn('inline-flex rounded-md bg-surface-muted p-1', className)}
+      className={cn('inline-flex rounded-full bg-surface-muted p-1', className)}
     >
       {options.map((option) => (
         <button
@@ -31,8 +31,8 @@ export function Segmented<T extends string>({
           aria-checked={value === option.value}
           onClick={() => onChange(option.value)}
           className={cn(
-            'h-8 rounded-sm px-3 text-sm font-medium text-text-muted transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
-            value === option.value && 'bg-surface text-text shadow-sm',
+            'h-8 min-w-0 flex-1 truncate whitespace-nowrap rounded-full px-2 text-label-md text-text-muted transition-colors duration-fast hover:text-primary focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus-ring/20 sm:px-4 sm:text-label-lg',
+            value === option.value && 'bg-surface text-primary shadow-sm',
           )}
         >
           {option.label}

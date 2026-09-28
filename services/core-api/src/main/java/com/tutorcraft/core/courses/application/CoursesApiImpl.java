@@ -11,6 +11,7 @@ import com.tutorcraft.core.courses.domain.CourseModule;
 import com.tutorcraft.core.courses.domain.LearnerVisibility;
 import com.tutorcraft.core.courses.domain.SelfEnrolSettings;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
@@ -132,6 +133,22 @@ class CoursesApiImpl implements CoursesApi {
                 .sorted(Comparator.comparing(CourseItem::courseId).thenComparingInt(CourseItem::position))
                 .map(CourseItem::toRef)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ItemRef> itemsDueBetween(Instant fromExclusive, Instant toInclusive) {
+        Map<UUID, List<CourseItem>> byTenant = items.dueBetween(fromExclusive, toInclusive).stream()
+                .collect(Collectors.groupingBy(CourseItem::tenantId));
+        return byTenant.entrySet().stream()
+                .flatMap(entry -> inLiveCourses(entry.getKey(), entry.getValue()).stream())
+                .map(CourseItem::toRef)
+                .toList();
+    }
+
+    private List<CourseItem> inLiveCourses(UUID tenantId, List<CourseItem> candidates) {
+        Set<UUID> live = liveCourseIds(tenantId, candidates.stream().map(CourseItem::courseId).collect(Collectors.toSet()));
+        return candidates.stream().filter(item -> live.contains(item.courseId())).toList();
     }
 
     @Override

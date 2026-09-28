@@ -232,7 +232,7 @@ export function BlockEditor({
         {blocks.map((block, index) => (
           <div
             key={block.id}
-            className="group relative flex gap-1 rounded-md focus-within:bg-surface-muted/40 md:-ml-16 md:pl-0"
+            className="group relative flex gap-1 rounded focus-within:bg-surface-muted/40 md:-ml-16 md:pl-0"
             onFocus={() => setFocusId(null)}
           >
             <div className="flex shrink-0 items-start gap-0.5 pt-0.5 opacity-100 transition-opacity md:w-16 md:justify-end md:opacity-0 md:focus-within:opacity-100 md:group-hover:opacity-100">

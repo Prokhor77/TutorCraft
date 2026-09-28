@@ -10,6 +10,7 @@ import com.tutorcraft.core.assessment.quiz.domain.Attempt;
 import com.tutorcraft.core.assessment.quiz.domain.AttemptScoring;
 import com.tutorcraft.core.assessment.quiz.domain.AttemptScoring.AttemptScore;
 import com.tutorcraft.core.assessment.quiz.domain.AttemptSlot;
+import com.tutorcraft.core.assessment.AssessmentEvents.EssayGraded;
 import com.tutorcraft.core.audit.AuditLog;
 import com.tutorcraft.core.audit.AuditRecord;
 import com.tutorcraft.core.shared.domain.BusinessRuleException;
@@ -25,6 +26,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,11 +45,12 @@ public class EssayGradingService {
     private final AccessService access;
     private final CurrentUserProvider currentUser;
     private final AuditLog audit;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public EssayGradingService(AttemptRepository attempts, AttemptFinisher finisher, QuizGradeSync gradeSync,
                                AttemptResultService results, AccessService access, CurrentUserProvider currentUser,
-                               AuditLog audit, Clock clock) {
+                               AuditLog audit, ApplicationEventPublisher events, Clock clock) {
         this.attempts = attempts;
         this.finisher = finisher;
         this.gradeSync = gradeSync;
@@ -55,6 +58,7 @@ public class EssayGradingService {
         this.access = access;
         this.currentUser = currentUser;
         this.audit = audit;
+        this.events = events;
         this.clock = clock;
     }
 
@@ -80,6 +84,7 @@ public class EssayGradingService {
         gradeSync.sync(user.tenantId(), attempt.itemId(), attempt.userId(), user.userId());
         audit.record(AuditRecord.of(user.tenantId(), user.userId(), "quiz.essay_graded", "attempt", attemptId.toString())
                 .withDiff(Map.of("slot", slotNumber)));
+        events.publishEvent(new EssayGraded(user.tenantId(), attempt.courseId(), attempt.itemId(), attemptId, user.userId()));
         log.info("Essay slot {} of attempt {} graded", slotNumber, attemptId);
         return results.fullResult(attempts.find(user.tenantId(), attemptId).orElseThrow());
     }

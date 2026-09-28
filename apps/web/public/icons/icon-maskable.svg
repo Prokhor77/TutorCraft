@@ -1,7 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="TutorCraft">
-  <rect width="512" height="512" fill="#4f46e5"/>
-  <g transform="translate(76 76) scale(0.703)">
-    <path d="M256 128 76 212l180 84 146-68v96h36V212z" fill="#fff"/>
-    <path d="M148 268v70c0 34 48 62 108 62s108-28 108-62v-70l-108 50z" fill="#c7d2fe"/>
-  </g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" role="img" aria-label="TutorCraft"><rect width="40" height="40" fill="#4F46E5"/><g transform="translate(6 6) scale(0.7)"><path d="M12 15L20 10L28 15L20 20L12 15Z" fill="#EEF2FF"/><path d="M14 18.5V24C14 26.5 17 28.5 20 28.5C23 28.5 26 26.5 26 24V18.5L20 22.25L14 18.5Z" fill="#C7D2FE"/><circle cx="28" cy="22" r="2.5" fill="#10B981"/><path d="M28 24.5V28" stroke="#10B981" stroke-width="1.5" stroke-linecap="round"/></g></svg>

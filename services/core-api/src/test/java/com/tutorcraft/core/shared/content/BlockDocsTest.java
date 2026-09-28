@@ -150,7 +150,8 @@ class BlockDocsTest {
 
             Map<?, ?> sanitized = (Map<?, ?>) ((List<?>) BlockDocs.sanitize(doc(paragraph), WHITELIST).doc().get("blocks")).get(0);
 
-            assertThat(sanitized.keySet()).containsExactlyInAnyOrder("id", "type", "text");
+            Set<Object> keys = Set.copyOf(sanitized.keySet());
+            assertThat(keys).containsExactlyInAnyOrder("id", "type", "text");
         }
 
         @Test

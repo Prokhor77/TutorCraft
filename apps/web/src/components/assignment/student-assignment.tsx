@@ -230,7 +230,7 @@ function SubmissionWorkspace({
           />
         </section>
       ) : null}
-      <div className="sticky bottom-[calc(var(--size-bottom-nav)+0.5rem)] flex flex-col gap-2 rounded-lg border border-border bg-surface p-3 shadow-md sm:flex-row sm:items-center sm:justify-between md:bottom-4">
+      <div className="glass sticky bottom-[calc(var(--size-bottom-nav)+0.5rem)] flex flex-col gap-2 rounded-md border border-card-border p-3 shadow-md sm:flex-row sm:items-center sm:justify-between md:bottom-4">
         <span className="flex items-center gap-2 text-sm text-text-muted">
           <FileText className="size-4" aria-hidden /> {t('draftStatus', { count: files.length })}
         </span>
@@ -260,7 +260,11 @@ export function StudentAssignment({ item }: { item: ItemDetail }) {
   return (
     <div className="flex flex-col gap-6">
       {dueAt ? <DeadlineCountdown dueAt={dueAt} /> : null}
-      <BlockRenderer doc={item.content} />
+      {item.content ? (
+        <section className="rounded-md border border-card-border bg-surface p-6 shadow-sm md:p-8">
+          <BlockRenderer doc={item.content} />
+        </section>
+      ) : null}
       {settings.submissionType === 'none' ? (
         <Alert tone="info" title={t('offlineAssignment')} />
       ) : null}
@@ -292,7 +296,9 @@ export function StudentAssignment({ item }: { item: ItemDetail }) {
             </Alert>
           ) : null}
           {EDITABLE_STATUSES.has(mySubmission.data.status) ? (
-            <SubmissionWorkspace item={item} settings={settings} submission={mySubmission.data} />
+            <div className="rounded-md border border-card-border bg-surface p-5 shadow-sm md:p-6">
+              <SubmissionWorkspace item={item} settings={settings} submission={mySubmission.data} />
+            </div>
           ) : (
             <section className="flex flex-col gap-2">
               <h2 className="text-lg">{t('yourWork')}</h2>

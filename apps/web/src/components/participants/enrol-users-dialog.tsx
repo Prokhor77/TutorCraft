@@ -55,7 +55,7 @@ export function EnrolUsersDialog({ courseId }: { courseId: string }) {
         <ul className="flex max-h-72 flex-col gap-1 overflow-y-auto">
           {list.map((user) => (
             <li key={user.id}>
-              <label className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-surface-muted">
+              <label className="flex items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-surface-muted">
                 <Checkbox
                   checked={selected.has(user.id)}
                   onCheckedChange={(checked) =>

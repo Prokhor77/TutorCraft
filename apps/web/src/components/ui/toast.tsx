@@ -60,7 +60,7 @@ export function Toaster({ closeLabel }: { closeLabel: string }) {
             }
             onOpenChange={(open) => !open && dismiss(entry.id)}
             type={tone === 'error' ? 'foreground' : 'background'}
-            className="pointer-events-auto flex w-full items-start gap-3 rounded-md border border-border bg-surface p-4 shadow-lg data-[state=open]:animate-slide-up"
+            className="pointer-events-auto flex w-full items-start gap-3 rounded-md border border-card-border bg-surface p-4 shadow-lg data-[state=open]:animate-slide-up"
           >
             <Icon className={cn('mt-0.5 size-5 shrink-0', toneClass[tone])} aria-hidden />
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -77,7 +77,7 @@ export function Toaster({ closeLabel }: { closeLabel: string }) {
               <ToastPrimitive.Action
                 altText={entry.action.label}
                 onClick={entry.action.onClick}
-                className="shrink-0 rounded-sm px-2 py-1 text-sm font-semibold text-primary hover:bg-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                className="shrink-0 rounded-full px-3 py-1 text-label-lg text-primary hover:bg-accent/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
               >
                 {entry.action.label}
               </ToastPrimitive.Action>

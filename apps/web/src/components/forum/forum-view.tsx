@@ -82,7 +82,7 @@ export function ForumView({ item }: { item: ItemDetail }) {
           <li key={discussion.id}>
             <Link
               href={ROUTES.discussion(item.courseId, item.id, discussion.id)}
-              className="flex items-center gap-3 rounded-md border border-border bg-surface px-4 py-3 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+              className="flex items-center gap-3 rounded border border-card-border bg-surface px-4 py-3 shadow-sm hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             >
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="flex items-center gap-2">

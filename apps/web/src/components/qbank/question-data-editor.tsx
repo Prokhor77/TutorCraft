@@ -2,7 +2,7 @@
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
-import { Checkbox, Switch } from '@/components/ui/checkbox';
+import { Checkbox, Radio, Switch } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/field';
 import { Input, NativeSelect } from '@/components/ui/input';
 import { FULL_SCORE_PERCENT } from '@/features/qbank/question-data';
@@ -57,14 +57,12 @@ export function QuestionDataEditor({ value, onChange }: Props) {
             {value.options.map((option, index) => (
               <li
                 key={option.id}
-                className="flex flex-col gap-2 rounded-md border border-border p-2 sm:flex-row sm:items-center"
+                className="flex flex-col gap-2 rounded-md border-[1.5px] border-border p-3 sm:flex-row sm:items-center"
               >
                 <label className="flex items-center gap-2 text-xs">
                   {value.type === 'single_choice' ? (
-                    <input
-                      type="radio"
+                    <Radio
                       name="correct-option"
-                      className="size-4"
                       checked={option.correct}
                       onChange={() => setOption(index, { correct: true })}
                     />
@@ -148,8 +146,7 @@ export function QuestionDataEditor({ value, onChange }: Props) {
           <legend className="mb-2 text-sm font-medium">{t('correctAnswer')}</legend>
           {[true, false].map((option) => (
             <label key={String(option)} className="flex items-center gap-2">
-              <input
-                type="radio"
+              <Radio
                 name="tf"
                 checked={value.correct === option}
                 onChange={() => onChange({ ...value, correct: option })}

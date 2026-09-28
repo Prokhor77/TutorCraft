@@ -3,7 +3,8 @@ import { comboOf, isEditableTarget } from '@/features/app/use-hotkeys';
 import { parseEssayId } from '@/features/assessment/quick-comments';
 import { safeNextPath } from '@/features/auth/routes';
 import { localeFromAcceptLanguage } from '@/i18n/config';
-import { parseHexColor, readableForeground } from './color';
+import { cn } from './cn';
+import { buildBrandCss, parseHexColor, readableForeground } from './color';
 import { monthGrid, rangeFor, startOfWeek } from './calendar';
 import { formatMoney, toMinor } from './money';
 
@@ -24,6 +25,14 @@ describe('branding colors (FR-ADMIN-01)', () => {
     expect(parseHexColor('red')).toBeNull();
     expect(readableForeground([79, 70, 229])).toEqual([255, 255, 255]);
     expect(readableForeground([250, 204, 21])).toEqual([15, 18, 30]);
+  });
+
+  it('overrides violet roles for light and a lightened variant for dark theme', () => {
+    const css = buildBrandCss('#0f766e');
+    expect(css).toContain(':root { --primary: 15 118 110;');
+    expect(css).toContain("[data-theme='dark']");
+    expect(css).toContain('--primary-foreground: 15 18 30;'); // lightened teal needs dark text in dark mode
+    expect(buildBrandCss('not-a-color')).toBe('');
   });
 });
 
@@ -70,5 +79,15 @@ describe('locale negotiation', () => {
   it('picks the first supported language', () => {
     expect(localeFromAcceptLanguage('de-DE,en;q=0.8,ru;q=0.5')).toBe('en');
     expect(localeFromAcceptLanguage('fr')).toBeNull();
+  });
+});
+
+describe('cn (tailwind-merge with Stitch type tokens)', () => {
+  it('keeps custom font sizes next to text colors and still dedupes sizes', () => {
+    expect(cn('text-label-md text-text-muted')).toBe('text-label-md text-text-muted');
+    expect(cn('text-hero-mobile text-text md:text-4xl')).toBe(
+      'text-hero-mobile text-text md:text-4xl',
+    );
+    expect(cn('text-sm', 'text-label-sm')).toBe('text-label-sm');
   });
 });

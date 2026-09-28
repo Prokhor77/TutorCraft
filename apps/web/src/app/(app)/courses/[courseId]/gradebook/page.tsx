@@ -1,8 +1,32 @@
 'use client';
-import { Download, Megaphone, Plus, Search, Table2 } from 'lucide-react';
+import {
+  BarChart3,
+  ClipboardCheck,
+  Download,
+  GraduationCap,
+  Inbox,
+  Megaphone,
+  Plus,
+  Search,
+  Table2,
+  TrendingUp,
+} from 'lucide-react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { GradeCellView } from '@/components/gradebook/grade-cell';
+import { QueueCard } from '@/components/grading/queue-card';
+import { Badge } from '@/components/ui/badge';
+import { LoadMore } from '@/components/ui/load-more';
+import { PageHeader } from '@/components/ui/page-header';
+import { Progress } from '@/components/ui/progress';
+import { StatCard, StatGrid } from '@/components/ui/stat-card';
+import { ROUTES } from '@/features/auth/routes';
+import { useGradingQueue } from '@/features/assessment/use-assessment';
+import { flattenPages } from '@/lib/api/pagination';
+import { ProgressReport } from '@/components/participants/progress-report';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { GradebookSetupSheet } from '@/components/gradebook/setup-sheet';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -25,6 +49,7 @@ import {
   useGradebookMutations,
   useGradebookSetup,
   useGradeCellMutation,
+  useProgressReport,
 } from '@/features/gradebook/use-gradebook';
 import { PERMISSIONS } from '@/lib/access/permissions';
 import { formatPercent } from '@/lib/utils/format';
@@ -78,7 +103,7 @@ function ManualItemDialog({ courseId }: { courseId: string }) {
 }
 
 /** Gradebook (FR-GRADE-01..07): sticky header/first column, inline editing, formula preview, export, publish. */
-export default function GradebookPage() {
+function GradebookJournal() {
   const t = useTranslations('gradebook');
   const tCommon = useTranslations('common');
   const locale = useLocale();
@@ -173,13 +198,13 @@ export default function GradebookPage() {
       {columns.length === 0 ? (
         <EmptyState icon={Table2} title={t('emptyTitle')} description={t('emptyText')} />
       ) : (
-        <div className="max-h-[70dvh] overflow-auto rounded-lg border border-border bg-surface">
+        <div className="max-h-[70dvh] overflow-auto rounded-md border border-card-border bg-surface shadow-sm">
           <table className="w-full border-separate border-spacing-0 text-sm">
             <thead>
               <tr>
                 <th
                   scope="col"
-                  className="sticky left-0 top-0 z-30 min-w-48 border-b border-r border-border bg-surface-muted px-3 py-2 text-left text-xs font-semibold uppercase text-text-muted"
+                  className="sticky left-0 top-0 z-30 min-w-32 border-b border-r border-border bg-surface-muted px-3 py-2 text-left text-xs font-semibold uppercase text-text-muted sm:min-w-48"
                 >
                   {t('student')}
                 </th>
@@ -210,7 +235,7 @@ export default function GradebookPage() {
                 })}
                 <th
                   scope="col"
-                  className="sticky right-0 top-0 z-20 min-w-24 border-b border-l border-border bg-surface-muted px-3 py-2 text-right text-xs font-semibold uppercase text-text-muted"
+                  className="sticky top-0 z-20 min-w-24 border-b border-l border-border bg-surface-muted px-3 py-2 text-right text-xs font-semibold uppercase text-text-muted sm:right-0"
                 >
                   {t('final')}
                 </th>
@@ -253,7 +278,7 @@ export default function GradebookPage() {
                       />
                     </td>
                   ))}
-                  <td className="sticky right-0 border-b border-l border-border bg-surface px-3 py-1.5 text-right font-semibold tabular-nums">
+                  <td className="border-b border-l border-border bg-surface px-3 py-1.5 text-right font-semibold tabular-nums sm:sticky sm:right-0">
                     {formatPercent(row.finalPercent, locale)}
                     {row.finalLabel ? (
                       <span className="block text-xs font-normal text-text-muted">
@@ -268,6 +293,179 @@ export default function GradebookPage() {
         </div>
       )}
       <p className="text-xs text-text-muted">{t('legend')}</p>
+    </div>
+  );
+}
+
+const ANALYTICS_TABS = ['queue', 'journal', 'progress'] as const;
+type AnalyticsTab = (typeof ANALYTICS_TABS)[number];
+const PERCENT = 100;
+
+function average(values: number[]): number | null {
+  return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+}
+
+/** Course grading queue (Stitch «Очередь проверки»): cards open the three-pane review screen. */
+function CourseQueue({ courseId }: { courseId: string }) {
+  const t = useTranslations('grading');
+  const tCommon = useTranslations('common');
+  const queue = useGradingQueue({ courseId });
+  const entries = flattenPages(queue.data?.pages);
+  const reviewHref = (entryId: string) =>
+    `${ROUTES.gradingReview}?${new URLSearchParams({ courseId, entry: entryId })}`;
+  if (queue.isLoading) return <SkeletonList label={tCommon('loading')} />;
+  if (queue.isError)
+    return (
+      <ErrorState
+        title={t('loadError')}
+        retryLabel={tCommon('retry')}
+        onRetry={() => void queue.refetch()}
+      />
+    );
+  if (entries.length === 0)
+    return <EmptyState icon={Inbox} title={t('emptyTitle')} description={t('emptyText')} />;
+  return (
+    <div className="flex flex-col gap-3">
+      <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+        {entries.map((entry) => (
+          <li key={entry.id}>
+            <QueueCard entry={entry} href={reviewHref(entry.id)} chevron />
+          </li>
+        ))}
+      </ul>
+      <LoadMore
+        hasMore={!!queue.hasNextPage}
+        loading={queue.isFetchingNextPage}
+        onClick={() => void queue.fetchNextPage()}
+        label={tCommon('loadMore')}
+      />
+    </div>
+  );
+}
+
+/**
+ * «Аналитика» (Stitch «Проверка заданий и аналитика успеваемости»): stat cards from the gradebook, grading queue
+ * and progress report, then tabs: queue · gradebook journal · progress matrix (FR-GRADE-01/06, FR-REPORT-01).
+ */
+export default function AnalyticsPage() {
+  const t = useTranslations('analytics');
+  const locale = useLocale();
+  const router = useRouter();
+  const params = useSearchParams();
+  const { course, can } = useCourseContext();
+  const canGrade = can(PERMISSIONS.submissionGrade);
+  const canProgress = can(PERMISSIONS.completionViewAll);
+  const gradebook = useGradebook(course.id);
+  const queue = useGradingQueue({ courseId: course.id });
+  const report = useProgressReport(course.id, canProgress);
+  const tabs = ANALYTICS_TABS.filter(
+    (tab) => (tab !== 'queue' || canGrade) && (tab !== 'progress' || canProgress),
+  );
+  const requested = params.get('tab') as AnalyticsTab | null;
+  const tab = requested && tabs.includes(requested) ? requested : tabs[0];
+  const queueEntries = flattenPages(queue.data?.pages);
+  const queueCount = `${queueEntries.length}${queue.hasNextPage ? '+' : ''}`;
+  const lateCount = queueEntries.filter((entry) => entry.late).length;
+  const rows = gradebook.data?.rows ?? [];
+  const avgFinal = average(
+    rows.map((row) => row.finalPercent).filter((value): value is number => value !== null),
+  );
+  const reportRows = report.data?.rows ?? [];
+  const avgProgress = average(reportRows.map((row) => row.percent));
+  const finished = reportRows.filter((row) => row.percent >= PERCENT).length;
+
+  return (
+    <div className="flex flex-col gap-gutter">
+      <PageHeader
+        className="mb-0"
+        eyebrow={course.title}
+        title={t('pageTitle')}
+        meta={
+          canGrade && queueEntries.length > 0 ? (
+            <Badge tone="warning" dot>
+              {t('waitingChip', { count: queueCount })}
+            </Badge>
+          ) : null
+        }
+        actions={
+          canGrade && queueEntries.length > 0 ? (
+            <Button asChild>
+              <Link
+                href={`${ROUTES.gradingReview}?${new URLSearchParams({ courseId: course.id })}`}
+              >
+                <ClipboardCheck aria-hidden /> {t('startReview')}
+              </Link>
+            </Button>
+          ) : null
+        }
+      />
+      <StatGrid>
+        <StatCard
+          label={t('statAverage')}
+          icon={BarChart3}
+          value={avgFinal === null ? '—' : formatPercent(avgFinal, locale)}
+          footer={t('statAverageHint', { count: rows.length })}
+        />
+        {canGrade ? (
+          <StatCard
+            label={t('statQueue')}
+            icon={ClipboardCheck}
+            tone="warning"
+            value={queueCount}
+            unit={t('worksUnit')}
+            footer={t('lateCount', { count: lateCount })}
+          />
+        ) : null}
+        {canProgress ? (
+          <StatCard
+            label={t('statProgress')}
+            icon={TrendingUp}
+            tone="success"
+            value={avgProgress === null ? '—' : formatPercent(avgProgress, locale)}
+            footer={
+              avgProgress === null ? undefined : (
+                <Progress value={avgProgress} tone="success" label={t('statProgress')} />
+              )
+            }
+          />
+        ) : null}
+        {canProgress ? (
+          <StatCard
+            label={t('statFinished')}
+            icon={GraduationCap}
+            value={finished}
+            unit={t('ofStudents', { total: reportRows.length })}
+          />
+        ) : null}
+      </StatGrid>
+      <Tabs
+        value={tab}
+        onValueChange={(value) =>
+          router.replace(`?${new URLSearchParams({ tab: value })}`, { scroll: false })
+        }
+      >
+        <TabsList>
+          {tabs.map((entry) => (
+            <TabsTrigger key={entry} value={entry}>
+              {t(entry)}
+              {entry === 'queue' && queueEntries.length > 0 ? (
+                <span className="rounded-full bg-primary px-1.5 text-label-sm text-primary-foreground">
+                  {queueCount}
+                </span>
+              ) : null}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        <TabsContent value="queue">
+          <CourseQueue courseId={course.id} />
+        </TabsContent>
+        <TabsContent value="journal">
+          <GradebookJournal />
+        </TabsContent>
+        <TabsContent value="progress">
+          <ProgressReport courseId={course.id} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

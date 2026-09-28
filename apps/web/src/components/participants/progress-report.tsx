@@ -1,10 +1,9 @@
 'use client';
-import { useQuery } from '@tanstack/react-query';
 import { Check, Minus } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { ErrorState } from '@/components/ui/error-state';
 import { SkeletonList } from '@/components/ui/skeleton';
-import { gradebookApi } from '@/lib/api/endpoints/gradebook';
+import { useProgressReport } from '@/features/gradebook/use-gradebook';
 import { formatPercent } from '@/lib/utils/format';
 
 /** FR-REPORT-01: student × item completion matrix. */
@@ -12,10 +11,7 @@ export function ProgressReport({ courseId }: { courseId: string }) {
   const t = useTranslations('participants');
   const tCommon = useTranslations('common');
   const locale = useLocale();
-  const report = useQuery({
-    queryKey: ['courses', courseId, 'progress-report'],
-    queryFn: () => gradebookApi.progressReport(courseId),
-  });
+  const report = useProgressReport(courseId);
   if (report.isLoading) return <SkeletonList label={tCommon('loading')} />;
   if (report.isError || !report.data)
     return (
@@ -27,7 +23,7 @@ export function ProgressReport({ courseId }: { courseId: string }) {
     );
   const { items, rows } = report.data;
   return (
-    <div className="max-h-[70dvh] overflow-auto rounded-lg border border-border bg-surface">
+    <div className="max-h-[70dvh] overflow-auto rounded-md border border-card-border bg-surface shadow-sm">
       <table className="w-full border-separate border-spacing-0 text-sm">
         <thead>
           <tr>

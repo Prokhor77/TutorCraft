@@ -3,6 +3,7 @@ package com.tutorcraft.core.org.application;
 import com.tutorcraft.core.org.OrgApi.TenantInfo;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 public interface TenantRepository {
@@ -16,6 +17,12 @@ public interface TenantRepository {
     Optional<TenantInfo> findBySlug(String slug);
 
     Optional<TenantSettingsView> settings(UUID id);
+
+    /** Белый список хостов встраиваний; пусто — tenant не найден или список пуст. */
+    Set<String> embedWhitelist(UUID id);
+
+    /** Квота хранилища в МБ; пусто — без ограничения или tenant не найден. */
+    Optional<Long> storageQuotaMb(UUID id);
 
     /** @return false, если версия не совпала (оптимистичная блокировка). */
     boolean updateSettings(UUID id, long expectedVersion, TenantSettingsUpdate update);

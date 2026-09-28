@@ -3,6 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { AtSign, Lock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -10,7 +11,7 @@ import { z } from 'zod';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
+import { IconInput, Input, PasswordInput } from '@/components/ui/input';
 import { describeProblem } from '@/features/app/use-problem-toast';
 import { ROUTES } from '@/features/auth/routes';
 import { useAcceptInvitation } from '@/features/auth/use-auth';
@@ -52,8 +53,19 @@ export function ForgotPasswordForm() {
         )}
         className="flex flex-col gap-4"
       >
-        <Field label={t('email')} error={form.formState.errors.email?.message} required>
-          <Input type="email" autoComplete="email" {...form.register('email')} />
+        <Field
+          labelVariant="caps"
+          label={t('email')}
+          error={form.formState.errors.email?.message}
+          required
+        >
+          <IconInput
+            icon={AtSign}
+            type="email"
+            placeholder={t('emailPlaceholder')}
+            autoComplete="email"
+            {...form.register('email')}
+          />
         </Field>
         <Button type="submit" size="lg" loading={mutation.isPending}>
           {t('sendResetLink')}
@@ -112,8 +124,19 @@ export function ResetPasswordForm() {
         )}
         className="flex flex-col gap-4"
       >
-        <Field label={t('newPassword')} error={form.formState.errors.newPassword?.message} required>
-          <Input type="password" autoComplete="new-password" {...form.register('newPassword')} />
+        <Field
+          labelVariant="caps"
+          label={t('newPassword')}
+          error={form.formState.errors.newPassword?.message}
+          required
+        >
+          <PasswordInput
+            icon={Lock}
+            showLabel={t('showPassword')}
+            hideLabel={t('hidePassword')}
+            autoComplete="new-password"
+            {...form.register('newPassword')}
+          />
         </Field>
         <Button type="submit" size="lg" loading={mutation.isPending}>
           {t('savePassword')}
@@ -171,15 +194,36 @@ export function AcceptInvitationForm() {
         className="flex flex-col gap-4"
       >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label={t('firstName')} error={form.formState.errors.firstName?.message} required>
+          <Field
+            labelVariant="caps"
+            label={t('firstName')}
+            error={form.formState.errors.firstName?.message}
+            required
+          >
             <Input autoComplete="given-name" {...form.register('firstName')} />
           </Field>
-          <Field label={t('lastName')} error={form.formState.errors.lastName?.message} required>
+          <Field
+            labelVariant="caps"
+            label={t('lastName')}
+            error={form.formState.errors.lastName?.message}
+            required
+          >
             <Input autoComplete="family-name" {...form.register('lastName')} />
           </Field>
         </div>
-        <Field label={t('password')} error={form.formState.errors.password?.message} required>
-          <Input type="password" autoComplete="new-password" {...form.register('password')} />
+        <Field
+          labelVariant="caps"
+          label={t('password')}
+          error={form.formState.errors.password?.message}
+          required
+        >
+          <PasswordInput
+            icon={Lock}
+            showLabel={t('showPassword')}
+            hideLabel={t('hidePassword')}
+            autoComplete="new-password"
+            {...form.register('password')}
+          />
         </Field>
         <Button type="submit" size="lg" loading={accept.isPending}>
           {t('acceptInvite')}

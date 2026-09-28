@@ -47,12 +47,10 @@ export default async function LandingPage() {
       <PublicHeader />
       <main id="main-content">
         <section className="mx-auto flex max-w-content flex-col items-center gap-6 px-page-x py-16 text-center md:py-24">
-          <span className="rounded-full bg-primary-soft px-3 py-1 text-sm font-medium text-primary">
+          <span className="rounded-full bg-accent/10 px-4 py-1.5 text-label-md uppercase text-primary">
             {t('badge')}
           </span>
-          <h1 className="max-w-3xl text-4xl font-bold leading-tight md:text-5xl">
-            {t('heroTitle')}
-          </h1>
+          <h1 className="max-w-3xl text-hero-mobile font-bold md:text-4xl">{t('heroTitle')}</h1>
           <p className="max-w-2xl text-lg text-text-muted">{t('heroSubtitle')}</p>
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button asChild size="lg">
@@ -71,7 +69,7 @@ export default async function LandingPage() {
             </h2>
             <ol className="grid grid-cols-1 gap-4 md:grid-cols-4">
               {STEPS.map((step, index) => (
-                <li key={step} className="flex flex-col gap-2 rounded-lg bg-surface-muted p-5">
+                <li key={step} className="flex flex-col gap-2 rounded-md bg-surface-muted p-5">
                   <span className="flex size-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
                     {index + 1}
                   </span>

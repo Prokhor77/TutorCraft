@@ -52,13 +52,14 @@ public class ItemCommandService {
     private final CurrentUserProvider currentUser;
     private final CourseChangeEvents events;
     private final ItemViews views;
+    private final ConditionRules conditionRules;
     private final TrashPolicy trash;
     private final Clock clock;
 
     public ItemCommandService(ModuleRepository modules, ItemRepository items, ActivityTypeRegistry types,
                               CourseContentFiles content, StructureCopier copier, AccessService access,
                               CurrentUserProvider currentUser, CourseChangeEvents events, ItemViews views,
-                              AppProperties properties, Clock clock) {
+                              ConditionRules conditionRules, AppProperties properties, Clock clock) {
         this.modules = modules;
         this.items = items;
         this.types = types;
@@ -68,6 +69,7 @@ public class ItemCommandService {
         this.currentUser = currentUser;
         this.events = events;
         this.views = views;
+        this.conditionRules = conditionRules;
         this.trash = new TrashPolicy(properties.trash().retention());
         this.clock = clock;
     }
@@ -181,7 +183,7 @@ public class ItemCommandService {
         }
         Map<String, Object> settings = patch.settings().isPresent() ? patchedSettings(current, patch) : before.settings();
         return new ItemContent(patch.title().applyTo(before.title()).trim(), visibility, publishAt, settings,
-                patchedContent(current, patch), patchedCompletionRule(before, patch), patchedConditions(before, patch),
+                patchedContent(current, patch), patchedCompletionRule(before, patch), patchedConditions(current, before, patch),
                 patch.settings().isPresent() ? types.keyDates(current.type(), settings) : before.dates());
     }
 
@@ -203,8 +205,8 @@ public class ItemCommandService {
                 ? ItemRules.completionRule(patch.completionRule().value(), "completionRule") : before.completionRule();
     }
 
-    private static Map<String, Object> patchedConditions(ItemContent before, ItemPatch patch) {
-        return patch.conditions().isPresent() ? ItemRules.conditions(patch.conditions().value(), "conditions") : before.conditions();
+    private Map<String, Object> patchedConditions(CourseItem current, ItemContent before, ItemPatch patch) {
+        return patch.conditions().isPresent() ? conditionRules.forItem(current, patch.conditions().value()) : before.conditions();
     }
 
     private void auditUpdate(CurrentUser user, CourseItem before, CourseItem after, ItemPatch patch) {

@@ -5,6 +5,8 @@ import com.tutorcraft.core.courses.CourseRef;
 import com.tutorcraft.core.courses.CoursesApi;
 import com.tutorcraft.core.dashboard.application.DashboardViews.CourseCard;
 import com.tutorcraft.core.enrollment.EnrollmentApi;
+import com.tutorcraft.core.files.FilesApi;
+import com.tutorcraft.core.files.FilesApi.FileRef;
 import com.tutorcraft.core.progress.ProgressApi;
 import com.tutorcraft.core.shared.security.CurrentUser;
 import com.tutorcraft.core.shared.security.CurrentUserProvider;
@@ -14,8 +16,10 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,19 +35,22 @@ public class MyCoursesService {
     private static final List<CourseRole> ROLE_PRIORITY = List.of(CourseRole.TEACHER, CourseRole.ASSISTANT,
             CourseRole.STUDENT, CourseRole.OBSERVER, CourseRole.GUEST);
     private static final Set<CourseRole> STAFF = Set.of(CourseRole.TEACHER, CourseRole.ASSISTANT);
+    private static final String READY = "ready";
 
     private final CurrentUserProvider currentUser;
     private final EnrollmentApi enrollment;
     private final CoursesApi courses;
     private final ObjectProvider<ProgressApi> progress;
+    private final FilesApi files;
     private final Clock clock;
 
     MyCoursesService(CurrentUserProvider currentUser, EnrollmentApi enrollment, CoursesApi courses,
-                     ObjectProvider<ProgressApi> progress, Clock clock) {
+                     ObjectProvider<ProgressApi> progress, FilesApi files, Clock clock) {
         this.currentUser = currentUser;
         this.enrollment = enrollment;
         this.courses = courses;
         this.progress = progress;
+        this.files = files;
         this.clock = clock;
     }
 
@@ -58,7 +65,21 @@ public class MyCoursesService {
                 .toList();
         Map<UUID, Integer> percents = progressOf(user, visible.stream()
                 .filter(course -> roles.get(course.id()) == CourseRole.STUDENT).map(CourseRef::id).toList());
-        return visible.stream().map(course -> card(course, roles.get(course.id()), percents.get(course.id()))).toList();
+        Map<UUID, String> covers = coverUrls(user.tenantId(), visible);
+        return visible.stream()
+                .map(course -> card(course, roles.get(course.id()), percents.get(course.id()), covers.get(course.coverFileId())))
+                .toList();
+    }
+
+    /** Pre-signed URL обложек одним запросом метаданных; не готовые файлы пропускаются. */
+    private Map<UUID, String> coverUrls(UUID tenantId, List<CourseRef> visible) {
+        List<UUID> coverIds = visible.stream().map(CourseRef::coverFileId).filter(Objects::nonNull).distinct().toList();
+        if (coverIds.isEmpty()) {
+            return Map.of();
+        }
+        return files.findAll(tenantId, coverIds).stream()
+                .filter(file -> READY.equals(file.status()))
+                .collect(Collectors.toMap(FileRef::id, files::downloadUrl));
     }
 
     private Map<UUID, CourseRole> roles(CurrentUser user) {
@@ -76,9 +97,8 @@ public class MyCoursesService {
         return progressApi.completionPercents(user.tenantId(), user.userId(), studentCourses);
     }
 
-    /** coverUrl — null, пока CourseRef не содержит coverFileId (запрошено у courses). */
-    private static CourseCard card(CourseRef course, CourseRole role, Integer progressPercent) {
-        return new CourseCard(course.id(), course.title(), course.shortName(), null, course.categoryId(), role.key(),
+    private static CourseCard card(CourseRef course, CourseRole role, Integer progressPercent, String coverUrl) {
+        return new CourseCard(course.id(), course.title(), course.shortName(), coverUrl, course.categoryId(), role.key(),
                 progressPercent, course.visibility().key(), course.price());
     }
 }

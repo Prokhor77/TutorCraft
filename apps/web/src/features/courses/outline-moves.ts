@@ -97,6 +97,40 @@ export function moduleProgress(module: OutlineModule): { done: number; total: nu
   };
 }
 
+/** Author readiness (Stitch «Готовность»): published items out of all items of the modules. */
+export function publishedProgress(modules: OutlineModule[]): { done: number; total: number } {
+  const items = allModules(modules).flatMap((entry) => entry.items);
+  return {
+    done: items.filter((item) => item.visibility === 'published').length,
+    total: items.length,
+  };
+}
+
+/** Tree search: keeps items whose title contains the query (case-insensitive) and their modules. */
+export function filterOutlineByTitle(modules: OutlineModule[], query: string): OutlineModule[] {
+  const needle = query.trim().toLocaleLowerCase();
+  if (!needle) return modules;
+  const keep = (list: OutlineModule[]): OutlineModule[] =>
+    list
+      .map((module) => {
+        const moduleMatches = module.title.toLocaleLowerCase().includes(needle);
+        return {
+          ...module,
+          items: moduleMatches
+            ? module.items
+            : module.items.filter((item) => item.title.toLocaleLowerCase().includes(needle)),
+          children: keep(module.children),
+        };
+      })
+      .filter(
+        (module) =>
+          module.title.toLocaleLowerCase().includes(needle) ||
+          module.items.length > 0 ||
+          module.children.length > 0,
+      );
+  return keep(modules);
+}
+
 /** Client-side "view as student" filter (FR-ACL-05 preview): drop non-published content. */
 export function studentPreview(outline: CourseOutline): CourseOutline {
   const visible = (modules: OutlineModule[]): OutlineModule[] =>

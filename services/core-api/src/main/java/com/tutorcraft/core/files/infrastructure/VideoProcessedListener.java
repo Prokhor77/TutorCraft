@@ -30,11 +30,19 @@ class VideoProcessedListener {
     @KafkaListener(topics = Topics.VIDEO_PROCESSED)
     void onMessage(String message) {
         EventEnvelope<VideoProcessed> envelope = parse(message);
-        if (envelope == null || envelope.eventId() == null || envelope.tenantId() == null
+        if (envelope == null || !supported(envelope) || envelope.eventId() == null || envelope.tenantId() == null
                 || envelope.payload() == null || envelope.payload().fileId() == null) {
             return;
         }
         videos.onProcessed(envelope.eventId(), envelope.tenantId(), envelope.payload());
+    }
+
+    private boolean supported(EventEnvelope<?> envelope) {
+        if (envelope.supportedVersion()) {
+            return true;
+        }
+        log.warn("{} event {} skipped: unsupported envelope version {}", Topics.VIDEO_PROCESSED, envelope.eventId(), envelope.version());
+        return false;
     }
 
     /** Нечитаемое сообщение не станет читаемым при повторе — логируем и пропускаем. */

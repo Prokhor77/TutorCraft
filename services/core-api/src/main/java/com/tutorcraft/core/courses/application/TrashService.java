@@ -9,7 +9,6 @@ import com.tutorcraft.core.courses.domain.CourseItem;
 import com.tutorcraft.core.courses.domain.CourseModule;
 import com.tutorcraft.core.courses.domain.TrashPolicy;
 import com.tutorcraft.core.shared.config.AppProperties;
-import com.tutorcraft.core.shared.domain.NotFoundException;
 import com.tutorcraft.core.shared.security.CurrentUser;
 import com.tutorcraft.core.shared.security.CurrentUserProvider;
 import java.time.Clock;
@@ -33,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class TrashService {
 
     private static final Logger log = LoggerFactory.getLogger(TrashService.class);
+    private static final int PURGE_PAGE_SIZE = 200;
 
     private final CourseRepository courses;
     private final ModuleRepository modules;
@@ -40,23 +40,26 @@ public class TrashService {
     private final AccessService access;
     private final CurrentUserProvider currentUser;
     private final CourseScopes scopes;
+    private final CoursePurger purger;
     private final TrashPolicy trash;
     private final Clock clock;
 
     public TrashService(CourseRepository courses, ModuleRepository modules, ItemRepository items, AccessService access,
-                        CurrentUserProvider currentUser, CourseScopes scopes, AppProperties properties, Clock clock) {
+                        CurrentUserProvider currentUser, CourseScopes scopes, CoursePurger purger, AppProperties properties,
+                        Clock clock) {
         this.courses = courses;
         this.modules = modules;
         this.items = items;
         this.access = access;
         this.currentUser = currentUser;
         this.scopes = scopes;
+        this.purger = purger;
         this.trash = new TrashPolicy(properties.trash().retention());
         this.clock = clock;
     }
 
     /** courseId != null — удалённые модули/элементы курса; иначе — удалённые курсы, доступные для восстановления. */
-    @Transactional(noRollbackFor = NotFoundException.class)
+    @Transactional(readOnly = true)
     public List<TrashEntryView> list(UUID courseId) {
         CurrentUser user = currentUser.require();
         Instant since = trash.cutoff(clock.instant());
@@ -86,22 +89,43 @@ public class TrashService {
     }
 
     /**
-     * Системная очистка просроченного (все tenant): элементы и модули MongoDB удаляются физически; курс PostgreSQL —
-     * только если на него не ссылаются данные других модулей (иначе остаётся в корзине навсегда).
+     * Системная очистка просроченного (все tenant): элементы и модули MongoDB удаляются физически; курс — только если
+     * у него нет данных учащихся/финансовых данных (CoursePurger, ADR-010), иначе он остаётся в корзине.
+     * Обход по курсору: удерживаемые курсы не блокируют очистку остальных.
      */
     public void purgeExpired() {
         Instant cutoff = trash.cutoff(clock.instant());
         long purgedItems = items.purgeDeletedBefore(cutoff);
         long purgedModules = modules.purgeDeletedBefore(cutoff);
-        int purgedCourses = 0;
-        for (TenantCourseId course : courses.deletedBefore(cutoff)) {
-            if (courses.hardDelete(course.tenantId(), course.courseId())) {
-                items.deleteAllOfCourse(course.tenantId(), course.courseId());
-                modules.deleteAllOfCourse(course.tenantId(), course.courseId());
-                purgedCourses++;
-            }
+        PurgeTally tally = new PurgeTally();
+        List<TenantCourseId> page = courses.deletedBefore(cutoff, null, PURGE_PAGE_SIZE);
+        while (!page.isEmpty()) {
+            page.forEach(course -> purgeCourse(course, tally));
+            page = page.size() < PURGE_PAGE_SIZE ? List.of() : courses.deletedBefore(cutoff, page.get(page.size() - 1), PURGE_PAGE_SIZE);
         }
-        log.info("Trash purge: {} items, {} modules, {} courses removed", purgedItems, purgedModules, purgedCourses);
+        log.info("Trash purge: {} items, {} modules, {} courses removed, {} retained, {} failed",
+                purgedItems, purgedModules, tally.purged, tally.retained, tally.failed);
+    }
+
+    /** Ошибка по одному курсу не останавливает очистку остальных; курс будет обработан при следующем запуске. */
+    private void purgeCourse(TenantCourseId course, PurgeTally tally) {
+        try {
+            if (purger.purgeIfUnreferenced(course)) {
+                tally.purged++;
+            } else {
+                tally.retained++;
+            }
+        } catch (RuntimeException e) {
+            tally.failed++;
+            log.warn("Trash purge of course {} failed: {}", course.courseId(), e.getClass().getSimpleName());
+        }
+    }
+
+    /** Счётчики одного запуска очистки (только для журнала). */
+    private static final class PurgeTally {
+        private int purged;
+        private int retained;
+        private int failed;
     }
 
     private static String cascadeKey(UUID parentId, Instant deletedAt) {

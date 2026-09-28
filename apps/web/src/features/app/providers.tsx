@@ -5,6 +5,7 @@ import { useState, type ReactNode } from 'react';
 import { toast, Toaster } from '@/components/ui/toast';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { HTTP_STATUS, isApiProblem } from '@/lib/api/problem';
+import { useSaveStore } from '@/stores/save-store';
 import { describeProblem } from './use-problem-toast';
 import { ServiceWorkerRegistrar } from './service-worker';
 
@@ -42,6 +43,7 @@ export function Providers({ children }: { children: ReactNode }) {
           },
         },
         mutationCache: new MutationCache({
+          onSuccess: () => useSaveStore.getState().markSaved(),
           onError: (error, _variables, _context, mutation) => {
             if (mutation.meta?.skipErrorToast) return;
             toast({ tone: 'error', ...describeProblem(error, tErrors) });

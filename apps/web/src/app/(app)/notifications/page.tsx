@@ -69,7 +69,7 @@ export default function NotificationsPage() {
             </>
           );
           const className = cn(
-            'flex flex-col gap-1 rounded-md border border-border bg-surface px-4 py-3',
+            'flex flex-col gap-1 rounded border border-border bg-surface px-4 py-3',
             !notification.readAt && 'border-primary/40 bg-primary-soft/30',
           );
           const onOpen = () => !notification.readAt && markRead.mutate({ ids: [notification.id] });

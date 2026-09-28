@@ -22,6 +22,7 @@ import {
 import type { QuestionResponse, StudentQuestionView } from '@/lib/api/schemas/quiz';
 import { cn } from '@/lib/utils/cn';
 import { QuestionInput } from './question-input';
+import { QuestionTypeTag, PointsPill } from './question-type';
 import { QuizTimer } from './quiz-timer';
 
 type LocalAnswers = Record<number, { response: QuestionResponse | null; flagged: boolean }>;
@@ -82,7 +83,7 @@ function Navigator({
               state: answered ? t('answered') : t('notAnswered'),
             })}
             className={cn(
-              'relative flex size-9 items-center justify-center rounded-md border text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
+              'relative flex size-9 items-center justify-center rounded-full border-[1.5px] text-sm font-semibold transition-colors duration-fast focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus-ring/20',
               answered
                 ? 'border-primary bg-primary text-primary-foreground'
                 : 'border-border bg-surface',
@@ -188,7 +189,7 @@ export function AttemptRunner({
 
   return (
     <div className="mx-auto flex max-w-prose flex-col gap-6">
-      <div className="sticky top-header z-10 -mx-page-x flex flex-col gap-3 border-b border-border bg-background/95 px-page-x py-3 backdrop-blur">
+      <div className="glass sticky top-header z-10 -mx-page-x flex flex-col gap-3 border-b border-border px-page-x py-3">
         <div className="flex items-center justify-between gap-3">
           <span className="text-sm text-text-muted">
             {t('pageOf', { page: pageIndex + 1, total: pages.length })}
@@ -214,14 +215,18 @@ export function AttemptRunner({
           <section
             key={question.slot}
             aria-labelledby={`question-${question.slot}`}
-            className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-5 shadow-sm"
+            className="flex flex-col gap-4 rounded-lg border border-card-border bg-surface p-6 shadow-sm transition-shadow duration-fast focus-within:shadow-md md:p-8"
           >
             <header className="flex flex-wrap items-start justify-between gap-2">
-              <div className="flex min-w-0 flex-1 basis-56 flex-col gap-1">
-                <span className="text-xs font-medium uppercase tracking-wide text-text-muted">
-                  {t('questionNumber', { number: index + 1, points: question.points })}
+              <div className="flex min-w-0 flex-1 basis-56 flex-col gap-2">
+                <span className="flex flex-wrap items-center gap-2">
+                  <span className="text-label-md uppercase text-text-muted">
+                    {t('questionOf', { number: index + 1, total: questions.length })}
+                  </span>
+                  <QuestionTypeTag type={question.type} />
+                  <PointsPill points={question.points} />
                 </span>
-                <h2 id={`question-${question.slot}`} className="text-lg">
+                <h2 id={`question-${question.slot}`} className="text-xl">
                   {question.title}
                 </h2>
               </div>

@@ -12,7 +12,6 @@ import com.tutorcraft.core.progress.ProgressApi;
 import com.tutorcraft.core.shared.api.PageQuery;
 import com.tutorcraft.core.shared.api.PageResponse;
 import com.tutorcraft.core.shared.domain.ForbiddenException;
-import com.tutorcraft.core.shared.domain.NotFoundException;
 import com.tutorcraft.core.shared.security.CurrentUser;
 import com.tutorcraft.core.shared.security.CurrentUserProvider;
 import java.time.Clock;
@@ -54,7 +53,7 @@ public class CourseQueryService {
     }
 
     /** Курс чужого tenant → 404 + аудит (AC-1, через AccessService); скрытый курс учащемуся → 403 course.hidden. */
-    @Transactional(noRollbackFor = NotFoundException.class)
+    @Transactional(readOnly = true)
     public CourseView get(UUID courseId) {
         CurrentUser user = currentUser.require();
         Set<Permission> permissions = access.permissions(AccessContext.course(courseId));

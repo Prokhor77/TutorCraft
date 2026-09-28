@@ -2,11 +2,11 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils/cn';
 
 export const badgeVariants = cva(
-  'inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium [&_svg]:size-3',
+  'inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-label-md [&_svg]:size-3',
   {
     variants: {
       tone: {
-        neutral: 'bg-surface-muted text-text-muted',
+        neutral: 'bg-draft text-draft-foreground',
         primary: 'bg-primary-soft text-primary',
         success: 'bg-success-soft text-success',
         warning: 'bg-warning-soft text-warning',
@@ -23,9 +23,20 @@ export type BadgeTone = NonNullable<VariantProps<typeof badgeVariants>['tone']>;
 export function Badge({
   className,
   tone,
+  dot,
+  children,
   ...props
-}: React.HTMLAttributes<HTMLSpanElement> & VariantProps<typeof badgeVariants>) {
-  return <span className={cn(badgeVariants({ tone }), className)} {...props} />;
+}: React.HTMLAttributes<HTMLSpanElement> &
+  VariantProps<typeof badgeVariants> & {
+    /** Leading status dot (Stitch status chips: «● Черновик теста»). */
+    dot?: boolean;
+  }) {
+  return (
+    <span className={cn(badgeVariants({ tone }), className)} {...props}>
+      {dot ? <span className="size-1.5 shrink-0 rounded-full bg-current" aria-hidden /> : null}
+      {children}
+    </span>
+  );
 }
 
 export function CountBadge({

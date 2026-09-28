@@ -11,7 +11,7 @@ export function EmbedFrame({ url, title }: { url: string; title: string }) {
       loading="lazy"
       referrerPolicy="strict-origin-when-cross-origin"
       allow="fullscreen; picture-in-picture"
-      className="aspect-video w-full rounded-md border border-border"
+      className="aspect-video w-full rounded border border-border"
     />
   );
 }

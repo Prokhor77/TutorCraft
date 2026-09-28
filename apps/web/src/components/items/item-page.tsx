@@ -1,14 +1,15 @@
 'use client';
-import { CheckCircle2, Circle } from 'lucide-react';
+import { CheckCircle2, ChevronRight, Circle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { AssignmentSubmissions } from '@/components/assignment/teacher-assignment';
 import { StudentAssignment } from '@/components/assignment/student-assignment';
 import { DueLabel, ItemTypeIcon, LockedReason } from '@/components/course/item-meta';
+import { StatusChip } from '@/components/course/status-chip';
 import { ForumView } from '@/components/forum/forum-view';
 import { AttemptsReport } from '@/components/quiz/attempts-report';
-import { SlotsEditor } from '@/components/quiz/slots-editor';
+import { QuizBuilder } from '@/components/quiz/quiz-builder';
 import { StudentQuiz } from '@/components/quiz/student-quiz';
 import { Button } from '@/components/ui/button';
 import { ErrorState } from '@/components/ui/error-state';
@@ -51,7 +52,11 @@ function StudentBody({ item }: { item: ItemDetail }) {
     case 'forum':
       return <ForumView item={item} />;
     default:
-      return <ResourceView item={item} />;
+      return (
+        <section className="rounded-md border border-card-border bg-surface p-6 shadow-sm md:p-8">
+          <ResourceView item={item} />
+        </section>
+      );
   }
 }
 
@@ -112,7 +117,7 @@ function TeacherBody({ item }: { item: ItemDetail }) {
         <AssignmentSubmissions item={item} />
       </TabsContent>
       <TabsContent value="questions">
-        <SlotsEditor courseId={course.id} itemId={item.id} />
+        <QuizBuilder item={item} />
       </TabsContent>
       <TabsContent value="attempts">
         <AttemptsReport itemId={item.id} />
@@ -131,6 +136,7 @@ function TeacherBody({ item }: { item: ItemDetail }) {
 export function ItemPage({ itemId }: { itemId: string }) {
   const t = useTranslations('itemView');
   const tCommon = useTranslations('common');
+  const tTypes = useTranslations('itemTypes');
   const { course, editMode, can } = useCourseContext();
   const item = useItem(itemId);
   const outline = useOutline(course.id);
@@ -141,7 +147,7 @@ export function ItemPage({ itemId }: { itemId: string }) {
     const notFound = isApiProblem(item.error) && item.error.status === HTTP_STATUS.notFound;
     if (outlineEntry && !outlineEntry.availability.available) {
       return (
-        <div className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-6">
+        <div className="flex flex-col gap-3 rounded-md border border-card-border bg-surface p-6 shadow-sm">
           <h1 className="text-xl">{outlineEntry.title}</h1>
           <LockedReason reasons={outlineEntry.availability.reasons} />
         </div>
@@ -160,17 +166,30 @@ export function ItemPage({ itemId }: { itemId: string }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <nav aria-label={t('breadcrumbs')} className="text-sm text-text-muted">
-        <Link href={ROUTES.course(course.id)} className="hover:underline">
-          {course.title}
-        </Link>{' '}
-        / <span aria-current="page">{data.title}</span>
+      <nav aria-label={t('breadcrumbs')} className="text-sm text-text-muted 2xl:hidden">
+        <ol className="flex flex-wrap items-center gap-1">
+          <li>
+            <Link href={ROUTES.course(course.id)} className="rounded-sm hover:text-primary">
+              {course.title}
+            </Link>
+          </li>
+          <li aria-hidden>
+            <ChevronRight className="size-3.5" />
+          </li>
+          <li aria-current="page" className="font-medium text-text">
+            {data.title}
+          </li>
+        </ol>
       </nav>
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-start gap-3">
-          <ItemTypeIcon type={data.type} className="size-10" />
-          <div className="flex flex-col gap-1">
-            <h1 className="text-2xl">{data.title}</h1>
+        <div className="flex min-w-0 items-start gap-3">
+          <ItemTypeIcon type={data.type} className="size-12 rounded-full" />
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <span className="text-label-md uppercase text-text-muted">{tTypes(data.type)}</span>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <h1 className="text-2xl md:text-3xl">{data.title}</h1>
+              {teacherView ? <StatusChip visibility={data.visibility} /> : null}
+            </div>
             <DueLabel dueAt={data.dueAt} />
           </div>
         </div>

@@ -59,7 +59,7 @@ export function ConditionsEditor({ value, onChange, items, groups }: Props) {
         {group.conditions.map((condition, index) => (
           <li
             key={index}
-            className="flex flex-wrap items-end gap-2 rounded-md border border-border p-3"
+            className="flex flex-wrap items-end gap-2 rounded-md bg-surface-muted p-3"
           >
             <NativeSelect
               aria-label={t('type')}

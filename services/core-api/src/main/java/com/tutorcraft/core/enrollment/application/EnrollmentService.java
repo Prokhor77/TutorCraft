@@ -16,7 +16,6 @@ import com.tutorcraft.core.shared.api.PageResponse;
 import com.tutorcraft.core.shared.domain.BusinessRuleException;
 import com.tutorcraft.core.shared.domain.Ids;
 import com.tutorcraft.core.shared.domain.ValidationException;
-import com.tutorcraft.core.shared.domain.NotFoundException;
 import com.tutorcraft.core.shared.security.CurrentUser;
 import com.tutorcraft.core.shared.security.CurrentUserProvider;
 import java.time.Clock;
@@ -59,7 +58,7 @@ public class EnrollmentService {
         this.clock = clock;
     }
 
-    @Transactional(noRollbackFor = NotFoundException.class)
+    @Transactional(readOnly = true)
     public PageResponse<EnrollmentView> list(UUID courseId, String q, String role, UUID groupId, PageQuery page) {
         CurrentUser user = currentUser.require();
         access.require(Permission.ENROLLMENT_VIEW, AccessContext.course(courseId));

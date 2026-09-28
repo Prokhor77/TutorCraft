@@ -4,7 +4,9 @@ import static com.mongodb.client.model.Filters.and;
 import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Filters.gte;
 import static com.mongodb.client.model.Filters.in;
+import static com.mongodb.client.model.Filters.gt;
 import static com.mongodb.client.model.Filters.lt;
+import static com.mongodb.client.model.Filters.lte;
 import static com.mongodb.client.model.Filters.ne;
 
 import com.mongodb.client.MongoCollection;
@@ -155,6 +157,12 @@ class MongoItemRepository implements ItemRepository {
     public List<CourseItem> deletedSince(UUID tenantId, UUID courseId, Instant since) {
         return list(and(eq(MongoFields.TENANT_ID, tenantId), eq(MongoFields.COURSE_ID, courseId),
                 ne(MongoFields.DELETED_AT, null), gte(MongoFields.DELETED_AT, MongoFields.date(since))));
+    }
+
+    @Override
+    public List<CourseItem> dueBetween(Instant fromExclusive, Instant toInclusive) {
+        return list(and(gt(MongoFields.DUE_AT, MongoFields.date(fromExclusive)), lte(MongoFields.DUE_AT, MongoFields.date(toInclusive)),
+                eq(MongoFields.DELETED_AT, null)));
     }
 
     @Override

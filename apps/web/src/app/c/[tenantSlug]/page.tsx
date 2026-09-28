@@ -51,7 +51,7 @@ export default async function CatalogPage({ params }: Params) {
               <li key={course.id}>
                 <Link
                   href={ROUTES.courseLanding(tenantSlug, course.slug)}
-                  className="flex h-full flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                  className="flex h-full flex-col overflow-hidden rounded-md border border-card-border bg-surface shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                 >
                   {course.coverUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element -- storage URL
@@ -62,9 +62,11 @@ export default async function CatalogPage({ params }: Params) {
                     />
                   ) : (
                     <div
-                      className="aspect-video w-full bg-gradient-to-br from-primary-soft to-surface-muted"
+                      className="flex aspect-video w-full items-center justify-center bg-gradient-to-br from-primary-soft via-surface-muted to-success-soft/60 text-primary"
                       aria-hidden
-                    />
+                    >
+                      <BookOpen className="size-10 opacity-70" />
+                    </div>
                   )}
                   <div className="flex flex-1 flex-col gap-2 p-4">
                     <h2 className="text-lg">{course.title}</h2>

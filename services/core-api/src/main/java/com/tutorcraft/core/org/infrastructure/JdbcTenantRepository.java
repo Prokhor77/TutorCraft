@@ -11,6 +11,7 @@ import java.sql.Timestamp;
 import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -68,6 +69,24 @@ class JdbcTenantRepository implements TenantRepository {
                         json.read(rs.getString("password_policy"), PasswordPolicy.class),
                         json.read(rs.getString("embed_whitelist"), STRING_LIST), rs.getLong("version")))
                 .optional();
+    }
+
+    @Override
+    public Set<String> embedWhitelist(UUID id) {
+        return jdbc.sql("SELECT embed_whitelist::text AS embed_whitelist FROM tenants WHERE id = :id")
+            .param("id", id)
+            .query((rs, rowNum) -> json.read(rs.getString("embed_whitelist"), STRING_LIST))
+            .optional()
+            .<Set<String>>map(Set::copyOf)
+            .orElse(Set.of());
+    }
+
+    @Override
+    public Optional<Long> storageQuotaMb(UUID id) {
+        return jdbc.sql("SELECT quota_storage_mb FROM tenants WHERE id = :id AND quota_storage_mb IS NOT NULL")
+            .param("id", id)
+            .query((rs, rowNum) -> rs.getLong("quota_storage_mb"))
+            .optional();
     }
 
     @Override

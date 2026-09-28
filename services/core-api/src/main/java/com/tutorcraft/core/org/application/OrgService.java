@@ -8,6 +8,7 @@ import com.tutorcraft.core.shared.domain.NotFoundException;
 import java.security.SecureRandom;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,6 +48,18 @@ class OrgService implements OrgApi, CategoryAncestry {
     @Transactional(readOnly = true)
     public TenantInfo require(UUID tenantId) {
         return tenants.findById(tenantId).orElseThrow(() -> new NotFoundException("tenant.not_found", "Tenant not found"));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Set<String> embedWhitelist(UUID tenantId) {
+        return tenants.embedWhitelist(tenantId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<Long> storageQuotaMb(UUID tenantId) {
+        return tenants.storageQuotaMb(tenantId);
     }
 
     @Override

@@ -7,7 +7,6 @@ import com.tutorcraft.core.courses.Availability;
 import com.tutorcraft.core.courses.domain.Course;
 import com.tutorcraft.core.courses.domain.CourseItem;
 import com.tutorcraft.core.shared.domain.ForbiddenException;
-import com.tutorcraft.core.shared.domain.NotFoundException;
 import com.tutorcraft.core.shared.security.CurrentUser;
 import com.tutorcraft.core.shared.security.CurrentUserProvider;
 import java.time.Clock;
@@ -51,7 +50,7 @@ public class CourseStructureQueries {
         this.clock = clock;
     }
 
-    @Transactional(noRollbackFor = NotFoundException.class)
+    @Transactional(readOnly = true)
     public OutlineView outline(UUID courseId) {
         CurrentUser user = currentUser.require();
         Set<Permission> permissions = access.permissions(AccessContext.course(courseId));

@@ -81,7 +81,7 @@ export function GradebookSetupSheet({
         closeLabel={tCommon('close')}
       >
         <div className="flex flex-col gap-5">
-          <div className="rounded-md bg-surface-muted p-3 text-sm">
+          <div className="rounded bg-surface-muted p-3 text-sm">
             <p className="font-medium">{t('formula')}</p>
             <p className="mt-1 font-mono text-sm">{saveSetup.data?.formula ?? setup.formula}</p>
           </div>

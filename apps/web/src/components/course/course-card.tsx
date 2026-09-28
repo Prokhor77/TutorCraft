@@ -1,8 +1,9 @@
 'use client';
-import { Copy, EyeOff, MoreHorizontal, Trash2 } from 'lucide-react';
+import { BookOpen, Copy, MoreHorizontal, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
+import { StatusChip } from './status-chip';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -23,15 +24,22 @@ export function CourseCard({ course, onDuplicate, onDelete }: Props) {
   const locale = useLocale();
   const manageable = !!(onDuplicate || onDelete);
   return (
-    <article className="group relative flex h-full flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-sm transition-shadow focus-within:ring-2 focus-within:ring-focus-ring hover:shadow-md">
+    <article className="group relative flex h-full flex-col overflow-hidden rounded-md border border-card-border bg-surface shadow-sm transition-shadow focus-within:ring-2 focus-within:ring-focus-ring hover:shadow-md">
       {course.coverUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- storage URL
         <img src={course.coverUrl} alt="" className="aspect-[16/7] w-full object-cover" />
       ) : (
         <div
-          className="aspect-[16/7] w-full bg-gradient-to-br from-primary-soft via-surface-muted to-surface"
+          className="relative flex aspect-[16/7] w-full items-center justify-center bg-gradient-to-br from-primary-soft via-surface-muted to-success-soft/60 text-primary"
           aria-hidden
-        />
+        >
+          <BookOpen className="size-10 opacity-70" />
+          {course.shortName ? (
+            <span className="absolute bottom-2 left-2 rounded-full bg-surface/90 px-2.5 py-0.5 text-label-sm uppercase text-text shadow-sm">
+              {course.shortName}
+            </span>
+          ) : null}
+        </div>
       )}
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div className="flex items-start gap-2">
@@ -72,11 +80,7 @@ export function CourseCard({ course, onDuplicate, onDelete }: Props) {
         </div>
         <div className="flex flex-wrap gap-1.5">
           {course.role ? <Badge tone="primary">{tRoles(course.role)}</Badge> : null}
-          {course.visibility !== 'published' ? (
-            <Badge tone="warning">
-              <EyeOff aria-hidden /> {t(`visibility.${course.visibility}`)}
-            </Badge>
-          ) : null}
+          {course.visibility !== 'published' ? <StatusChip visibility={course.visibility} /> : null}
           {course.price ? <Badge>{formatMoney(course.price, locale)}</Badge> : null}
         </div>
         {course.progressPercent !== null ? (

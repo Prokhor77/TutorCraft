@@ -26,9 +26,6 @@ public interface FileRepository {
     /** Сумма размеров непринятых к отказу файлов tenant (квота). */
     long usedBytes(UUID tenantId);
 
-    /** Квота хранилища tenant в байтах; пусто — без ограничения. */
-    Optional<Long> storageQuotaBytes(UUID tenantId);
-
     void insertLink(UUID tenantId, UUID fileId, String ownerType, UUID ownerId, Instant at);
 
     List<FileLink> links(UUID tenantId, UUID fileId);

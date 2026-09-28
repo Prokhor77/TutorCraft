@@ -40,7 +40,7 @@ export default function MyGradesPage() {
           <li key={course.courseId}>
             <Link
               href={ROUTES.courseGrades(course.courseId)}
-              className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-4 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+              className="flex flex-col gap-2 rounded-md border border-card-border bg-surface p-4 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             >
               <span className="font-medium">{course.courseTitle}</span>
               <span className="flex items-baseline gap-2">

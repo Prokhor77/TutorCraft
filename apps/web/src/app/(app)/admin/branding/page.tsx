@@ -26,6 +26,7 @@ function previewStyle(color: string): React.CSSProperties | undefined {
   return {
     ['--primary' as string]: toChannels(rgb),
     ['--primary-foreground' as string]: toChannels(readableForeground(rgb)),
+    ['--accent' as string]: toChannels(rgb),
   };
 }
 
@@ -118,7 +119,7 @@ export default function AdminBrandingPage() {
                 aria-label={t('colorPicker')}
                 value={parseHexColor(color) ? color : DEFAULT_BRAND_COLOR}
                 onChange={(event) => setColor(event.target.value)}
-                className="h-10 w-14 cursor-pointer rounded-md border border-border bg-surface"
+                className="h-10 w-14 cursor-pointer rounded border border-border bg-surface"
               />
               <Button variant="ghost" size="sm" onClick={() => applyBrandColor(color)}>
                 {t('tryInApp')}
@@ -211,7 +212,7 @@ export default function AdminBrandingPage() {
       <aside
         aria-label={t('preview')}
         style={previewStyle(color)}
-        className="flex flex-col gap-3 self-start rounded-lg border border-border bg-surface p-4 lg:sticky lg:top-[calc(var(--size-header)+1rem)]"
+        className="flex flex-col gap-3 self-start rounded-md border border-card-border bg-surface p-4 shadow-sm lg:sticky lg:top-[calc(var(--size-header)+1rem)]"
       >
         <span className="text-xs font-semibold uppercase text-text-muted">{t('preview')}</span>
         <Brand

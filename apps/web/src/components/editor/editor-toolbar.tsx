@@ -35,7 +35,7 @@ export function EditorToolbar() {
     <div
       role="toolbar"
       aria-label={t('formatting')}
-      className="sticky top-header z-10 flex flex-wrap gap-0.5 rounded-md border border-border bg-surface/95 p-1 shadow-sm backdrop-blur"
+      className="glass sticky top-header z-10 flex flex-wrap gap-0.5 rounded-lg border border-card-border p-1 shadow-sm"
     >
       {MARK_BUTTONS.map(({ mark, icon: Icon, shortcut }) => (
         <Tooltip

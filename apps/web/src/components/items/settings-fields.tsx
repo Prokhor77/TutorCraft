@@ -94,7 +94,7 @@ export function AssignmentSettingsFields({ value, onChange }: FieldsProps<Assign
           </NativeSelect>
         </Field>
       </div>
-      <details className="rounded-md border border-border p-4">
+      <details className="rounded-md bg-surface-muted p-4">
         <summary className="cursor-pointer text-sm font-medium">{t('advanced')}</summary>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <DateField
@@ -241,7 +241,7 @@ export function QuizSettingsFields({ value, onChange }: FieldsProps<QuizSettings
           />
         </Field>
       </div>
-      <details className="rounded-md border border-border p-4">
+      <details className="rounded-md bg-surface-muted p-4">
         <summary className="cursor-pointer text-sm font-medium">{t('advanced')}</summary>
         <div className="mt-4 flex flex-col gap-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

@@ -14,7 +14,7 @@ export async function PublicHeader({
 }) {
   const t = await getTranslations('landing');
   return (
-    <header className="sticky top-0 z-20 border-b border-border bg-background/90 backdrop-blur">
+    <header className="glass sticky top-0 z-20 border-b border-card-border">
       <div className="mx-auto flex h-header max-w-content items-center gap-2 px-page-x">
         <Brand name={brandName} href={brandHref} />
         <div className="ml-auto flex items-center gap-1">

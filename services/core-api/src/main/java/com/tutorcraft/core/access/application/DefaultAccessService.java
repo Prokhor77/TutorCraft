@@ -92,9 +92,10 @@ class DefaultAccessService implements AccessService {
         return resolver.resolve(grants, ancestry, courseRole);
     }
 
+    /** Своя транзакция: запись переживает последующий 404 и read-only транзакцию вызывающего кода (AC-1). */
     private void auditCrossTenantProbe(UUID tenantId, UUID userId, UUID courseId) {
         if (courses.existsInOtherTenant(tenantId, courseId)) {
-            audit.record(AuditRecord.of(tenantId, userId, "access.cross_tenant_denied", "course", courseId.toString()));
+            audit.recordIndependently(AuditRecord.of(tenantId, userId, "access.cross_tenant_denied", "course", courseId.toString()));
         }
     }
 

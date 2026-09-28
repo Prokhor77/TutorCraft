@@ -33,9 +33,9 @@ function ImageBlockView({ block }: { block: BlockOf<'image'> }) {
     <figure className="flex flex-col gap-2">
       {data?.url ? (
         // eslint-disable-next-line @next/next/no-img-element -- pre-signed storage URL
-        <img src={data.url} alt={block.alt} loading="lazy" className="rounded-md" />
+        <img src={data.url} alt={block.alt} loading="lazy" className="rounded" />
       ) : (
-        <div className="flex aspect-video items-center justify-center rounded-md bg-surface-muted text-sm text-text-muted">
+        <div className="flex aspect-video items-center justify-center rounded bg-surface-muted text-sm text-text-muted">
           {block.alt}
         </div>
       )}
@@ -59,7 +59,7 @@ function VideoBlockView({ block }: { block: BlockOf<'video'> }) {
       controls
       src={data.url}
       aria-label={data.name}
-      className="aspect-video w-full rounded-md bg-black"
+      className="aspect-video w-full rounded bg-black"
     />
   ) : null;
 }
@@ -142,7 +142,7 @@ export function BlockView({ block }: { block: Block }) {
     case 'callout': {
       const { icon: Icon, className } = calloutStyles[block.tone];
       return (
-        <div className={cn('flex gap-3 rounded-md border p-4', className)}>
+        <div className={cn('flex gap-3 rounded border p-4', className)}>
           <Icon className="mt-0.5 size-5 shrink-0" aria-hidden />
           <div>
             <RichTextView value={block.text} />

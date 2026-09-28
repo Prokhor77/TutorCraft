@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+
+<html lang="ru"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;700&amp;family=Work+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"on-tertiary":"#ffffff","background":"#f8f9ff","inverse-primary":"#c0c1ff","surface-container":"#e5eeff","surface-dim":"#cbdbf5","surface":"#f8f9ff","on-primary":"#ffffff","on-surface":"#0b1c30","primary-container":"#6063ee","secondary-fixed-dim":"#4edea3","tertiary":"#825100","tertiary-fixed-dim":"#ffb95f","surface-container-lowest":"#ffffff","on-tertiary-fixed-variant":"#653e00","secondary-container":"#6cf8bb","secondary":"#006c49","surface-variant":"#d3e4fe","primary":"#4648d4","on-primary-fixed-variant":"#2f2ebe","error":"#ba1a1a","on-tertiary-fixed":"#2a1700","inverse-surface":"#213145","surface-tint":"#494bd6","tertiary-container":"#a36700","surface-container-low":"#eff4ff","tertiary-fixed":"#ffddb8","on-primary-container":"#fffbff","outline":"#767586","surface-bright":"#f8f9ff","error-container":"#ffdad6","on-error-container":"#93000a","surface-container-highest":"#d3e4fe","secondary-fixed":"#6ffbbe","primary-fixed-dim":"#c0c1ff","on-error":"#ffffff","on-secondary-container":"#00714d","on-surface-variant":"#464554","inverse-on-surface":"#eaf1ff","on-primary-fixed":"#07006c","on-secondary":"#ffffff","on-secondary-fixed-variant":"#005236","on-background":"#0b1c30","on-secondary-fixed":"#002113","surface-container-high":"#dce9ff","primary-fixed":"#e1e0ff","outline-variant":"#c7c4d7","on-tertiary-container":"#fffbff"},borderRadius:{"DEFAULT":"1rem","lg":"2rem","xl":"3rem","full":"9999px"},spacing:{"space-xl":"2.25rem","space-xs":"0.25rem","margin":"1.75rem","space-sm":"0.5rem","gutter":"1.25rem","space-md":"1rem","space-lg":"1.5rem"},fontFamily:{"headline-lg-mobile":["Bricolage Grotesque"],"label-md":["Work Sans"],"body-md":["Work Sans"],"headline-sm":["Bricolage Grotesque"],"headline-xl":["Bricolage Grotesque"],"body-sm":["Work Sans"],"headline-lg":["Bricolage Grotesque"],"headline-xl-mobile":["Bricolage Grotesque"],"headline-md":["Bricolage Grotesque"],"label-lg":["Work Sans"],"body-lg":["Work Sans"],"label-sm":["Work Sans"]},fontSize:{"headline-lg-mobile":["24px",{lineHeight:"32px",letterSpacing:"-0.01em",fontWeight:"600"}],"label-md":["12px",{lineHeight:"16px",letterSpacing:"0.02em",fontWeight:"600"}],"body-md":["14px",{lineHeight:"22px",fontWeight:"400"}],"headline-sm":["18px",{lineHeight:"24px",fontWeight:"600"}],"headline-xl":["40px",{lineHeight:"48px",letterSpacing:"-0.02em",fontWeight:"700"}],"body-sm":["12px",{lineHeight:"18px",fontWeight:"400"}],"headline-lg":["32px",{lineHeight:"40px",letterSpacing:"-0.015em",fontWeight:"600"}],"headline-xl-mobile":["30px",{lineHeight:"38px",letterSpacing:"-0.015em",fontWeight:"700"}],"headline-md":["22px",{lineHeight:"28px",letterSpacing:"-0.01em",fontWeight:"600"}],"label-lg":["14px",{lineHeight:"20px",fontWeight:"600"}],"body-lg":["16px",{lineHeight:"26px",fontWeight:"400"}],"label-sm":["10px",{lineHeight:"14px",letterSpacing:"0.04em",fontWeight:"600"}]}}}};</script></head><body class="bg-surface font-body-md text-body-md text-on-surface antialiased min-h-screen"><header class="fixed top-0 left-0 w-full z-50 bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-16 w-full px-gutter flex items-center justify-between gap-space-md"><div class="flex items-center gap-space-md min-w-0 flex-shrink-0"><div class="flex items-center gap-space-sm"><div class="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-on-primary font-headline-sm text-headline-sm overflow-hidden flex-shrink-0 shadow-sm"><img alt="TutorCraft Studio" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AEtjO1WAEbyTEBSxJJcLn60YZgoynztUa8n418DNva0GRNdhmBdjI52Q9UdDVe3vVV35RxVO2_8CViNBaw3Vf6VTDX12zrXvvIOWiPmYAkRsb5Eh3LfhFh8cA5SuKH6OrXW_O9-3BIgZsHfkHW2GolhhGE1_DfSb0lL0CDTyCf1dXPVa6HTTnFmnQTYtBAc7NVpf_vklhz0l3VPuMO9XNna2dd9SNv7Ttzp9LqRw6XSnUxUSletEeNXRriVKEw"/></div><div class="flex items-center gap-space-xs"><span class="font-headline-sm text-headline-sm text-on-surface tracking-tight">TutorCraft</span><span class="px-space-sm py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm">Студия курсов</span></div></div><div class="hidden xl:flex items-center gap-space-xs text-on-surface-variant font-body-sm text-body-sm pl-space-sm"><span class="material-symbols-outlined text-[16px] text-outline-variant">chevron_right</span><a class="hover:text-primary transition-colors truncate max-w-[100px]" href="#">Мои курсы</a><span class="material-symbols-outlined text-[16px] text-outline-variant">chevron_right</span><a class="hover:text-primary transition-colors truncate max-w-[200px]" href="#">Подготовка к ЕГЭ и ОГЭ: Профильная математика</a><span class="material-symbols-outlined text-[16px] text-outline-variant">chevron_right</span><span class="text-on-surface font-label-sm text-label-sm px-space-xs py-0.5 rounded bg-surface-container-low">Медиатека и материалы</span></div></div><nav class="hidden lg:flex items-center gap-space-xs bg-surface-container-low p-1.5 rounded-full shadow-[0_1px_4px_rgba(11,28,48,0.03)]" data-active-classes="bg-primary-container text-on-primary-container font-label-lg rounded-full shadow-sm"><a class="flex items-center px-space-md py-1.5 rounded-full text-on-surface-variant font-label-lg text-label-lg hover:text-on-surface transition-all" data-path="konstruktor-kursa" href="#">Конструктор курса</a><a class="flex items-center px-space-md py-1.5 rounded-full text-on-surface-variant font-label-lg text-label-lg hover:text-on-surface transition-all" data-path="konstruktor-testov" href="#">Конструктор тестов и квизов</a><a aria-current="page" class="flex items-center px-space-md py-1.5 transition-all bg-primary-container text-on-primary-container font-label-lg rounded-full shadow-sm" data-path="mediateka" href="#">Медиатека</a><a class="flex items-center px-space-md py-1.5 rounded-full text-on-surface-variant font-label-lg text-label-lg hover:text-on-surface transition-all" data-path="analitika-i-ucheniki" href="#">Аналитика и ученики</a></nav><div class="flex items-center gap-space-md flex-shrink-0"><div class="hidden sm:flex items-center gap-space-xs text-on-surface-variant font-body-sm text-body-sm"><span class="material-symbols-outlined text-[18px] text-secondary">cloud_done</span><span class="truncate text-label-sm font-label-sm">Сохранено 2 мин назад</span></div><div class="flex items-center gap-space-sm"><button class="hidden md:inline-flex items-center gap-space-xs px-space-md py-1.5 rounded-full bg-surface-container-low text-on-surface font-label-lg text-label-lg hover:bg-surface-container hover:text-on-surface transition-all shadow-[0_1px_3px_rgba(0,0,0,0.04)]" type="button"><span class="material-symbols-outlined text-[18px]">visibility</span><span>Предпросмотр</span></button><button class="inline-flex items-center gap-space-xs px-space-md py-1.5 rounded-full bg-primary text-on-primary font-label-lg text-label-lg hover:bg-primary-container hover:text-on-primary-container transition-all shadow-[0_2px_8px_rgba(70,72,212,0.25)]" type="button"><span class="material-symbols-outlined text-[18px]">rocket_launch</span><span class="hidden sm:inline">Опубликовать курс</span></button></div><div class="flex items-center gap-space-sm pl-space-xs"><button class="relative w-9 h-9 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" type="button"><span class="material-symbols-outlined text-[20px]">notifications</span><span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-error ring-2 ring-surface-container-lowest"></span></button><div class="flex items-center gap-space-xs p-1 rounded-full hover:bg-surface-container-high transition-all cursor-pointer"><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida/AEtjO1XndAktPJXBMn9dmrdPKDzFrVUpUdRW46TaMRYYSuFuBqxaB5PJo8Xi2ff8QWCI4D7cVTcqaB1wD2eLK1-ZBJkzbhlWGZtjR1ims1PMcoODSB6iCW6UFEUjvdI71Wy9Q6WOkE6sPEAmc0Q8YY3F1_n-bDwFhYuokXDRcVOxx53Ze02V--c-BWq3ORznmmiW5J_K0Dm7zd0sTx89GQhPpHXUfZLozuD98QDHUNooQCCv4Bktn5Vkg3-gtw"/><div class="hidden 2xl:flex flex-col text-left pr-space-xs"><span class="font-label-sm text-label-sm text-on-surface leading-tight">Анна Смирнова</span><span class="font-label-sm text-label-sm text-on-surface-variant leading-tight">Репетитор высшей категории</span></div><span class="material-symbols-outlined text-[18px] text-on-surface-variant hidden xl:block">expand_more</span></div></div></div></div></header><main class="w-full pt-16 bg-surface min-h-[calc(100vh-4rem)]"><div class="flex flex-col w-full">
+<!-- Dynamic Styles for Animations & Interactions -->
+<style>
+    .glass-effect {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(14px);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+      display: block;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #c7c4d7;
+      border-radius: 9999px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #767586;
+    }
+  </style>
+<div class="w-full px-gutter py-space-md space-y-space-md max-w-[1720px] mx-auto">
+<!-- Top Header Banner & Fast Actions -->
+<div class="flex flex-col xl:flex-row xl:items-center justify-between gap-space-md pb-space-xs">
+<div class="space-y-1">
+<div class="flex items-center gap-space-sm">
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">
+            Медиатека и каталог материалов
+          </h1>
+<span class="px-space-sm py-0.5 rounded-full bg-surface-container-high text-primary font-label-sm text-label-sm shadow-sm flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span>
+            CDN Активен
+          </span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-3xl">
+          Централизованное облачное хранилище лекций, скриптов, PDF-памяток, интерактивных задач и видеоразборов к курсу подготовки к ЕГЭ/ОГЭ.
+        </p>
+</div>
+<!-- Action Button Group -->
+<div class="flex flex-wrap items-center gap-space-sm flex-shrink-0">
+<button class="inline-flex items-center gap-space-xs px-space-md py-2 rounded-full bg-surface-container-lowest text-on-surface font-label-lg text-label-lg hover:bg-surface-container hover:shadow-sm transition-all shadow-[0_2px_8px_rgba(11,28,48,0.06)] active:scale-95" type="button">
+<span class="material-symbols-outlined text-[19px] text-primary">create_new_folder</span>
+<span>Создать папку</span>
+</button>
+<button class="inline-flex items-center gap-space-xs px-space-md py-2 rounded-full bg-surface-container-lowest text-on-surface-variant font-label-lg text-label-lg hover:bg-surface-container hover:text-on-surface transition-all shadow-[0_2px_8px_rgba(11,28,48,0.06)]" type="button">
+<span class="material-symbols-outlined text-[19px]">tune</span>
+<span>Очистить дубликаты</span>
+</button>
+<button class="inline-flex items-center gap-space-xs px-space-lg py-2.5 rounded-full bg-primary text-on-primary font-label-lg text-label-lg hover:bg-primary-container shadow-[0_4px_16px_rgba(70,72,212,0.3)] hover:shadow-[0_6px_20px_rgba(70,72,212,0.4)] transition-all transform hover:-translate-y-0.5 active:translate-y-0" type="button">
+<span class="material-symbols-outlined text-[20px]">cloud_upload</span>
+<span class="tracking-wide">Загрузить файлы</span>
+<span class="px-1.5 py-0.2 rounded-full bg-primary-container text-on-primary text-label-sm font-label-sm ml-0.5">до 5 ГБ</span>
+</button>
+</div>
+</div>
+<!-- 4 High-Impact Metric Summary Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-md">
+<!-- Metric 1: Cloud Storage -->
+<div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-[0_2px_12px_rgba(11,28,48,0.04)] hover:shadow-[0_8px_20px_rgba(11,28,48,0.07)] transition-all flex flex-col justify-between">
+<div class="flex items-center justify-between mb-space-xs">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Занято хранилища</span>
+<div class="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[18px]">cloud</span>
+</div>
+</div>
+<div class="flex items-baseline gap-2 mb-2">
+<span class="font-headline-md text-headline-md text-on-surface">42.8 ГБ</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">/ 100 ГБ (43%)</span>
+</div>
+<!-- Progress Bar Breakdown -->
+<div class="w-full bg-surface-container-low h-2 rounded-full overflow-hidden flex mb-2">
+<div class="bg-primary h-full" style="width: 34%" title="Видео: 34 ГБ"></div>
+<div class="bg-primary-fixed-dim h-full" style="width: 6.2%" title="Документы: 6.2 ГБ"></div>
+<div class="bg-secondary h-full" style="width: 2.6%" title="Схемы: 2.6 ГБ"></div>
+</div>
+<div class="flex items-center justify-between text-label-sm font-label-sm text-on-surface-variant pt-0.5">
+<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-primary inline-block"></span> Видео 34 ГБ</span>
+<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-primary-fixed-dim inline-block"></span> PDF 6.2 ГБ</span>
+<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-secondary inline-block"></span> Схемы 2.6 ГБ</span>
+</div>
+</div>
+<!-- Metric 2: Total Assets -->
+<div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-[0_2px_12px_rgba(11,28,48,0.04)] hover:shadow-[0_8px_20px_rgba(11,28,48,0.07)] transition-all flex flex-col justify-between">
+<div class="flex items-center justify-between mb-space-xs">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Всего материалов</span>
+<div class="w-8 h-8 rounded-full bg-secondary-fixed/50 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[18px]">folder_copy</span>
+</div>
+</div>
+<div class="flex items-baseline gap-2 mb-2">
+<span class="font-headline-md text-headline-md text-on-surface">148</span>
+<span class="font-body-md text-body-md text-on-surface">файлов</span>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="inline-flex items-center gap-1 text-secondary font-label-md text-label-md bg-secondary-container/40 px-2 py-0.5 rounded-full">
+<span class="material-symbols-outlined text-[15px]">trending_up</span>
+            +12 на этой неделе
+          </span>
+<span class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px] text-secondary">verified</span> 0 ошибок
+          </span>
+</div>
+</div>
+<!-- Metric 3: Course Linkage -->
+<div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-[0_2px_12px_rgba(11,28,48,0.04)] hover:shadow-[0_8px_20px_rgba(11,28,48,0.07)] transition-all flex flex-col justify-between">
+<div class="flex items-center justify-between mb-space-xs">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Привязано к урокам</span>
+<div class="w-8 h-8 rounded-full bg-primary-fixed flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[18px]">link</span>
+</div>
+</div>
+<div class="flex items-baseline gap-2 mb-2">
+<span class="font-headline-md text-headline-md text-on-surface">94%</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">материалов</span>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant bg-surface-container-high px-2 py-0.5 rounded-full">
+            В 16 уроках курса
+          </span>
+<span class="font-label-sm text-label-sm text-tertiary font-semibold flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span> 9 файлов не привязано
+          </span>
+</div>
+</div>
+<!-- Metric 4: CDN & Processing -->
+<div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-[0_2px_12px_rgba(11,28,48,0.04)] hover:shadow-[0_8px_20px_rgba(11,28,48,0.07)] transition-all flex flex-col justify-between">
+<div class="flex items-center justify-between mb-space-xs">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">CDN &amp; Транскодирование</span>
+<div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[18px]">bolt</span>
+</div>
+</div>
+<div class="flex items-baseline gap-2 mb-2">
+<span class="font-headline-md text-headline-md text-on-surface">HLS 1080p</span>
+<span class="font-body-sm text-body-sm text-secondary font-semibold">Готово</span>
+</div>
+<div class="flex items-center gap-1.5 text-label-sm font-label-sm text-secondary">
+<span class="material-symbols-outlined text-[16px]">check_circle</span>
+<span class="truncate">Оптимизировано под медленный интернет</span>
+</div>
+</div>
+</div>
+<!-- MAIN THREE-COLUMN WORKSPACE -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-md items-start">
+<!-- COLUMN 1: LEFT SIDEBAR DOCK (Tree & Filters) - lg:col-span-3 -->
+<aside class="lg:col-span-3 space-y-space-md">
+<div class="bg-surface-container-lowest rounded-2xl p-space-md shadow-[0_2px_12px_rgba(11,28,48,0.04)] space-y-space-md">
+<!-- Search within folders -->
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-2.5 text-on-surface-variant text-[18px]">search</span>
+<input class="w-full bg-surface-container-low text-on-surface placeholder:text-outline text-body-sm font-body-sm pl-9 pr-3 py-2 rounded-full focus:outline-none focus:bg-surface-container transition-all" placeholder="Поиск по папкам..." type="text"/>
+</div>
+<!-- Quick Navigation Views -->
+<div class="space-y-1">
+<div class="px-2 py-1 text-label-sm font-label-sm text-outline uppercase tracking-wider">Быстрый доступ</div>
+<a class="flex items-center justify-between px-3 py-2 rounded-xl bg-primary text-on-primary font-label-lg text-label-lg shadow-sm" href="#">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">layers</span>
+<span>Все файлы</span>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-primary-container text-on-primary text-label-sm font-label-sm">148</span>
+</a>
+<a class="flex items-center justify-between px-3 py-2 rounded-xl text-on-surface hover:bg-surface-container-low transition-colors font-body-md text-body-md" href="#">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant">schedule</span>
+<span>Недавно загруженные</span>
+</div>
+<span class="text-on-surface-variant text-label-sm font-label-sm">12</span>
+</a>
+<a class="flex items-center justify-between px-3 py-2 rounded-xl text-on-surface hover:bg-surface-container-low transition-colors font-body-md text-body-md" href="#">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-tertiary-container">star</span>
+<span>Избранное и шаблоны</span>
+</div>
+<span class="text-on-surface-variant text-label-sm font-label-sm">18</span>
+</a>
+<a class="flex items-center justify-between px-3 py-2 rounded-xl text-on-surface hover:bg-surface-container-low transition-colors font-body-md text-body-md" href="#">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-tertiary">link_off</span>
+<span>Не привязаны к урокам</span>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-tertiary-fixed text-tertiary text-label-sm font-label-sm font-semibold">9</span>
+</a>
+<a class="flex items-center justify-between px-3 py-2 rounded-xl text-on-surface hover:bg-surface-container-low transition-colors font-body-md text-body-md" href="#">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-outline">delete</span>
+<span>Корзина</span>
+</div>
+<span class="text-outline text-label-sm font-label-sm">4</span>
+</a>
+</div>
+<!-- Filter By File Type -->
+<div class="space-y-1 pt-1">
+<div class="px-2 py-1 text-label-sm font-label-sm text-outline uppercase tracking-wider">Типы материалов</div>
+<a class="flex items-center justify-between px-3 py-1.5 rounded-xl hover:bg-surface-container-low transition-colors text-on-surface font-body-md text-body-md" href="#">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-md bg-primary-fixed flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[15px]">play_circle</span>
+</div>
+<span>Видеолекции</span>
+</div>
+<span class="text-label-sm font-label-sm text-on-surface-variant">32</span>
+</a>
+<a class="flex items-center justify-between px-3 py-1.5 rounded-xl hover:bg-surface-container-low transition-colors text-on-surface font-body-md text-body-md" href="#">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-md bg-error-container flex items-center justify-center text-error">
+<span class="material-symbols-outlined text-[15px]">picture_as_pdf</span>
+</div>
+<span>Тетради и памятки</span>
+</div>
+<span class="text-label-sm font-label-sm text-on-surface-variant">54</span>
+</a>
+<a class="flex items-center justify-between px-3 py-1.5 rounded-xl hover:bg-surface-container-low transition-colors text-on-surface font-body-md text-body-md" href="#">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-md bg-tertiary-fixed flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined text-[15px]">slideshow</span>
+</div>
+<span>Презентации</span>
+</div>
+<span class="text-label-sm font-label-sm text-on-surface-variant">28</span>
+</a>
+<a class="flex items-center justify-between px-3 py-1.5 rounded-xl hover:bg-surface-container-low transition-colors text-on-surface font-body-md text-body-md" href="#">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-md bg-secondary-fixed flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[15px]">shapes</span>
+</div>
+<span>Чертежи &amp; Схемы</span>
+</div>
+<span class="text-label-sm font-label-sm text-on-surface-variant">34</span>
+</a>
+</div>
+<!-- Course Structure Tree (Collapsible Hierarchy) -->
+<div class="space-y-1 pt-1">
+<div class="flex items-center justify-between px-2 py-1">
+<span class="text-label-sm font-label-sm text-outline uppercase tracking-wider">Модули курса</span>
+<button class="text-primary hover:text-primary-container p-0.5 rounded-full" title="Свернуть все">
+<span class="material-symbols-outlined text-[16px]">unfold_less</span>
+</button>
+</div>
+<!-- Module 1 -->
+<div class="rounded-xl overflow-hidden">
+<div class="flex items-center justify-between px-2.5 py-1.5 hover:bg-surface-container-low cursor-pointer rounded-lg text-body-md font-body-md text-on-surface">
+<div class="flex items-center gap-2 min-w-0">
+<span class="material-symbols-outlined text-[18px] text-outline">chevron_right</span>
+<span class="material-symbols-outlined text-[18px] text-tertiary">folder</span>
+<span class="truncate">Модуль 1: Вводный блок</span>
+</div>
+<span class="text-label-sm font-label-sm text-outline pl-1">16</span>
+</div>
+</div>
+<!-- Module 2 (EXPANDED) -->
+<div class="space-y-0.5 bg-surface-container-low/60 rounded-xl p-1">
+<div class="flex items-center justify-between px-2 py-1.5 text-on-surface font-label-md text-label-md cursor-pointer">
+<div class="flex items-center gap-1.5 min-w-0">
+<span class="material-symbols-outlined text-[18px] text-primary">expand_more</span>
+<span class="material-symbols-outlined text-[18px] text-primary">folder_open</span>
+<span class="truncate">Модуль 2: Геометрия и планиметрия</span>
+</div>
+<span class="text-label-sm font-label-sm text-primary font-semibold">42</span>
+</div>
+<!-- Nested Lessons -->
+<div class="pl-5 space-y-1">
+<div class="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-body-sm font-body-sm text-on-surface-variant hover:bg-surface-container cursor-pointer">
+<span class="truncate">Урок 2.1: Движение &amp; смеси</span>
+<span class="text-label-sm font-label-sm">8</span>
+</div>
+<div class="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-body-sm font-body-sm text-on-surface-variant hover:bg-surface-container cursor-pointer">
+<span class="truncate">Урок 2.2: Вписанные окружности</span>
+<span class="text-label-sm font-label-sm">10</span>
+</div>
+<!-- SELECTED LESSON -->
+<div class="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-surface-container-high text-primary font-label-sm text-label-sm cursor-pointer shadow-sm">
+<div class="flex items-center gap-1.5 min-w-0">
+<span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0"></span>
+<span class="truncate font-semibold">Урок 2.3: Теорема синусов и косинусов</span>
+</div>
+<span class="px-1.5 py-0.5 rounded-full bg-surface-container-lowest text-primary text-label-sm font-label-sm font-bold">14</span>
+</div>
+<div class="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-body-sm font-body-sm text-on-surface-variant hover:bg-surface-container cursor-pointer">
+<span class="truncate">Урок 2.4: Практикум №16</span>
+<span class="text-label-sm font-label-sm">10</span>
+</div>
+</div>
+</div>
+<!-- Module 3 -->
+<div class="rounded-xl overflow-hidden">
+<div class="flex items-center justify-between px-2.5 py-1.5 hover:bg-surface-container-low cursor-pointer rounded-lg text-body-md font-body-md text-on-surface">
+<div class="flex items-center gap-2 min-w-0">
+<span class="material-symbols-outlined text-[18px] text-outline">chevron_right</span>
+<span class="material-symbols-outlined text-[18px] text-tertiary">folder</span>
+<span class="truncate">Модуль 3: Параметры и функции</span>
+</div>
+<span class="text-label-sm font-label-sm text-outline pl-1">38</span>
+</div>
+</div>
+<!-- Module 4 -->
+<div class="rounded-xl overflow-hidden">
+<div class="flex items-center justify-between px-2.5 py-1.5 hover:bg-surface-container-low cursor-pointer rounded-lg text-body-md font-body-md text-on-surface">
+<div class="flex items-center gap-2 min-w-0">
+<span class="material-symbols-outlined text-[18px] text-outline">chevron_right</span>
+<span class="material-symbols-outlined text-[18px] text-tertiary">folder</span>
+<span class="truncate">Модуль 4: Стереометрия 3D</span>
+</div>
+<span class="text-label-sm font-label-sm text-outline pl-1">34</span>
+</div>
+</div>
+</div>
+<!-- Cloud Sync Card -->
+<div class="p-space-sm rounded-xl bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-secondary">cloud_sync</span>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface">Google Drive &amp; Яндекс</span>
+<span class="font-label-sm text-label-sm text-secondary">Автосинхронизация активна</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant cursor-pointer hover:text-on-surface">settings</span>
+</div>
+</div>
+</aside>
+<!-- COLUMN 2: CENTRAL ASSET REPOSITORY & GRID - lg:col-span-6 -->
+<section class="lg:col-span-6 space-y-space-md">
+<!-- Filter and Search Control Toolbar -->
+<div class="bg-surface-container-lowest p-space-sm rounded-2xl shadow-[0_2px_12px_rgba(11,28,48,0.04)] flex flex-wrap items-center justify-between gap-space-sm">
+<div class="relative flex-grow min-w-[200px]">
+<span class="material-symbols-outlined absolute left-3 top-2.5 text-on-surface-variant text-[20px]">search</span>
+<input class="w-full bg-surface-container-low text-on-surface placeholder:text-outline font-body-md text-body-md pl-10 pr-3 py-2 rounded-full focus:outline-none focus:bg-surface-container transition-all" placeholder="Поиск по названию, тегам или распознанному тексту в PDF..." type="text" value="Урок 2.3"/>
+</div>
+<div class="flex items-center gap-2 flex-shrink-0">
+<!-- Filter Dropdown 1 -->
+<button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md transition-all" type="button">
+<span>Тип: Все</span>
+<span class="material-symbols-outlined text-[16px]">expand_more</span>
+</button>
+<!-- Filter Dropdown 2 -->
+<button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md transition-all" type="button">
+<span>По дате обновления</span>
+<span class="material-symbols-outlined text-[16px]">swap_vert</span>
+</button>
+<!-- Layout View Switcher -->
+<div class="flex items-center bg-surface-container-low p-1 rounded-full">
+<button class="w-7 h-7 rounded-full bg-surface-container-lowest text-primary shadow-sm flex items-center justify-center" title="Вид: Сетка" type="button">
+<span class="material-symbols-outlined text-[17px]">grid_view</span>
+</button>
+<button class="w-7 h-7 rounded-full text-on-surface-variant hover:text-on-surface flex items-center justify-center" title="Вид: Таблица" type="button">
+<span class="material-symbols-outlined text-[17px]">format_list_bulleted</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Drag & Drop Quick Dropzone Strip -->
+<div class="bg-primary-fixed/20 p-space-md rounded-2xl flex items-center justify-between gap-space-md transition-all hover:bg-primary-fixed/30 cursor-pointer shadow-sm">
+<div class="flex items-center gap-3">
+<div class="w-11 h-11 rounded-2xl bg-primary-fixed flex items-center justify-center text-primary flex-shrink-0 shadow-sm">
+<span class="material-symbols-outlined text-[24px]">cloud_upload</span>
+</div>
+<div>
+<p class="font-label-lg text-label-lg text-on-surface">Перетащите файлы сюда для мгновенной загрузки и AI-индексации</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Поддерживаются MP4, PDF, PPTX, GeoGebra, PNG до 5 ГБ на файл</p>
+</div>
+</div>
+<button class="px-3.5 py-1.5 rounded-full bg-surface-container-lowest text-primary font-label-md text-label-md shadow-sm hover:shadow transition-all whitespace-nowrap" type="button">
+            Выбрать с диска
+          </button>
+</div>
+<!-- Breadcrumbs & Batch Action Strip -->
+<div class="flex items-center justify-between px-space-xs">
+<div class="flex items-center gap-1.5 text-body-sm font-body-sm text-on-surface-variant">
+<span>Модуль 2: Геометрия</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span class="text-on-surface font-semibold">Урок 2.3: Теорема синусов и косинусов</span>
+<span class="ml-2 px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant text-label-sm font-label-sm">14 файлов</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-label-sm font-label-sm text-primary font-semibold">Выбран 1 файл</span>
+<button class="text-label-sm font-label-sm text-on-surface-variant hover:text-on-surface">Снять выбор</button>
+</div>
+</div>
+<!-- ASSET CARDS GRID (Rich Media Layout) -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
+<!-- CARD 1: Selected Video Lecture Item -->
+<div class="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-[0_8px_24px_rgba(70,72,212,0.15)] ring-2 ring-primary relative group flex flex-col justify-between transition-all transform hover:-translate-y-0.5">
+<!-- Top Badges & Selector -->
+<div class="relative w-full aspect-video bg-surface-container-high overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="Clear high resolution shot of a mathematical blackboard with detailed geometric diagrams of triangles and trigonometric formulas with bright studio lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAQuFbSGU-w2YgovAvc_rnL_N-6sYVxvFwVi65t4h6OT9A_WcGQ1gv_Tild9VYreU9E9NfiF7aAJ-90d_so8mBNlUx1dGuM1VF0Q9OVjHzIC4nv6i7oMhzQBzS1d-cWmkLEKwukoREIxqWmV5h3F4rA777iqK0R_NA88XL8OvTGIiEr4znpczpsrH4B9CcuZ-4TNSq-uiaRokraKA7ADOc3_mrEhVppA4UGPNGnQNEVkZbl1KBsh1bG"/>
+<!-- Video Duration and Quality Badges -->
+<div class="absolute bottom-2.5 left-2.5 flex items-center gap-1.5">
+<span class="px-2 py-0.5 rounded-md bg-inverse-surface/85 backdrop-blur text-inverse-on-surface font-label-sm text-label-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px] text-secondary-container">play_arrow</span> 28:40
+                </span>
+<span class="px-2 py-0.5 rounded-md bg-inverse-surface/85 backdrop-blur text-inverse-on-surface font-label-sm text-label-sm">
+                  1080p 60fps
+                </span>
+</div>
+<!-- Selection Checkmark Active -->
+<div class="absolute top-2.5 right-2.5 w-6 h-6 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-md">
+<span class="material-symbols-outlined text-[16px]">check</span>
+</div>
+<!-- Play button overlay -->
+<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-inverse-surface/30">
+<div class="w-12 h-12 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform">
+<span class="material-symbols-outlined text-[24px]">play_arrow</span>
+</div>
+</div>
+</div>
+<!-- Content Details -->
+<div class="p-space-md space-y-2 flex-grow flex flex-col justify-between">
+<div>
+<div class="flex items-center gap-1.5 mb-1">
+<span class="px-2 py-0.5 rounded-full bg-primary-fixed text-primary font-label-sm text-label-sm font-semibold">Видеолекция</span>
+<span class="px-2 py-0.5 rounded-full bg-secondary-fixed/50 text-secondary font-label-sm text-label-sm flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[12px]">auto_awesome</span> AI-субтитры
+                  </span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface line-clamp-2 leading-snug">
+                  Лекция 2.3: Теорема косинусов и следствия.mp4
+                </h3>
+</div>
+<div class="pt-2 border-t border-surface-container flex items-center justify-between text-on-surface-variant font-body-sm text-body-sm">
+<span>1.42 ГБ • 2 ч назад</span>
+<span class="flex items-center gap-1 text-primary font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[15px]">attachment</span>
+                  Урок 2.3
+                </span>
+</div>
+</div>
+</div>
+<!-- CARD 2: PDF Student Workbook -->
+<div class="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(11,28,48,0.04)] hover:shadow-[0_8px_24px_rgba(11,28,48,0.08)] relative group flex flex-col justify-between transition-all transform hover:-translate-y-0.5">
+<div class="relative w-full aspect-video bg-surface-container-high overflow-hidden flex items-center justify-center">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="Student printed workbook page for advanced high school geometry showing diagrams of circumscribed circles and step by step proof steps with red margin notes" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCDmCgZ_8J4uksQw0q3JBGX9aUXutFOdewtlc0piD0WXQKQoyqENLSqDn2yNrXJLoYU3sUNUNtuBsKsGAJGYYZhJLysAWnfGF4wSh8dEW4788vjBY-dhfePPtU3YdNeEi67AN6p1gQmbYWCJCOrNilOohllBGqMCzL8p94sPMriWKxMO4D_G5Xu2WAJW9U7pU8Yd-gQP4Ua8hCjxDX8MAzWRRRTnBKCo3nOsqOlVC8Z2D6S2gVxsyf7"/>
+<div class="absolute bottom-2.5 left-2.5">
+<span class="px-2 py-0.5 rounded-md bg-inverse-surface/85 backdrop-blur text-inverse-on-surface font-label-sm text-label-sm">
+                  8 страниц • PDF
+                </span>
+</div>
+<div class="absolute top-2.5 right-2.5 w-6 h-6 rounded-full bg-surface-container-lowest/80 text-outline-variant flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:text-primary">
+<span class="material-symbols-outlined text-[16px]">check_box_outline_blank</span>
+</div>
+</div>
+<div class="p-space-md space-y-2 flex-grow flex flex-col justify-between">
+<div>
+<div class="flex items-center gap-1.5 mb-1">
+<span class="px-2 py-0.5 rounded-full bg-error-container text-error font-label-sm text-label-sm font-semibold">Рабочая тетрадь</span>
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm">Для печати</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface line-clamp-2 leading-snug">
+                  Рабочая_тетрадь_Урок_2.3_Планиметрия.pdf
+                </h3>
+</div>
+<div class="pt-2 border-t border-surface-container flex items-center justify-between text-on-surface-variant font-body-sm text-body-sm">
+<span>4.2 МБ • Вчера</span>
+<span class="flex items-center gap-1 text-primary font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[15px]">attachment</span>
+                  Урок 2.3
+                </span>
+</div>
+</div>
+</div>
+<!-- CARD 3: Cheat Sheet Formula Chart -->
+<div class="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(11,28,48,0.04)] hover:shadow-[0_8px_24px_rgba(11,28,48,0.08)] relative group flex flex-col justify-between transition-all transform hover:-translate-y-0.5">
+<div class="relative w-full aspect-video bg-surface-container-high overflow-hidden flex items-center justify-center">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="Modern clean educational reference chart of trigonometric identities, angle theorems, and triangle formulas with colorful pastel tags and crisp typography" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCSLFaPPT3MISgY3qK294jofCatawsaTFSnP759yzuyBx4DTbnqMbSsJIQNlhJanzjyVYel0Qom_Fk4ns3Z2xZXHGnpdBL1WQyI-M-SUQzNtJF1FHULlCwQUUGJl-P0OHHXwTvvh6cpM-dKTIqo9yJ-B7PmnJ-scH4vDTrNrtO60lGO1yNYTN3bM-RXD48dW9SyqYM2wtCbV39jpXEyt-DhiikNw63vUDgciVf0dqF-4Xm0J-rbkphE"/>
+<div class="absolute bottom-2.5 left-2.5">
+<span class="px-2 py-0.5 rounded-md bg-inverse-surface/85 backdrop-blur text-inverse-on-surface font-label-sm text-label-sm">
+                  2 страницы
+                </span>
+</div>
+<div class="absolute top-2.5 right-2.5 w-6 h-6 rounded-full bg-surface-container-lowest/80 text-outline-variant flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:text-primary">
+<span class="material-symbols-outlined text-[16px]">check_box_outline_blank</span>
+</div>
+</div>
+<div class="p-space-md space-y-2 flex-grow flex flex-col justify-between">
+<div>
+<div class="flex items-center gap-1.5 mb-1">
+<span class="px-2 py-0.5 rounded-full bg-tertiary-fixed text-tertiary font-label-sm text-label-sm font-semibold">Шпаргалка</span>
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm">Общий доступ</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface line-clamp-2 leading-snug">
+                  Опорная_схема_треугольники_ЕГЭ_шпаргалка.pdf
+                </h3>
+</div>
+<div class="pt-2 border-t border-surface-container flex items-center justify-between text-on-surface-variant font-body-sm text-body-sm">
+<span>1.1 МБ • 3 дня назад</span>
+<span class="flex items-center gap-1 text-secondary font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[15px]">hub</span>
+                  2 урока
+                </span>
+</div>
+</div>
+</div>
+<!-- CARD 4: High Res Scheme / GeoGebra Drawing -->
+<div class="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(11,28,48,0.04)] hover:shadow-[0_8px_24px_rgba(11,28,48,0.08)] relative group flex flex-col justify-between transition-all transform hover:-translate-y-0.5">
+<div class="relative w-full aspect-video bg-surface-container-high overflow-hidden flex items-center justify-center">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="Technical blueprint diagram of an acute triangle inscribed inside a circle with marked radii, vectors, and angles on a clean white background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC2kXv-PngyjfRYdYCfdFkBh1uipi0EX0CCCAj_THx0DEMfkGBqyp-qVJpNJ-FJ9RdkjuEatQf_RntXzgfB4kXWP9EGvqEa31Pyp4yXJOyE_SDdy9BzSbo2RYUBxkAHn-5jc7QGh793-e9ly2Mpi8lPSnn65s8hnvobKZY_40py5D6WwOeY8tVD3LMlUFM1pqlt4DTkaU6BnjWUfLJZs0ApxzxS27jyJr3AM4Y14rvuxdifPltTo04E"/>
+<div class="absolute bottom-2.5 left-2.5">
+<span class="px-2 py-0.5 rounded-md bg-inverse-surface/85 backdrop-blur text-inverse-on-surface font-label-sm text-label-sm">
+                  1920×1080 • PNG
+                </span>
+</div>
+<div class="absolute top-2.5 right-2.5 w-6 h-6 rounded-full bg-surface-container-lowest/80 text-outline-variant flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:text-primary">
+<span class="material-symbols-outlined text-[16px]">check_box_outline_blank</span>
+</div>
+</div>
+<div class="p-space-md space-y-2 flex-grow flex flex-col justify-between">
+<div>
+<div class="flex items-center gap-1.5 mb-1">
+<span class="px-2 py-0.5 rounded-full bg-secondary-fixed text-secondary font-label-sm text-label-sm font-semibold">Схема к задаче</span>
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm">GeoGebra</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface line-clamp-2 leading-snug">
+                  Чертеж_задача_16_радиус_окружности.png
+                </h3>
+</div>
+<div class="pt-2 border-t border-surface-container flex items-center justify-between text-on-surface-variant font-body-sm text-body-sm">
+<span>420 КБ • 5 дней назад</span>
+<span class="flex items-center gap-1 text-primary font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[15px]">attachment</span>
+                  Урок 2.3
+                </span>
+</div>
+</div>
+</div>
+<!-- CARD 5: Presentation PPTX -->
+<div class="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(11,28,48,0.04)] hover:shadow-[0_8px_24px_rgba(11,28,48,0.08)] relative group flex flex-col justify-between transition-all transform hover:-translate-y-0.5">
+<div class="relative w-full aspect-video bg-surface-container-high overflow-hidden flex items-center justify-center p-4">
+<div class="w-full h-full rounded-xl bg-surface-container flex flex-col items-center justify-center p-3 text-center">
+<span class="material-symbols-outlined text-[36px] text-tertiary-container mb-1">co_present</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">Разбор ловушек ФИПИ №16</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant mt-1">24 интерактивных слайда</span>
+</div>
+<div class="absolute bottom-2.5 left-2.5">
+<span class="px-2 py-0.5 rounded-md bg-inverse-surface/85 backdrop-blur text-inverse-on-surface font-label-sm text-label-sm">
+                  PPTX • 18.5 МБ
+                </span>
+</div>
+</div>
+<div class="p-space-md space-y-2 flex-grow flex flex-col justify-between">
+<div>
+<div class="flex items-center gap-1.5 mb-1">
+<span class="px-2 py-0.5 rounded-full bg-tertiary-fixed text-tertiary font-label-sm text-label-sm font-semibold">Презентация</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface line-clamp-2 leading-snug">
+                  Разбор ловушек ФИПИ в задании №16.pptx
+                </h3>
+</div>
+<div class="pt-2 border-t border-surface-container flex items-center justify-between text-on-surface-variant font-body-sm text-body-sm">
+<span>18.5 МБ • 1 нед назад</span>
+<span class="flex items-center gap-1 text-primary font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[15px]">attachment</span>
+                  Урок 2.3
+                </span>
+</div>
+</div>
+</div>
+<!-- CARD 6: Audio Voice Note with Waveform indicator -->
+<div class="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-[0_2px_12px_rgba(11,28,48,0.04)] hover:shadow-[0_8px_24px_rgba(11,28,48,0.08)] relative group flex flex-col justify-between transition-all transform hover:-translate-y-0.5">
+<div class="relative w-full aspect-video bg-surface-container-high overflow-hidden flex flex-col items-center justify-center p-4">
+<!-- Inline Audio Waveform Visualizer -->
+<div class="flex items-end gap-1.5 h-12 mb-2">
+<span class="w-1.5 bg-primary/40 rounded-full h-4"></span>
+<span class="w-1.5 bg-primary/60 rounded-full h-8"></span>
+<span class="w-1.5 bg-primary rounded-full h-11"></span>
+<span class="w-1.5 bg-primary rounded-full h-6"></span>
+<span class="w-1.5 bg-primary/80 rounded-full h-9"></span>
+<span class="w-1.5 bg-primary rounded-full h-12"></span>
+<span class="w-1.5 bg-primary/70 rounded-full h-5"></span>
+<span class="w-1.5 bg-primary/90 rounded-full h-10"></span>
+<span class="w-1.5 bg-primary/50 rounded-full h-7"></span>
+<span class="w-1.5 bg-primary rounded-full h-11"></span>
+<span class="w-1.5 bg-primary/60 rounded-full h-4"></span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">04:15 • Аудио-комментарий к задаче</span>
+<div class="absolute bottom-2.5 left-2.5">
+<span class="px-2 py-0.5 rounded-md bg-inverse-surface/85 backdrop-blur text-inverse-on-surface font-label-sm text-label-sm">
+                  M4A • 3.8 МБ
+                </span>
+</div>
+</div>
+<div class="p-space-md space-y-2 flex-grow flex flex-col justify-between">
+<div>
+<div class="flex items-center gap-1.5 mb-1">
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm font-semibold">Аудио-разбор</span>
+<span class="px-2 py-0.5 rounded-full bg-tertiary-fixed text-tertiary font-label-sm text-label-sm flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[13px]">warning</span> Не привязан
+                  </span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface line-clamp-2 leading-snug">
+                  Голосовой_комментарий_к_теореме_синусов.m4a
+                </h3>
+</div>
+<div class="pt-2 border-t border-surface-container flex items-center justify-between text-on-surface-variant font-body-sm text-body-sm">
+<span>3.8 МБ • 4 дня назад</span>
+<span class="text-tertiary font-label-sm text-label-sm cursor-pointer hover:underline">
+                  + Привязать
+                </span>
+</div>
+</div>
+</div>
+</div>
+<!-- Pagination / Load More Bar -->
+<div class="flex items-center justify-between py-space-sm px-space-xs text-body-sm font-body-sm text-on-surface-variant">
+<span>Показано 6 из 14 файлов в выбранном уроке</span>
+<div class="flex items-center gap-2">
+<button class="px-3 py-1 rounded-full bg-surface-container-lowest text-on-surface font-label-md text-label-md shadow-sm hover:bg-surface-container transition-all">
+              Загрузить ещё 8 файлов
+            </button>
+</div>
+</div>
+</section>
+<!-- COLUMN 3: RIGHT INSPECTOR PANEL (File Details & Actions) - lg:col-span-3 -->
+<aside class="lg:col-span-3 space-y-space-md">
+<div class="bg-surface-container-lowest rounded-2xl p-space-md shadow-[0_2px_12px_rgba(11,28,48,0.04)] space-y-space-md sticky top-20">
+<!-- Header & Quick Close / Expand -->
+<div class="flex items-center justify-between">
+<span class="font-headline-sm text-headline-sm text-on-surface">Инспектор файла</span>
+<div class="flex items-center gap-1">
+<button class="w-8 h-8 rounded-full hover:bg-surface-container flex items-center justify-center text-on-surface-variant" title="Развернуть">
+<span class="material-symbols-outlined text-[18px]">open_in_full</span>
+</button>
+<button class="w-8 h-8 rounded-full hover:bg-surface-container flex items-center justify-center text-on-surface-variant" title="Опции">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+</div>
+<!-- Rich Preview Player Container -->
+<div class="relative w-full aspect-video rounded-xl overflow-hidden bg-inverse-surface shadow-sm group">
+<img class="w-full h-full object-cover" data-alt="High resolution close-up frame from a geometry lesson video showing the teacher pointing with a stylus to a trigonometric formula on a sleek digital whiteboard" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCC7dJ0UAVv7kQxSo4wwxb35XEiiDPAEPfEy8vj3ZSzkYe6Bddu_-sKrR-NcXqHfDjEyFxyBlw-ziQ_5mMsBx2bt7KSuF5w_vPW1lVLyiLlFZguuO2mL1zlhztKlB4Xz4MRS9lFAPyYmg7LMDmJ2TPv6StTAt8iTbvADIIUl4f4ENF2ZOJ5jeGOB6mRPQWjp9bIf1uwViuR4Y1XORKmjwozT9n9IysjO6wN00SoWtcy1EbFqxo7O8TU"/>
+<div class="absolute inset-0 bg-inverse-surface/40 flex items-center justify-center">
+<div class="w-12 h-12 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-lg cursor-pointer transform group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[24px]">play_arrow</span>
+</div>
+</div>
+<div class="absolute bottom-2 left-2 right-2 flex items-center justify-between text-inverse-on-surface text-label-sm font-label-sm">
+<span class="px-1.5 py-0.5 rounded bg-inverse-surface/75">00:00 / 28:40</span>
+<span class="px-1.5 py-0.5 rounded bg-inverse-surface/75">4K Ultra HD</span>
+</div>
+</div>
+<!-- File Title & Rename -->
+<div class="space-y-1">
+<div class="flex items-center justify-between">
+<span class="text-label-sm font-label-sm text-outline uppercase tracking-wider">Название файла</span>
+<button class="text-primary hover:underline text-label-sm font-label-sm flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[14px]">edit</span> Переименовать
+              </button>
+</div>
+<p class="font-headline-sm text-headline-sm text-on-surface break-words leading-tight">
+              Лекция 2.3: Теорема косинусов и следствия.mp4
+            </p>
+</div>
+<!-- File Technical Metadata -->
+<div class="p-space-sm rounded-xl bg-surface-container-low space-y-2 text-body-sm font-body-sm">
+<div class="flex justify-between items-center">
+<span class="text-on-surface-variant">Размер оригинала:</span>
+<span class="font-semibold text-on-surface">1.42 ГБ (4K ProRes)</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-on-surface-variant">CDN Транскодинг:</span>
+<span class="text-secondary font-semibold">1080p, 720p HLS (Готово)</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-on-surface-variant">Формат потока:</span>
+<span class="text-on-surface">MP4 (H.264 / AAC 320 kbps)</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-on-surface-variant">Загружено:</span>
+<span class="text-on-surface">Сегодня, в 14:15</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-on-surface-variant">Владелец:</span>
+<span class="text-on-surface">Анна Смирнова (Вы)</span>
+</div>
+</div>
+<!-- Lesson Association & Course Placement -->
+<div class="space-y-2 pt-1 border-t border-surface-container">
+<span class="text-label-sm font-label-sm text-outline uppercase tracking-wider">Привязка к курсу</span>
+<div class="flex items-center justify-between p-2 rounded-xl bg-surface-container">
+<div class="flex items-center gap-2 min-w-0">
+<span class="material-symbols-outlined text-[18px] text-primary">school</span>
+<span class="text-label-sm font-label-sm text-on-surface truncate">Урок 2.3: Теорема косинусов</span>
+</div>
+<button class="text-primary hover:text-primary-container p-1" title="Отвязать">
+<span class="material-symbols-outlined text-[16px]">close</span>
+</button>
+</div>
+<button class="w-full py-1.5 px-3 rounded-full bg-surface-container-low hover:bg-surface-container text-primary font-label-sm text-label-sm flex items-center justify-center gap-1 transition-all" type="button">
+<span class="material-symbols-outlined text-[16px]">add_link</span>
+<span>Привязать к другому уроку</span>
+</button>
+</div>
+<!-- Permissions & Toggles -->
+<div class="space-y-3 pt-1 border-t border-surface-container">
+<span class="text-label-sm font-label-sm text-outline uppercase tracking-wider">Доступ учеников</span>
+<!-- Toggle 1: Visible to Students -->
+<div class="flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface">Доступен ученикам</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant">Отображать в кабинете ученика</span>
+</div>
+<!-- Simulated Custom Switch (ACTIVE) -->
+<div class="w-10 h-6 bg-primary rounded-full relative p-0.5 cursor-pointer flex items-center justify-end">
+<div class="w-5 h-5 bg-on-primary rounded-full shadow-md"></div>
+</div>
+</div>
+<!-- Toggle 2: DRM / Offline Download Protection -->
+<div class="flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface">Офлайн-скачивание</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant">Защита от пиратства включена</span>
+</div>
+<!-- Simulated Custom Switch (INACTIVE) -->
+<div class="w-10 h-6 bg-surface-container-high rounded-full relative p-0.5 cursor-pointer flex items-center justify-start">
+<div class="w-5 h-5 bg-on-primary rounded-full shadow-md"></div>
+</div>
+</div>
+</div>
+<!-- Smart AI Features Card -->
+<div class="p-space-sm rounded-xl bg-surface-container-low space-y-2">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-primary font-semibold flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">auto_awesome</span> AI-индексация видео
+              </span>
+<span class="px-1.5 py-0.5 rounded-full bg-secondary-fixed text-secondary text-label-sm font-label-sm font-bold">100%</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-tight">
+              Сгенерирован краткий конспект и таймкоды к ключевым теоремам. Доступен поиск по фразам из видео.
+            </p>
+<button class="text-primary hover:underline text-label-sm font-label-sm flex items-center gap-1 font-semibold">
+<span>Открыть таймкоды и стенограмму</span>
+<span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</button>
+</div>
+<!-- Primary Actions Stack -->
+<div class="space-y-2 pt-2">
+<button class="w-full py-2.5 px-space-md rounded-full bg-primary text-on-primary font-label-lg text-label-lg shadow-[0_2px_10px_rgba(70,72,212,0.3)] hover:bg-primary-container transition-all flex items-center justify-center gap-2" type="button">
+<span class="material-symbols-outlined text-[19px]">integration_instructions</span>
+<span>Вставить в конструктор урока</span>
+</button>
+<div class="grid grid-cols-2 gap-2">
+<button class="py-2 px-3 rounded-full bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md transition-all flex items-center justify-center gap-1" type="button">
+<span class="material-symbols-outlined text-[17px]">download</span>
+<span>Скачать</span>
+</button>
+<button class="py-2 px-3 rounded-full bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md transition-all flex items-center justify-center gap-1" type="button">
+<span class="material-symbols-outlined text-[17px]">share</span>
+<span>Ссылка</span>
+</button>
+</div>
+<div class="flex items-center justify-between pt-2">
+<button class="text-on-surface-variant hover:text-on-surface text-label-sm font-label-sm flex items-center gap-1" type="button">
+<span class="material-symbols-outlined text-[15px]">history</span> Заменить версию
+              </button>
+<button class="text-error hover:text-on-error-container text-label-sm font-label-sm flex items-center gap-1" type="button">
+<span class="material-symbols-outlined text-[15px]">delete</span> В корзину
+              </button>
+</div>
+</div>
+</div>
+</aside>
+</div>
+</div>
+<!-- Interactive Client Micro-Script -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Toggle switches micro-interaction
+      const toggles = document.querySelectorAll('.cursor-pointer.w-10');
+      toggles.forEach(toggle => {
+        toggle.addEventListener('click', () => {
+          const thumb = toggle.querySelector('div');
+          const isEnabled = toggle.classList.contains('bg-primary');
+          if (isEnabled) {
+            toggle.classList.remove('bg-primary', 'justify-end');
+            toggle.classList.add('bg-surface-container-high', 'justify-start');
+          } else {
+            toggle.classList.remove('bg-surface-container-high', 'justify-start');
+            toggle.classList.add('bg-primary', 'justify-end');
+          }
+        });
+      });
+    });
+  </script>
+</div></main></body></html>

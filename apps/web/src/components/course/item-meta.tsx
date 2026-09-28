@@ -36,7 +36,7 @@ export function ItemTypeIcon({ type, className }: { type: ItemType; className?: 
   return (
     <span
       className={cn(
-        'flex size-8 shrink-0 items-center justify-center rounded-md bg-primary-soft text-primary',
+        'flex size-8 shrink-0 items-center justify-center rounded bg-primary-soft text-primary',
         className,
       )}
       title={t(type)}

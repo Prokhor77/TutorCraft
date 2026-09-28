@@ -12,7 +12,6 @@ import com.tutorcraft.core.enrollment.domain.GroupNames;
 import com.tutorcraft.core.shared.domain.Ids;
 import com.tutorcraft.core.shared.domain.ValidationException;
 import com.tutorcraft.core.shared.i18n.Messages;
-import com.tutorcraft.core.shared.domain.NotFoundException;
 import com.tutorcraft.core.shared.security.CurrentUser;
 import com.tutorcraft.core.shared.security.CurrentUserProvider;
 import java.security.SecureRandom;
@@ -57,7 +56,7 @@ public class GroupService {
         this.clock = clock;
     }
 
-    @Transactional(noRollbackFor = NotFoundException.class)
+    @Transactional(readOnly = true)
     public List<GroupView> list(UUID courseId) {
         CurrentUser user = currentUser.require();
         access.require(Permission.ENROLLMENT_VIEW, AccessContext.course(courseId));

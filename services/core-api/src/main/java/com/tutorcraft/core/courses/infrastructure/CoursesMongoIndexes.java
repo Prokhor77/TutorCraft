@@ -33,6 +33,7 @@ class CoursesMongoIndexes {
         items.createIndex(Indexes.ascending(MongoFields.TENANT_ID, MongoFields.COURSE_ID, MongoFields.POSITION));
         items.createIndex(Indexes.ascending(MongoFields.TENANT_ID, MongoFields.MODULE_ID, MongoFields.POSITION));
         items.createIndex(Indexes.ascending(MongoFields.TENANT_ID, MongoFields.COURSE_ID, MongoFields.DUE_AT));
+        items.createIndex(Indexes.ascending(MongoFields.DUE_AT), new IndexOptions().sparse(true));
         items.createIndex(Indexes.ascending(MongoFields.DELETED_AT), new IndexOptions().sparse(true));
         log.info("Courses MongoDB indexes ensured");
     }

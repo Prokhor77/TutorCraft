@@ -38,7 +38,7 @@ function PostNode({ post, depth, actions }: { post: Post; depth: number; actions
   return (
     <li className={cn('flex flex-col gap-2', depth > 1 && 'border-l-2 border-border pl-3 sm:pl-5')}>
       <article
-        className="flex flex-col gap-2 rounded-md bg-surface p-3"
+        className="flex flex-col gap-2 rounded bg-surface p-3"
         aria-label={t('postBy', { name: post.authorName })}
       >
         <header className="flex items-center gap-2">

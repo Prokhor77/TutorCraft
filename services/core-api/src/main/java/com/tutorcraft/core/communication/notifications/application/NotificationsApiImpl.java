@@ -1,6 +1,5 @@
 package com.tutorcraft.core.communication.notifications.application;
 
-import com.tutorcraft.core.communication.NotificationCategory;
 import com.tutorcraft.core.communication.NotificationsApi;
 import com.tutorcraft.core.communication.notifications.application.NotificationRepository.StoredNotification;
 import com.tutorcraft.core.communication.notifications.domain.ChannelResolver;
@@ -13,6 +12,7 @@ import com.tutorcraft.core.shared.domain.Ids;
 import com.tutorcraft.core.shared.i18n.Messages;
 import com.tutorcraft.core.shared.outbox.OutboxPublisher;
 import com.tutorcraft.core.shared.outbox.Topics;
+import com.tutorcraft.core.shared.persistence.JsonCodec;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.EnumSet;
@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -44,22 +45,26 @@ class NotificationsApiImpl implements NotificationsApi {
     private static final String RELATIVE_LINK_PREFIX = "/";
     private static final int MAX_TITLE = 200;
     private static final int MAX_BODY = 2000;
+    private static final String COUNTER_CATEGORY = "counter";
+    private static final Pattern COUNTER_NAME = Pattern.compile("^[a-z][a-z0-9_]{0,63}$");
 
     private final UsersApi users;
     private final NotificationRepository notifications;
     private final PreferenceRepository preferences;
     private final Messages messages;
     private final OutboxPublisher outbox;
+    private final JsonCodec json;
     private final Clock clock;
     private final String publicBaseUrl;
 
     NotificationsApiImpl(UsersApi users, NotificationRepository notifications, PreferenceRepository preferences,
-                         Messages messages, OutboxPublisher outbox, Clock clock, AppProperties properties) {
+                         Messages messages, OutboxPublisher outbox, JsonCodec json, Clock clock, AppProperties properties) {
         this.users = users;
         this.notifications = notifications;
         this.preferences = preferences;
         this.messages = messages;
         this.outbox = outbox;
+        this.json = json;
         this.clock = clock;
         this.publicBaseUrl = properties.publicBaseUrl();
     }
@@ -74,6 +79,19 @@ class NotificationsApiImpl implements NotificationsApi {
         userIds.stream()
                 .filter(recipients::containsKey)
                 .forEach(userId -> deliver(command, recipients.get(userId), prefs.getOrDefault(userId, Map.of())));
+    }
+
+    @Override
+    @Transactional
+    public void pushCounter(UUID tenantId, UUID userId, String name, long value) {
+        Objects.requireNonNull(tenantId, "tenantId");
+        Objects.requireNonNull(userId, "userId");
+        if (name == null || !COUNTER_NAME.matcher(name).matches()) {
+            throw new IllegalArgumentException("Invalid counter name");
+        }
+        String body = json.write(new CounterBody(name, value));
+        outbox.publish(Topics.NOTIFY_REQUESTED, tenantId, EVENT_TYPE, new NotifyRequested(Ids.newId(), userId, COUNTER_CATEGORY,
+                List.of(NotificationChannel.WEB.key()), name, body, null, null, null, null));
     }
 
     private void deliver(NotificationCommand command, UserRef user, Map<NotificationChannel, Boolean> userPrefs) {
@@ -143,6 +161,10 @@ class NotificationsApiImpl implements NotificationsApi {
 
     private static String truncate(String text, int max) {
         return text.length() <= max ? text : text.substring(0, max);
+    }
+
+    /** Тело счётчика: notifier пересылает его клиенту как {"type":"counter","data":{...}}. */
+    record CounterBody(String name, long value) {
     }
 
     /** Полезная нагрузка tc.notify.requested.v1 (docs/events/README.md). */

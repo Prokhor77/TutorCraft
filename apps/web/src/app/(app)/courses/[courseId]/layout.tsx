@@ -2,7 +2,7 @@
 import { useParams, usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
-import { CourseHeader } from '@/components/course/course-header';
+import { CourseHeader, PreviewBanner } from '@/components/course/course-header';
 import { ErrorState } from '@/components/ui/error-state';
 import { SkeletonList } from '@/components/ui/skeleton';
 import { CourseProvider } from '@/features/courses/course-context';
@@ -11,13 +11,16 @@ import { HTTP_STATUS, isApiProblem } from '@/lib/api/problem';
 
 /** Quiz attempts run in focus mode: no course header/tabs to distract (SPEC §10 «Прохождение теста»). */
 const FOCUS_MODE_PATTERN = /\/attempts\/[^/]+$/;
+/** The course headline belongs to the builder root; sub-pages render their own Stitch page headers. */
+const COURSE_ROOT_PATTERN = /^\/courses\/[^/]+$/;
 
 export default function CourseLayout({ children }: { children: ReactNode }) {
   const { courseId } = useParams<{ courseId: string }>();
   const t = useTranslations('course');
   const tCommon = useTranslations('common');
   const course = useCourse(courseId);
-  const focusMode = FOCUS_MODE_PATTERN.test(usePathname());
+  const pathname = usePathname();
+  const focusMode = FOCUS_MODE_PATTERN.test(pathname);
   if (course.isLoading) return <SkeletonList label={tCommon('loading')} />;
   if (course.isError || !course.data) {
     const notFound = isApiProblem(course.error) && course.error.status === HTTP_STATUS.notFound;
@@ -31,7 +34,8 @@ export default function CourseLayout({ children }: { children: ReactNode }) {
   }
   return (
     <CourseProvider course={course.data}>
-      {focusMode ? null : <CourseHeader />}
+      {focusMode ? null : <PreviewBanner />}
+      {COURSE_ROOT_PATTERN.test(pathname) ? <CourseHeader /> : null}
       {children}
     </CourseProvider>
   );

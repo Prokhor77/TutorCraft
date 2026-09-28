@@ -78,7 +78,7 @@ export function TextBlockField(
   );
   if (block.type !== 'callout') return editable;
   return (
-    <div className="flex flex-col gap-2 rounded-md border border-border bg-surface-muted p-3 sm:flex-row sm:items-start">
+    <div className="flex flex-col gap-2 rounded bg-surface-muted p-3 sm:flex-row sm:items-start">
       <NativeSelect
         aria-label={t('calloutTone')}
         value={block.tone}
@@ -141,7 +141,7 @@ export function ListBlockField({
 export function CodeBlockField({ block, onChange, autoFocus }: BlockFieldProps<'code'>) {
   const t = useTranslations('editor');
   return (
-    <div className="flex flex-col gap-2 rounded-md bg-surface-muted p-3">
+    <div className="flex flex-col gap-2 rounded bg-surface-muted p-3">
       <Input
         aria-label={t('codeLanguage')}
         value={block.language}
@@ -173,7 +173,7 @@ export function CodeBlockField({ block, onChange, autoFocus }: BlockFieldProps<'
 export function MathBlockField({ block, onChange, autoFocus }: BlockFieldProps<'math'>) {
   const t = useTranslations('editor');
   return (
-    <div className="grid grid-cols-1 gap-2 rounded-md bg-surface-muted p-3 md:grid-cols-2">
+    <div className="grid grid-cols-1 gap-2 rounded bg-surface-muted p-3 md:grid-cols-2">
       <Textarea
         aria-label={t('latex')}
         placeholder="E = mc^2"
@@ -183,10 +183,7 @@ export function MathBlockField({ block, onChange, autoFocus }: BlockFieldProps<'
         onChange={(event) => onChange({ ...block, latex: event.target.value })}
         className="min-h-20 font-mono text-sm"
       />
-      <div
-        className="flex items-center justify-center rounded-md bg-surface p-2"
-        aria-live="polite"
-      >
+      <div className="flex items-center justify-center rounded bg-surface p-2" aria-live="polite">
         <MathView latex={block.latex} />
       </div>
     </div>
@@ -321,7 +318,7 @@ export function VideoBlockField({
   return (
     <div
       className={cn(
-        'flex flex-col gap-2 rounded-md border border-dashed border-border p-3',
+        'flex flex-col gap-2 rounded border border-dashed border-border p-3',
         invalid && 'border-danger',
       )}
     >

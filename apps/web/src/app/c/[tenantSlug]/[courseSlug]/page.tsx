@@ -58,7 +58,7 @@ export default async function CourseLandingPage({ params }: Params) {
               <img
                 src={course.coverUrl}
                 alt=""
-                className="aspect-[21/9] w-full rounded-xl object-cover"
+                className="aspect-[21/9] w-full rounded-lg object-cover"
               />
             ) : null}
             <header className="flex flex-col gap-3">
@@ -75,7 +75,7 @@ export default async function CourseLandingPage({ params }: Params) {
                 {course.modules.map((module, index) => (
                   <li
                     key={`${module.title}-${index}`}
-                    className="flex items-center gap-3 rounded-md border border-border bg-surface px-4 py-3"
+                    className="flex items-center gap-3 rounded border border-card-border bg-surface px-4 py-3 shadow-sm"
                   >
                     <Layers className="size-4 text-primary" aria-hidden />
                     <span className="flex-1">{module.title}</span>

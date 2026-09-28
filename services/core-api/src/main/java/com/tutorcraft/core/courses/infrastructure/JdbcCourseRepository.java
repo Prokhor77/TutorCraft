@@ -18,9 +18,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.core.simple.JdbcClient.StatementSpec;
@@ -29,7 +26,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 class JdbcCourseRepository implements CourseRepository {
 
-    private static final Logger log = LoggerFactory.getLogger(JdbcCourseRepository.class);
     private static final String SELECT = """
             SELECT id, tenant_id, category_id, title, short_name, slug, description::text AS description, cover_file_id,
                    starts_at, ends_at, visibility, publish_at, self_enrol::text AS self_enrol, price_amount_minor,
@@ -46,7 +42,6 @@ class JdbcCourseRepository implements CourseRepository {
             """.formatted(VISIBLE_NOW);
     private static final UUID NO_ID = new UUID(0L, 0L);
     private static final int MAX_PUBLIC_CATALOG = 500;
-    private static final int PURGE_BATCH = 1000;
     private static final String SHORT_NAME_INDEX = "courses_tenant_short_name_uq";
 
     private final JdbcClient jdbc;
@@ -245,23 +240,28 @@ class JdbcCourseRepository implements CourseRepository {
     }
 
     @Override
-    public List<TenantCourseId> deletedBefore(Instant cutoff) {
-        return jdbc.sql("SELECT tenant_id, id FROM courses WHERE deleted_at < :cutoff ORDER BY deleted_at LIMIT :limit")
-            .param("cutoff", Timestamps.of(cutoff)).param("limit", PURGE_BATCH)
-            .query((rs, n) -> new TenantCourseId(rs.getObject("tenant_id", UUID.class), rs.getObject("id", UUID.class)))
+    public List<TenantCourseId> deletedBefore(Instant cutoff, TenantCourseId after, int limit) {
+        return jdbc.sql("""
+                SELECT tenant_id, id, deleted_at FROM courses
+                WHERE deleted_at < :cutoff
+                  AND (CAST(:afterAt AS timestamptz) IS NULL
+                       OR (deleted_at, id) > (CAST(:afterAt AS timestamptz), CAST(:afterId AS uuid)))
+                ORDER BY deleted_at, id
+                LIMIT :limit
+                """)
+            .param("cutoff", Timestamps.of(cutoff))
+            .param("afterAt", after == null ? null : Timestamps.of(after.deletedAt()))
+            .param("afterId", after == null ? null : after.courseId())
+            .param("limit", limit)
+            .query((rs, n) -> new TenantCourseId(rs.getObject("tenant_id", UUID.class), rs.getObject("id", UUID.class),
+                    Timestamps.read(rs, "deleted_at")))
             .list();
     }
 
-    /** Вне транзакции (autocommit): нарушение внешнего ключа означает, что на курс ссылаются данные других модулей. */
     @Override
     public boolean hardDelete(UUID tenantId, UUID id) {
-        try {
-            return jdbc.sql("DELETE FROM courses WHERE tenant_id = :tenantId AND id = :id AND deleted_at IS NOT NULL")
-                .param("tenantId", tenantId).param("id", id).update() == 1;
-        } catch (DataIntegrityViolationException e) {
-            log.info("Course {} kept in trash: referenced by other data", id);
-            return false;
-        }
+        return jdbc.sql("DELETE FROM courses WHERE tenant_id = :tenantId AND id = :id AND deleted_at IS NOT NULL")
+            .param("tenantId", tenantId).param("id", id).update() == 1;
     }
 
     private static StatementSpec bindScope(StatementSpec spec, CourseScope scope) {

@@ -10,6 +10,9 @@ import java.time.Clock;
 import java.util.Optional;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -21,11 +24,19 @@ class JdbcAuditLog implements AuditLog {
     private final JdbcClient jdbc;
     private final JsonCodec json;
     private final Clock clock;
+    private final TransactionTemplate independentTransaction;
 
-    JdbcAuditLog(JdbcClient jdbc, JsonCodec json, Clock clock) {
+    JdbcAuditLog(JdbcClient jdbc, JsonCodec json, Clock clock, PlatformTransactionManager transactionManager) {
         this.jdbc = jdbc;
         this.json = json;
         this.clock = clock;
+        this.independentTransaction = new TransactionTemplate(transactionManager);
+        this.independentTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+    }
+
+    @Override
+    public void recordIndependently(AuditRecord record) {
+        independentTransaction.executeWithoutResult(status -> record(record));
     }
 
     @Override

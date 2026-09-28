@@ -70,16 +70,50 @@ messages/{ru,en}.json     all UI strings (next-intl, default ru)
   `form-action`), `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options`.
   Script CSP still needs `'unsafe-inline'` for Next's inline bootstrap (nonce-based CSP is a TODO).
 
-### Design system & re-skinning
+### Design system (Google Stitch «TutorCraft Studio»)
 
-Every color is a role token (`--background`, `--surface`, `--surface-muted`, `--border`, `--text`,
-`--text-muted`, `--primary(-foreground|-soft)`, `--success|warning|danger|info(-soft)`, `--focus-ring`, …)
-stored as `R G B` channels in `src/styles/tokens.css`, with light/dark themes (system preference + manual
-toggle via `data-theme`), plus radius, type scale, spacing, shadow and motion tokens (reduced motion
-respected). `tailwind.config.ts` only maps utilities to those variables, and all screens are built from
-`components/ui/*`. To apply the Google Stitch mockups later, edit `tokens.css` (and, if needed, variants in
-`components/ui`) — no screen code changes. Tenant branding overrides `--primary*` at runtime (FR-ADMIN-01).
-Inter (latin + cyrillic, variable) is self-hosted, so builds need no Google Fonts access.
+Source of truth: `design/stitch/DESIGN.md` (full Stitch export; per-screen references in `design/stitch/*/screen.png`,
+used for layout and hierarchy — not pixel-copied). Every visual decision is a role token in
+`src/styles/tokens.css` (`R G B` channels so Tailwind can apply alpha); `tailwind.config.ts` only maps utilities
+to those variables and all screens are built from `components/ui/*`.
+
+- **Palette** — Material roles from Stitch: violet primary `#4648d4` / accent `#6366f1` (actions, focus), emerald
+  `#006c49` (done / published / saved), amber `#825100` (draft / needs review), slate neutrals, surfaces
+  `#f8f9ff` → `#dce9ff`. Two Stitch values fail WCAG AA and are replaced by their role colors: placeholder
+  `#94a3b8` → slate-500, amber chip text `#d97706` → `#825100`.
+- **Dark theme** is derived from the same hues (navy surfaces, lighter roles with dark “on” colors); system
+  preference + manual toggle via `data-theme`. `npm run contrast:check` verifies ~26 text/fill pairs in both
+  themes (AA 4.5:1 for text, 3:1 for UI).
+- **Radii** sm .5rem · DEFAULT 1rem (inputs) · md 1.5rem (cards) · lg 2rem (question cards, dropzone, dialogs) ·
+  xl 3rem · full (buttons, chips, tree nodes). **Elevation** L1/L2/L3 violet-tinted shadows + `shadow-glow`;
+  `.glass` for sticky bars (blur 12px, 82% surface). Motion tokens honour `prefers-reduced-motion`.
+- **Typography** — Bricolage Grotesque (headings, `font-heading`, headline xl…sm incl. mobile 30/38 and 24/32)
+  and Work Sans (body, `label-lg/md/sm`, uppercase label-sm for badges and shortcuts). Both are self-hosted from
+  npm (`@fontsource-variable/*`, no Google Fonts access needed). Neither has Cyrillic glyphs, so the stacks fall
+  back per glyph to **Geologica** (headings) and **Onest** (body), which match their metrics and character.
+- **Components** — pill primary buttons with lift + glow, ghost-pill secondary, emerald `success`; inputs with
+  1.5px border and 4px violet focus ring; custom `Radio`/`Checkbox` with bounce; dashed violet `FileDropzone`;
+  question cards (`QuestionTypeTag`, `PointsPill`, drag grip); pill course tree (`CourseTree`).
+- **Layout** — glass top header with logo, breadcrumbs (2xl), pill section tabs (global sections, or inside a
+  course: Конструктор курса · Конструктор тестов · Медиатека · Аналитика · Участники), «Предпросмотр» and
+  «Опубликовать курс». Course builder is 3 panes on ≥1280px (tree 18.5rem · canvas ≤860px · inspector 20rem,
+  selection in `?item=`); the canvas shows the selected item's workspace (header card, content editor, type blocks, glass
+  quick-add bar) and the tree card shows readiness + search; on tablets the tree collapses to an icon rail and
+  the inspector moves under the canvas; on mobile a segmented control (Конструктор / Структура / Предпросмотр). Inside a course the mobile bottom nav is
+  Курс · Тесты · Проверка (teachers; «Прогресс» for learners) · Медиа · Профиль; elsewhere the global nav stays.
+  The mobile header shows the logo with the school name as an eyebrow over the current section.
+- **Logo & icons** — the Stitch logo (`design/stitch/logo/logo.svg`) is `LogoMark` in the header and
+  `public/icons/icon.svg`; PNG/maskable PWA icons are rendered from the same geometry by
+  `scripts/generate-icons.py` (Pillow). UI icons stay on Lucide (tree-shaken SVG): Material Symbols can be
+  self-hosted from npm, but it is a multi-MB ligature font and the Lucide rounded set is visually equivalent.
+- **Stitch patterns, real data only** — `StatCard`/`StatGrid` (uppercase label, tinted icon, headline value),
+  `StatusChip` (Опубликовано · Черновик · Запланировано), `PageHeader` with eyebrow + status meta,
+  `QueueCard` (grading), glass action bars, the header «Сохранено N мин назад» indicator (`SavedIndicator`,
+  fed by successful mutations/autosaves in this tab). Metrics come from the contract only (outline, quiz slots
+  and settings, gradebook, grading queue, progress report, `/me/*`); Stitch-only ideas without API data
+  (storage/CDN, AI subtitles, webinars, parent contacts, voice notes, Face ID / Госуслуги login) are omitted.
+- **Tenant branding** — `buildBrandCss()` injects `<style id="tc-brand">` overriding `--primary*`, `--accent` and
+  `--focus-ring` for light and (lightened) dark themes (FR-ADMIN-01).
 
 ### Block editor
 
@@ -91,28 +125,30 @@ searchable block picker; paste and drag-and-drop upload files via the presigned 
 
 ## Route map
 
-| Route                                                                      | Screen                                                                                                                                                                                                                                                   |
-| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/`                                                                        | tutor marketing landing («Курс за 15 минут», features, pricing placeholder, CTA)                                                                                                                                                                         |
-| `/login` `/register` `/forgot-password` `/reset-password` `/accept-invite` | auth (Google / Telegram buttons appear when `/auth/providers` enables them; tenant chooser on `auth.tenant_required`)                                                                                                                                    |
-| `/join/[token]`                                                            | accept a course invite link                                                                                                                                                                                                                              |
-| `/c/[tenantSlug]` · `/c/[tenantSlug]/[courseSlug]`                         | SSR catalog and course landing (SEO metadata, OpenGraph) with Buy / Enroll CTA                                                                                                                                                                           |
-| `/checkout/fake/[orderId]` · `/checkout/return`                            | dev fake payment page, return page polling the order                                                                                                                                                                                                     |
-| `/home`                                                                    | «Мои задачи» (student) / teaching dashboard (teacher) / tabs for both                                                                                                                                                                                    |
-| `/courses`                                                                 | course cards, search, create dialog (title only)                                                                                                                                                                                                         |
-| `/courses/[id]`                                                            | outline: sidebar with module progress, collapsible modules, status/lock reasons; teacher inline editing, DnD, `+` type picker → quick create, visibility, duplicate, delete+undo, bulk hide/show/move/shift dates, settings sheet, «Как студент» preview |
-| `/courses/[id]/trash`                                                      | restore deleted items/modules                                                                                                                                                                                                                            |
-| `/courses/[id]/items/[itemId]`                                             | page / file / url / folder / video / assignment / quiz / forum (teacher tabs: content, submissions, questions, attempts, discussions, settings)                                                                                                          |
-| `/courses/[id]/items/[itemId]/attempts/[attemptId]` (+ `/result`)          | quiz attempt (focus mode) and results                                                                                                                                                                                                                    |
-| `/courses/[id]/items/[itemId]/discussions/[discussionId]`                  | forum thread                                                                                                                                                                                                                                             |
-| `/courses/[id]/question-bank`                                              | categories, filters, editor for 8 question types, versions, preview-check                                                                                                                                                                                |
-| `/courses/[id]/gradebook`                                                  | gradebook with inline editing, setup sheet, formula + warnings, export, publish                                                                                                                                                                          |
-| `/courses/[id]/participants`                                               | people (search, roles, bulk), enrol existing users, invite links, groups (auto), progress matrix                                                                                                                                                         |
-| `/grading` · `/grading/review`                                             | unified inbox · three-panel grading with J/K, Ctrl+Enter, `?`                                                                                                                                                                                            |
-| `/grades` · `/grades/[courseId]`                                           | my grades                                                                                                                                                                                                                                                |
-| `/calendar`                                                                | month / week / list, iCal subscription                                                                                                                                                                                                                   |
-| `/notifications` · `/settings/notifications` · `/settings/profile`         | notification center, channel matrix + Telegram link, profile/password                                                                                                                                                                                    |
-| `/admin/*`                                                                 | users (+CSV import), categories (DnD), branding (live preview), audit log, orders, API tokens & webhooks                                                                                                                                                 |
+| Route                                                                      | Screen                                                                                                                                                                                                                                                                                                         |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`                                                                        | tutor marketing landing («Курс за 15 минут», features, pricing placeholder, CTA)                                                                                                                                                                                                                               |
+| `/login` `/register` `/forgot-password` `/reset-password` `/accept-invite` | auth: Stitch card with «Вход · Регистрация» tabs, icon inputs, password toggle (Google / Telegram tiles appear when `/auth/providers` enables them; tenant chooser on `auth.tenant_required`)                                                                                                                  |
+| `/join/[token]`                                                            | accept a course invite link                                                                                                                                                                                                                                                                                    |
+| `/c/[tenantSlug]` · `/c/[tenantSlug]/[courseSlug]`                         | SSR catalog and course landing (SEO metadata, OpenGraph) with Buy / Enroll CTA                                                                                                                                                                                                                                 |
+| `/checkout/fake/[orderId]` · `/checkout/return`                            | dev fake payment page, return page polling the order                                                                                                                                                                                                                                                           |
+| `/home`                                                                    | «Мои задачи» (student) / teaching dashboard (teacher) / tabs for both — stat cards on top                                                                                                                                                                                                                      |
+| `/courses`                                                                 | course cards, search, create dialog (title only)                                                                                                                                                                                                                                                               |
+| `/courses/[id]`                                                            | 3-pane builder: course tree, outline canvas, item inspector (`?item=`, `?type=quiz` filter); collapsible modules, status/lock reasons; teacher inline editing, DnD, `+` type picker → quick create, visibility, duplicate, delete+undo, bulk hide/show/move/shift dates, settings sheet, «Как студент» preview |
+| `/courses/[id]/trash`                                                      | restore deleted items/modules                                                                                                                                                                                                                                                                                  |
+| `/courses/[id]/items/[itemId]`                                             | page / file / url / folder / video / assignment / quiz / forum (teacher tabs: content, submissions, questions = Stitch quiz builder with stat cards / question structure / inline question editor / «Параметры теста», attempts, discussions, settings)                                                        |
+| `/courses/[id]/items/[itemId]/attempts/[attemptId]` (+ `/result`)          | quiz attempt (focus mode) and results                                                                                                                                                                                                                                                                          |
+| `/courses/[id]/items/[itemId]/discussions/[discussionId]`                  | forum thread                                                                                                                                                                                                                                                                                                   |
+| `/courses/[id]/question-bank`                                              | «Конструктор тестов»: stat cards, course quizzes (→ quiz builder), bank categories, filters, editor for 8 question types, versions, preview-check                                                                                                                                                              |
+| `/courses/[id]/media`                                                      | media library: stat cards, quick access / type / module filters, search, upload strip into a module, material cards, inspector (rename, learner access, insert into builder, trash)                                                                                                                            |
+| `/courses/[id]/grades`                                                     | learner’s grades inside the course context                                                                                                                                                                                                                                                                     |
+| `/courses/[id]/gradebook`                                                  | «Аналитика»: stat cards (average, queue, progress, completed) and tabs `?tab=queue                                                                                                                                                                                                                             | journal | progress` — grading queue cards, gradebook (inline editing, setup sheet, formula + warnings, export, publish), progress matrix |
+| `/courses/[id]/participants`                                               | people (search, roles, bulk), enrol existing users, invite links, groups (auto)                                                                                                                                                                                                                                |
+| `/grading` · `/grading/review`                                             | unified inbox · three-panel grading with J/K, Ctrl+Enter, `?`                                                                                                                                                                                                                                                  |
+| `/grades` · `/grades/[courseId]`                                           | my grades                                                                                                                                                                                                                                                                                                      |
+| `/calendar`                                                                | month / week / list, iCal subscription                                                                                                                                                                                                                                                                         |
+| `/notifications` · `/settings/notifications` · `/settings/profile`         | notification center, channel matrix + Telegram link, profile/password                                                                                                                                                                                                                                          |
+| `/admin/*`                                                                 | users (+CSV import), categories (DnD), branding (live preview), audit log, orders, API tokens & webhooks                                                                                                                                                                                                       |
 
 ## API assumptions (contract gaps)
 

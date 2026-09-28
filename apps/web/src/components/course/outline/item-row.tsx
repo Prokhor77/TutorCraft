@@ -3,6 +3,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
   CheckCircle2,
+  ExternalLink,
   Copy,
   Eye,
   EyeOff,
@@ -37,6 +38,9 @@ type TeacherActions = {
   onToggleVisibility: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
+  /** Builder: select this item for the inspector pane. */
+  inspected?: boolean;
+  onInspect?: () => void;
 };
 
 export function StudentItemRow({ courseId, item }: { courseId: string; item: OutlineItem }) {
@@ -62,12 +66,11 @@ export function StudentItemRow({ courseId, item }: { courseId: string; item: Out
       </span>
     </>
   );
-  if (locked)
-    return <div className="flex items-center gap-3 rounded-md px-3 py-2.5">{content}</div>;
+  if (locked) return <div className="flex items-center gap-3 rounded px-3 py-2.5">{content}</div>;
   return (
     <Link
       href={ROUTES.item(courseId, item.id)}
-      className="flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+      className="flex items-center gap-3 rounded px-3 py-2.5 transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
     >
       {content}
     </Link>
@@ -95,9 +98,10 @@ export function TeacherItemRow({
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(
-        'group flex items-center gap-2 rounded-md bg-surface px-2 py-2 hover:bg-surface-muted/60',
-        isDragging && 'z-10 shadow-lg ring-1 ring-primary',
+        'group relative flex items-center gap-2 rounded bg-surface px-2 py-2 transition-[background-color,box-shadow] duration-fast hover:bg-accent/5',
+        isDragging && 'z-10 scale-[1.02] shadow-lg ring-1 ring-accent/40',
         actions.selected && 'bg-primary-soft/50',
+        actions.inspected && 'bg-accent/10 shadow-md ring-1 ring-accent/30',
       )}
     >
       <Checkbox
@@ -122,12 +126,27 @@ export function TeacherItemRow({
           onSave={actions.onRename}
           className="text-sm font-medium"
         >
-          <Link
-            href={ROUTES.item(courseId, item.id)}
-            className={cn('truncate hover:underline', hidden && 'text-text-muted')}
-          >
-            {item.title}
-          </Link>
+          {actions.onInspect ? (
+            <button
+              type="button"
+              onClick={actions.onInspect}
+              aria-pressed={actions.inspected}
+              className={cn(
+                'truncate rounded-sm text-left hover:text-primary',
+                hidden && 'text-text-muted',
+                actions.inspected && 'text-primary',
+              )}
+            >
+              {item.title}
+            </button>
+          ) : (
+            <Link
+              href={ROUTES.item(courseId, item.id)}
+              className={cn('truncate hover:underline', hidden && 'text-text-muted')}
+            >
+              {item.title}
+            </Link>
+          )}
         </InlineEdit>
         <span className="flex flex-wrap items-center gap-2">
           <DueLabel dueAt={item.dueAt} />
@@ -136,15 +155,27 @@ export function TeacherItemRow({
               {t('scheduledFor', { date: formatDateTime(item.publishAt, locale) })}
             </Badge>
           ) : null}
-          {item.visibility === 'hidden' ? <Badge tone="warning">{t('hiddenBadge')}</Badge> : null}
+          {item.visibility === 'hidden' ? <Badge tone="neutral">{t('hiddenBadge')}</Badge> : null}
           {!item.availability.available ? (
             <LockedReason reasons={item.availability.reasons} />
           ) : null}
         </span>
       </div>
+      {actions.onInspect ? (
+        // Below `sm` «open» and visibility live in the inspector sheet to give the title room.
+        <Button asChild variant="ghost" size="icon-sm" className="hidden sm:inline-flex">
+          <Link
+            href={ROUTES.item(courseId, item.id)}
+            aria-label={t('openItem', { title: item.title })}
+          >
+            <ExternalLink aria-hidden />
+          </Link>
+        </Button>
+      ) : null}
       <Button
         variant="ghost"
         size="icon-sm"
+        className={actions.onInspect ? 'hidden sm:inline-flex' : undefined}
         onClick={actions.onToggleVisibility}
         aria-label={
           hidden ? t('showItem', { title: item.title }) : t('hideItem', { title: item.title })

@@ -11,6 +11,9 @@ export const ROUTES = {
   courseParticipants: (id: string) => `/courses/${id}/participants`,
   courseGradebook: (id: string) => `/courses/${id}/gradebook`,
   courseQuestionBank: (id: string) => `/courses/${id}/question-bank`,
+  courseMedia: (id: string) => `/courses/${id}/media`,
+  courseMyGrades: (id: string) => `/courses/${id}/grades`,
+  courseTests: (id: string) => `/courses/${id}?type=quiz`,
   courseTrash: (id: string) => `/courses/${id}/trash`,
   item: (courseId: string, itemId: string) => `/courses/${courseId}/items/${itemId}`,
   itemSettings: (courseId: string, itemId: string) =>

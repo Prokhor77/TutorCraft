@@ -63,7 +63,7 @@ export function EssayPreview({ id }: { id: string }) {
     <div className="flex flex-col gap-3">
       <h3 className="text-base">{question.title}</h3>
       <BlockRenderer doc={question.body} />
-      <div className="whitespace-pre-wrap rounded-md border border-border bg-surface-muted p-4 text-sm leading-relaxed">
+      <div className="whitespace-pre-wrap rounded bg-surface-muted p-4 text-sm leading-relaxed">
         {essayText(question.response) || t('emptySubmission')}
       </div>
     </div>

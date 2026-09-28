@@ -1,5 +1,6 @@
 'use client';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { ArrowRight, AtSign, Award, ChevronRight, Lock } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -9,7 +10,7 @@ import { z } from 'zod';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
+import { IconInput, PasswordInput } from '@/components/ui/input';
 import { describeProblem } from '@/features/app/use-problem-toast';
 import { NEXT_PARAM, ROUTES, safeNextPath } from '@/features/auth/routes';
 import {
@@ -118,33 +119,59 @@ export function LoginForm() {
   const telegramConfig = providers.data?.telegram;
   return (
     <div>
-      <AuthHeading title={t('loginTitle')} description={t('loginSubtitle')} />
+      <AuthHeading title={t('loginTitle')} description={t('loginSubtitle')} visuallyHidden />
       {error ? <Alert tone="danger" className="mb-4" title={error} /> : null}
       <form
         noValidate
         onSubmit={form.handleSubmit(() => run({ kind: 'password' }))}
         className="flex flex-col gap-4"
       >
-        <Field label={t('email')} error={form.formState.errors.email?.message} required>
-          <Input type="email" autoComplete="email" inputMode="email" {...form.register('email')} />
+        <Field
+          label={t('email')}
+          labelVariant="caps"
+          error={form.formState.errors.email?.message}
+          required
+        >
+          <IconInput
+            icon={AtSign}
+            type="email"
+            autoComplete="email"
+            inputMode="email"
+            placeholder={t('emailPlaceholder')}
+            {...form.register('email')}
+          />
         </Field>
-        <Field label={t('password')} error={form.formState.errors.password?.message} required>
-          <Input type="password" autoComplete="current-password" {...form.register('password')} />
+        <Field
+          label={t('password')}
+          labelVariant="caps"
+          labelAside={
+            <Link
+              href={ROUTES.forgotPassword}
+              className="rounded-sm text-sm font-semibold text-primary hover:underline"
+            >
+              {t('forgotPassword')}
+            </Link>
+          }
+          error={form.formState.errors.password?.message}
+          required
+        >
+          <PasswordInput
+            icon={Lock}
+            autoComplete="current-password"
+            showLabel={t('showPassword')}
+            hideLabel={t('hidePassword')}
+            {...form.register('password')}
+          />
         </Field>
-        <div className="flex justify-end">
-          <Link href={ROUTES.forgotPassword} className="text-sm text-primary hover:underline">
-            {t('forgotPassword')}
-          </Link>
-        </div>
-        <Button type="submit" size="lg" loading={login.isPending}>
-          {t('login')}
+        <Button type="submit" size="lg" loading={login.isPending} className="mt-2 h-14 text-base">
+          {t('loginCta')} <ArrowRight aria-hidden />
         </Button>
       </form>
       {googleConfig || telegramConfig ? (
         <div className="mt-6 flex flex-col gap-3">
           <div className="flex items-center gap-3 text-xs text-text-muted">
             <span className="h-px flex-1 bg-border" />
-            {t('or')}
+            {t('orVia')}
             <span className="h-px flex-1 bg-border" />
           </div>
           {googleConfig ? (
@@ -161,12 +188,24 @@ export function LoginForm() {
           ) : null}
         </div>
       ) : null}
-      <p className="mt-6 text-center text-sm text-text-muted">
-        {t('noAccount')}{' '}
-        <Link href={ROUTES.register} className="font-medium text-primary hover:underline">
-          {t('registerLink')}
-        </Link>
-      </p>
+      <Link
+        href={ROUTES.register}
+        className="group mt-6 flex items-center gap-4 rounded-md bg-surface-muted p-4 transition-colors duration-fast hover:bg-primary-soft focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus-ring/20"
+      >
+        <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-success-soft text-success">
+          <Award className="size-6" aria-hidden />
+        </span>
+        <span className="flex min-w-0 flex-col">
+          <span className="font-heading text-base font-semibold">{t('newTeacherTitle')}</span>
+          <span className="flex items-center gap-1 text-sm font-semibold text-primary">
+            {t('newTeacherLink')}
+            <ChevronRight
+              className="size-4 transition-transform duration-fast group-hover:translate-x-0.5"
+              aria-hidden
+            />
+          </span>
+        </span>
+      </Link>
     </div>
   );
 }

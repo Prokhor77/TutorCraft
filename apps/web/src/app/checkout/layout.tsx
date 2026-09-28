@@ -11,7 +11,7 @@ export default function CheckoutLayout({ children }: { children: ReactNode }) {
         id="main-content"
         className="flex flex-1 items-start justify-center px-4 py-8 sm:items-center"
       >
-        <div className="w-full max-w-md rounded-xl border border-border bg-surface p-6 shadow-md">
+        <div className="w-full max-w-md rounded-lg border border-card-border bg-surface p-6 shadow-md">
           {children}
         </div>
       </main>

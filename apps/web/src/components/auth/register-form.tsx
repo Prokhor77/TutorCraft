@@ -2,6 +2,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { AtSign, Lock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -9,7 +10,7 @@ import { z } from 'zod';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
+import { IconInput, Input, PasswordInput } from '@/components/ui/input';
 import { describeProblem } from '@/features/app/use-problem-toast';
 import { ROUTES } from '@/features/auth/routes';
 import { useRegister } from '@/features/auth/use-auth';
@@ -61,29 +62,54 @@ export function RegisterForm() {
 
   return (
     <div>
-      <AuthHeading title={t('registerTitle')} description={t('registerSubtitle')} />
+      <AuthHeading title={t('registerTitle')} description={t('registerSubtitle')} visuallyHidden />
       {error ? <Alert tone="danger" className="mb-4" title={error} /> : null}
       <form noValidate onSubmit={onSubmit} className="flex flex-col gap-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label={t('firstName')} error={errors.firstName?.message} required>
+          <Field
+            labelVariant="caps"
+            label={t('firstName')}
+            error={errors.firstName?.message}
+            required
+          >
             <Input autoComplete="given-name" {...form.register('firstName')} />
           </Field>
-          <Field label={t('lastName')} error={errors.lastName?.message} required>
+          <Field
+            labelVariant="caps"
+            label={t('lastName')}
+            error={errors.lastName?.message}
+            required
+          >
             <Input autoComplete="family-name" {...form.register('lastName')} />
           </Field>
         </div>
-        <Field label={t('email')} error={errors.email?.message} required>
-          <Input type="email" autoComplete="email" inputMode="email" {...form.register('email')} />
+        <Field labelVariant="caps" label={t('email')} error={errors.email?.message} required>
+          <IconInput
+            icon={AtSign}
+            type="email"
+            placeholder={t('emailPlaceholder')}
+            autoComplete="email"
+            inputMode="email"
+            {...form.register('email')}
+          />
         </Field>
         <Field
+          labelVariant="caps"
           label={t('password')}
           error={errors.password?.message}
           hint={t('passwordHint', { min: PASSWORD_MIN_LENGTH_HINT })}
           required
         >
-          <Input type="password" autoComplete="new-password" {...form.register('password')} />
+          <PasswordInput
+            icon={Lock}
+            showLabel={t('showPassword')}
+            hideLabel={t('hidePassword')}
+            autoComplete="new-password"
+            {...form.register('password')}
+          />
         </Field>
         <Field
+          labelVariant="caps"
           label={t('schoolName')}
           hint={t('schoolNameHint')}
           error={errors.schoolName?.message}

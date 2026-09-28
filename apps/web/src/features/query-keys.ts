@@ -36,6 +36,7 @@ export const queryKeys = {
     ['courses', courseId, 'gradebook', groupId ?? 'all'] as const,
   gradebookRoot: (courseId: string) => ['courses', courseId, 'gradebook'] as const,
   gradebookSetup: (courseId: string) => ['courses', courseId, 'gradebook-setup'] as const,
+  progressReport: (courseId: string) => ['courses', courseId, 'progress-report'] as const,
   gradeHistory: (gradeId: string) => ['grades', gradeId, 'history'] as const,
   scales: ['scales'] as const,
 

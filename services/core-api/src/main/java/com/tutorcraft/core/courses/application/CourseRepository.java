@@ -58,10 +58,13 @@ public interface CourseRepository {
 
     boolean existsInOtherTenant(UUID tenantId, UUID id);
 
-    /** Системный (очистка корзины, все tenant): удалённые раньше cutoff. */
-    List<TenantCourseId> deletedBefore(Instant cutoff);
+    /**
+     * Системный (очистка корзины, все tenant): страница курсов, удалённых раньше cutoff, по (deleted_at, id) после
+     * {@code after} (null — с начала). Удерживаемые курсы остаются в корзине, поэтому обход идёт по курсору.
+     */
+    List<TenantCourseId> deletedBefore(Instant cutoff, TenantCourseId after, int limit);
 
-    /** Физическое удаление; false — на курс ссылаются данные других модулей (курс остаётся в корзине). */
+    /** Физическое удаление курса из корзины (в транзакции вызывающего кода). @return false — курса уже нет. */
     boolean hardDelete(UUID tenantId, UUID id);
 
     /** Фильтр списка курсов: q — подстрока названия/краткого имени. */
@@ -80,6 +83,6 @@ public interface CourseRepository {
         }
     }
 
-    record TenantCourseId(UUID tenantId, UUID courseId) {
+    record TenantCourseId(UUID tenantId, UUID courseId, Instant deletedAt) {
     }
 }

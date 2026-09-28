@@ -32,26 +32,50 @@ export function mixWithWhite([r, g, b]: Rgb, ratio = SOFT_MIX_RATIO): Rgb {
 
 export const toChannels = (rgb: Rgb) => rgb.join(' ');
 
-export const BRANDING_CSS_VARS = {
-  primary: '--primary',
-  foreground: '--primary-foreground',
-  soft: '--primary-soft',
-  focus: '--focus-ring',
-} as const;
+const BRAND_STYLE_ID = 'tc-brand';
+/** Dark theme lightens the tenant color so it stays readable on navy surfaces (Material dark pattern). */
+const DARK_LIGHTEN_RATIO = 0.45;
+const DARK_SOFT: Rgb = [40, 42, 96];
+const DARK_THEME_SELECTORS = ":root[data-theme='dark']";
 
-/** Applies (or clears when color is null) tenant primary color on :root. */
-export function applyBrandColor(
-  color: string | null,
-  root: HTMLElement = document.documentElement,
-): void {
+function brandVars(primary: Rgb, soft: Rgb): string {
+  const vars = {
+    '--primary': primary,
+    '--primary-foreground': readableForeground(primary),
+    '--primary-soft': soft,
+    '--accent': primary,
+    '--focus-ring': primary,
+  };
+  return Object.entries(vars)
+    .map(([name, rgb]) => `${name}: ${toChannels(rgb)};`)
+    .join(' ');
+}
+
+/** CSS overriding the violet role tokens with the tenant color, for light and dark themes. */
+export function buildBrandCss(color: string | null): string {
   const rgb = parseHexColor(color);
-  const vars = Object.values(BRANDING_CSS_VARS);
-  if (!rgb) {
-    vars.forEach((name) => root.style.removeProperty(name));
+  if (!rgb) return '';
+  const light = brandVars(rgb, mixWithWhite(rgb));
+  const dark = brandVars(mixWithWhite(rgb, DARK_LIGHTEN_RATIO), DARK_SOFT);
+  return [
+    `:root { ${light} }`,
+    `${DARK_THEME_SELECTORS} { ${dark} }`,
+    `@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) { ${dark} } }`,
+  ].join('\n');
+}
+
+/** Applies (or clears when color is null) the tenant primary color (FR-ADMIN-01). */
+export function applyBrandColor(color: string | null, doc: Document = document): void {
+  const css = buildBrandCss(color);
+  let style = doc.getElementById(BRAND_STYLE_ID);
+  if (!css) {
+    style?.remove();
     return;
   }
-  root.style.setProperty(BRANDING_CSS_VARS.primary, toChannels(rgb));
-  root.style.setProperty(BRANDING_CSS_VARS.foreground, toChannels(readableForeground(rgb)));
-  root.style.setProperty(BRANDING_CSS_VARS.soft, toChannels(mixWithWhite(rgb)));
-  root.style.setProperty(BRANDING_CSS_VARS.focus, toChannels(rgb));
+  if (!style) {
+    style = doc.createElement('style');
+    style.id = BRAND_STYLE_ID;
+    doc.head.appendChild(style);
+  }
+  style.textContent = css;
 }

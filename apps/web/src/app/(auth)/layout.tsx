@@ -1,12 +1,24 @@
+import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
-import { Brand } from '@/components/layout/brand';
+import { AuthTabs } from '@/components/auth/auth-tabs';
+import { Brand, LogoMark, PRODUCT_NAME } from '@/components/layout/brand';
 import { LanguageMenu, ThemeMenu } from '@/components/layout/preferences-menu';
 import { MAIN_CONTENT_ID } from '@/components/layout/skip-link';
 
-export default function AuthLayout({ children }: { children: ReactNode }) {
+/** Stitch auth screen: soft violet/emerald canvas, logo hero, rounded card with «Вход · Регистрация». */
+export default async function AuthLayout({ children }: { children: ReactNode }) {
+  const t = await getTranslations('auth');
   return (
-    <div className="flex min-h-dvh flex-col bg-background">
-      <header className="flex h-header items-center justify-between px-page-x">
+    <div className="relative flex min-h-dvh flex-col overflow-hidden bg-background">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-24 top-24 size-96 rounded-full bg-success-soft opacity-70 blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -left-24 top-0 size-96 rounded-full bg-primary-soft opacity-70 blur-3xl"
+      />
+      <header className="glass sticky top-0 z-30 flex h-header items-center justify-between border-b border-card-border px-page-x">
         <Brand />
         <div className="flex items-center gap-1">
           <LanguageMenu />
@@ -15,9 +27,17 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       </header>
       <main
         id={MAIN_CONTENT_ID}
-        className="flex flex-1 items-start justify-center px-4 py-8 sm:items-center"
+        className="relative flex flex-1 flex-col items-center gap-6 px-4 py-8 sm:py-12"
       >
-        <div className="w-full max-w-md rounded-xl border border-border bg-surface p-6 shadow-md sm:p-8">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <span className="rounded-full bg-surface p-2 shadow-md">
+            <LogoMark className="size-16 rounded-full" />
+          </span>
+          <p className="font-heading text-3xl font-bold tracking-tight">{PRODUCT_NAME}</p>
+          <p className="max-w-sm text-sm text-text-muted">{t('heroSubtitle')}</p>
+        </div>
+        <div className="w-full max-w-md rounded-lg border border-card-border bg-surface p-6 shadow-md sm:p-8">
+          <AuthTabs />
           {children}
         </div>
       </main>

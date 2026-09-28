@@ -1,5 +1,9 @@
 @import 'katex/dist/katex.min.css';
-@import './fonts.css';
+/* Self-hosted fonts from npm (Google Fonts is not reachable): Stitch fonts + Cyrillic fallbacks. */
+@import '@fontsource-variable/bricolage-grotesque/wght.css';
+@import '@fontsource-variable/work-sans/wght.css';
+@import '@fontsource-variable/geologica/wght.css';
+@import '@fontsource-variable/onest/wght.css';
 @import './tokens.css';
 
 @tailwind base;
@@ -18,20 +22,27 @@
     outline-offset: 2px;
   }
   ::selection {
-    background: rgb(var(--primary) / 0.2);
+    background: rgb(var(--accent) / 0.2);
+  }
+  ::placeholder {
+    color: rgb(var(--placeholder));
+    opacity: 1;
   }
   h1,
   h2,
   h3,
   h4 {
-    @apply font-semibold tracking-tight text-text;
+    @apply font-heading font-semibold tracking-tight text-text;
+  }
+  h1 {
+    @apply font-bold;
   }
 }
 
 @layer components {
   /* Reader typography for BlockDoc content — shared by pages, feedback, forum posts. */
   .prose-content {
-    @apply max-w-prose text-base leading-relaxed text-text;
+    @apply max-w-prose text-base text-text;
   }
   .prose-content > * + * {
     @apply mt-4;
@@ -40,10 +51,10 @@
     @apply text-3xl;
   }
   .prose-content h2 {
-    @apply mt-8 text-2xl;
+    @apply mt-8 text-xl;
   }
   .prose-content h3 {
-    @apply mt-6 text-xl;
+    @apply mt-6 text-lg;
   }
   .prose-content a {
     @apply text-primary underline underline-offset-2;
@@ -52,13 +63,13 @@
     @apply rounded-xs bg-surface-muted px-1 py-0.5 font-mono text-sm;
   }
   .prose-content pre {
-    @apply overflow-x-auto rounded-md bg-surface-muted p-4 font-mono text-sm;
+    @apply overflow-x-auto rounded bg-surface-muted p-4 font-mono text-sm;
   }
   .prose-content pre code {
     @apply bg-transparent p-0;
   }
   .prose-content blockquote {
-    @apply border-l-4 border-border pl-4 italic text-text-muted;
+    @apply border-l-4 border-accent/30 pl-4 italic text-text-muted;
   }
   .prose-content ul {
     @apply list-disc pl-6;
@@ -73,17 +84,60 @@
     @apply border border-border px-3 py-2 align-top;
   }
   .prose-content img {
-    @apply max-w-full rounded-md;
+    @apply max-w-full rounded;
   }
 
   .editable-text:empty::before {
     content: attr(data-placeholder);
-    @apply pointer-events-none text-text-muted/70;
+    @apply pointer-events-none text-placeholder;
+  }
+
+  /* Glass sticky action bars (Stitch): blur + translucent surface + hairline. */
+  .glass {
+    background: var(--glass);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  /* Custom radio: ring with a soft bounce, violet dot when selected (motion tokens honour reduced motion). */
+  .tc-radio {
+    @apply relative inline-grid size-5 shrink-0 cursor-pointer appearance-none place-content-center rounded-full border-[1.5px] border-outline-variant bg-surface transition-colors duration-fast;
+  }
+  .tc-radio::before {
+    content: '';
+    @apply size-2.5 scale-0 rounded-full bg-primary;
+    transition: transform var(--motion-base) var(--ease-bounce);
+  }
+  .tc-radio:checked {
+    @apply border-primary;
+  }
+  .tc-radio:checked::before {
+    @apply scale-100;
+  }
+  .tc-radio:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px rgb(var(--focus-ring) / 0.2);
+  }
+  .tc-radio:disabled {
+    @apply cursor-not-allowed opacity-50;
   }
 }
 
 @layer utilities {
   .pb-safe-nav {
-    padding-bottom: calc(var(--size-bottom-nav) + env(safe-area-inset-bottom));
+    padding-bottom: calc(var(--size-bottom-nav) + env(safe-area-inset-bottom) + 1rem);
+  }
+  .lift {
+    transition:
+      transform var(--motion-fast) ease-out,
+      box-shadow var(--motion-fast) ease-out;
+  }
+  .lift:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .lift:hover:not(:disabled) {
+      transform: none;
+    }
   }
 }

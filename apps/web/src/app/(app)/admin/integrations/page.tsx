@@ -213,7 +213,7 @@ function DeliveriesSheet({
           {flattenPages(deliveries.data?.pages).map((delivery) => (
             <li
               key={delivery.id}
-              className="flex flex-col gap-1 rounded-md border border-border p-3 text-sm"
+              className="flex flex-col gap-1 rounded-md bg-surface-muted p-3 text-sm"
             >
               <span className="flex items-center justify-between">
                 <span className="font-mono text-xs">{delivery.event}</span>
@@ -265,7 +265,7 @@ export default function AdminIntegrationsPage() {
             {tokens.data?.map((token) => (
               <li
                 key={token.id}
-                className="flex items-center gap-3 rounded-md border border-border px-3 py-2"
+                className="flex items-center gap-3 rounded-md bg-surface-muted px-3 py-2"
               >
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="font-medium">{token.name}</span>
@@ -302,7 +302,7 @@ export default function AdminIntegrationsPage() {
             {webhooks.data?.map((webhook) => (
               <li
                 key={webhook.id}
-                className="flex items-center gap-3 rounded-md border border-border px-3 py-2"
+                className="flex items-center gap-3 rounded-md bg-surface-muted px-3 py-2"
               >
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate font-mono text-xs">{webhook.url}</span>

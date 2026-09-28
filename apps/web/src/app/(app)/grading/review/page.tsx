@@ -1,12 +1,17 @@
 'use client';
-import { ChevronLeft, ChevronRight, Inbox, Keyboard } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Inbox, Keyboard, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { EssayPreview, SubmissionPreview } from '@/components/grading/submission-preview';
 import { emptyGradeDraft, GradePanel, type GradeDraft } from '@/components/grading/grade-panel';
 import { ShortcutsHelp } from '@/components/grading/shortcuts-help';
+import { QueueCard } from '@/components/grading/queue-card';
+import { DueLabel } from '@/components/course/item-meta';
+import { Avatar } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { SkeletonList } from '@/components/ui/skeleton';
@@ -24,11 +29,16 @@ import { useItem } from '@/features/items/use-item';
 import { useAttempt } from '@/features/quiz/use-quiz';
 import { quizApi } from '@/lib/api/endpoints/quiz';
 import { flattenPages } from '@/lib/api/pagination';
-import type { QueueEntry } from '@/lib/api/schemas/assessment';
+import { QUEUE_KINDS, type QueueEntry } from '@/lib/api/schemas/assessment';
 import { isDocEmpty } from '@/lib/blockdoc/doc';
 import { cn } from '@/lib/utils/cn';
+import { formatRelative } from '@/lib/utils/format';
 
-type ReviewEntry = Pick<QueueEntry, 'kind' | 'id' | 'itemId' | 'userName' | 'itemTitle'>;
+type ReviewEntry = Pick<QueueEntry, 'kind' | 'id' | 'itemId' | 'userName' | 'itemTitle'> &
+  Partial<Pick<QueueEntry, 'submittedAt' | 'late' | 'dueAt'>>;
+type QueueKind = (typeof QUEUE_KINDS)[number];
+/** «Далее в очереди» on phones (Stitch grading-mobile). */
+const UP_NEXT_COUNT = 3;
 
 function useMaxScore(entry: ReviewEntry | undefined): number | null {
   const item = useItem(entry?.kind === 'submission' ? entry.itemId : '');
@@ -72,6 +82,9 @@ function Review() {
   const [draft, setDraft] = useState<GradeDraft>(emptyGradeDraft());
   const [helpOpen, setHelpOpen] = useState(false);
   const [essaySaving, setEssaySaving] = useState(false);
+  const [search, setSearch] = useState('');
+  const [kindFilter, setKindFilter] = useState<'all' | QueueKind>('all');
+  const locale = useLocale();
   const grade = useGradeSubmission();
 
   const entries: ReviewEntry[] = useMemo(() => {
@@ -149,6 +162,14 @@ function Review() {
     '?': () => setHelpOpen(true),
   });
 
+  const needle = search.trim().toLocaleLowerCase();
+  const listed = entries.filter(
+    (entry) =>
+      (kindFilter === 'all' || entry.kind === kindFilter) &&
+      (!needle || entry.userName.toLocaleLowerCase().includes(needle)),
+  );
+  const upNext = entries.slice(index + 1, index + 1 + UP_NEXT_COUNT);
+
   if (queue.isLoading) return <SkeletonList label={tCommon('loading')} />;
   if (!current) {
     return (
@@ -165,6 +186,7 @@ function Review() {
     );
   }
 
+  const studentName = current.userName || submission.data?.userName || '';
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -203,60 +225,118 @@ function Review() {
           </Button>
         </div>
       </div>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[16rem_minmax(0,1fr)_22rem]">
+      <div className="grid grid-cols-1 items-start gap-gutter lg:grid-cols-[18rem_minmax(0,1fr)_22rem]">
         <nav
           aria-label={t('queue')}
-          className="hidden max-h-[calc(100dvh-12rem)] overflow-y-auto rounded-lg border border-border bg-surface p-2 lg:block"
+          className="hidden flex-col gap-3 rounded-md border border-card-border bg-surface p-3 shadow-sm lg:sticky lg:top-[calc(var(--size-header)+1rem)] lg:flex lg:max-h-[calc(100dvh-var(--size-header)-2rem)]"
         >
-          <ul className="flex flex-col gap-0.5">
-            {entries.map((entry) => (
+          <div className="relative">
+            <Search
+              className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-text-muted"
+              aria-hidden
+            />
+            <Input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder={t('searchStudent')}
+              aria-label={t('searchStudent')}
+              className="h-10 pl-10"
+            />
+          </div>
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label={t('filterType')}>
+            {(['all', ...QUEUE_KINDS] as const).map((kind) => (
+              <button
+                key={kind}
+                type="button"
+                aria-pressed={kindFilter === kind}
+                onClick={() => setKindFilter(kind)}
+                className={cn(
+                  'h-7 rounded-full px-3 text-label-md transition-colors duration-fast focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus-ring/20',
+                  kindFilter === kind
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-surface-muted text-text-muted hover:text-primary',
+                )}
+              >
+                {kind === 'all' ? t('allKinds', { count: entries.length }) : t(`kinds.${kind}`)}
+              </button>
+            ))}
+          </div>
+          <ul className="-mx-1 flex flex-col gap-2 overflow-y-auto px-1 pb-1">
+            {listed.map((entry) => (
               <li key={entry.id}>
-                <button
-                  type="button"
-                  onClick={() => setCurrentId(entry.id)}
-                  aria-current={entry.id === current.id ? 'true' : undefined}
-                  className={cn(
-                    'flex w-full flex-col rounded-md px-2 py-2 text-left text-sm hover:bg-surface-muted',
-                    entry.id === current.id && 'bg-primary-soft text-primary',
-                  )}
-                >
-                  <span className="truncate font-medium">
-                    {entry.userName || submission.data?.userName || '…'}
-                  </span>
-                  <span className="truncate text-xs text-text-muted">{entry.itemTitle}</span>
-                </button>
+                <QueueCard
+                  entry={{
+                    ...entry,
+                    userName: entry.userName || submission.data?.userName || '',
+                  }}
+                  active={entry.id === current.id}
+                  onSelect={() => setCurrentId(entry.id)}
+                />
               </li>
             ))}
           </ul>
         </nav>
-        <section
-          aria-label={t('work')}
-          className="min-w-0 rounded-lg border border-border bg-surface p-4"
-        >
-          <h1 className="mb-3 text-lg">
-            {current.userName || submission.data?.userName}{' '}
-            <span className="text-text-muted">· {current.itemTitle}</span>
-          </h1>
-          {current.kind === 'submission' ? (
-            <SubmissionPreview id={current.id} />
-          ) : (
-            <EssayPreview id={current.id} />
-          )}
-        </section>
-        <aside
-          aria-label={t('grade')}
-          className="rounded-lg border border-border bg-surface p-4 lg:sticky lg:top-[calc(var(--size-header)+1rem)] lg:self-start"
-        >
-          <GradePanel
-            key={current.id}
-            kind={current.kind}
-            maxScore={maxScore}
-            draft={draft}
-            onChange={setDraft}
-            saving={grade.isPending || essaySaving}
-            onSave={() => void saveAndNext().catch(() => undefined)}
-          />
-        </aside>
+        <div className="flex min-w-0 flex-col gap-4">
+          <section className="flex flex-wrap items-center gap-4 rounded-md border border-card-border bg-surface p-5 shadow-sm">
+            <Avatar name={studentName || '…'} size="lg" />
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              <h1 className="truncate text-xl">{studentName}</h1>
+              <p className="truncate text-sm text-text-muted">{current.itemTitle}</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {'submittedAt' in current && current.submittedAt ? (
+                <Badge tone="neutral">
+                  {t('submitted', { when: formatRelative(current.submittedAt, locale) })}
+                </Badge>
+              ) : null}
+              {'late' in current && current.late ? (
+                <Badge tone="danger" dot>
+                  {t('late')}
+                </Badge>
+              ) : null}
+              <DueLabel dueAt={'dueAt' in current ? (current.dueAt ?? null) : null} />
+            </div>
+          </section>
+          <section
+            aria-label={t('work')}
+            className="min-w-0 rounded-md border border-card-border bg-surface p-5 shadow-sm md:p-6"
+          >
+            {current.kind === 'submission' ? (
+              <SubmissionPreview id={current.id} />
+            ) : (
+              <EssayPreview id={current.id} />
+            )}
+          </section>
+        </div>
+        <div className="flex flex-col gap-4 lg:sticky lg:top-[calc(var(--size-header)+1rem)]">
+          <aside
+            aria-label={t('grade')}
+            className="rounded-md border border-card-border bg-surface p-5 shadow-sm"
+          >
+            <GradePanel
+              key={current.id}
+              kind={current.kind}
+              maxScore={maxScore}
+              draft={draft}
+              onChange={setDraft}
+              saving={grade.isPending || essaySaving}
+              onSave={() => void saveAndNext().catch(() => undefined)}
+            />
+          </aside>
+          {upNext.length > 0 ? (
+            <section aria-label={t('upNext')} className="flex flex-col gap-2 lg:hidden">
+              <h2 className="text-lg">{t('upNext')}</h2>
+              <ul className="flex flex-col gap-2">
+                {upNext.map((entry) => (
+                  <li key={entry.id}>
+                    <QueueCard entry={entry} onSelect={() => setCurrentId(entry.id)} chevron />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+        </div>
       </div>
       <ShortcutsHelp open={helpOpen} onOpenChange={setHelpOpen} />
     </div>

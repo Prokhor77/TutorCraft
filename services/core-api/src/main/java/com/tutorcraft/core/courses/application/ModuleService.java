@@ -11,7 +11,6 @@ import com.tutorcraft.core.courses.domain.Course;
 import com.tutorcraft.core.courses.domain.CourseItem;
 import com.tutorcraft.core.courses.domain.CourseModule;
 import com.tutorcraft.core.courses.domain.CourseTexts;
-import com.tutorcraft.core.courses.domain.ItemRules;
 import com.tutorcraft.core.courses.domain.ModuleHierarchy;
 import com.tutorcraft.core.courses.domain.TrashPolicy;
 import com.tutorcraft.core.shared.api.IfMatch;
@@ -47,12 +46,13 @@ public class ModuleService {
     private final CourseChangeEvents events;
     private final LearnerStateResolver structure;
     private final OutlineAssembler outlines;
+    private final ConditionRules conditionRules;
     private final TrashPolicy trash;
     private final Clock clock;
 
     public ModuleService(CourseRepository courses, ModuleRepository modules, ItemRepository items, AccessService access,
                          CurrentUserProvider currentUser, CourseChangeEvents events, LearnerStateResolver structure,
-                         OutlineAssembler outlines, AppProperties properties, Clock clock) {
+                         OutlineAssembler outlines, ConditionRules conditionRules, AppProperties properties, Clock clock) {
         this.courses = courses;
         this.modules = modules;
         this.items = items;
@@ -61,6 +61,7 @@ public class ModuleService {
         this.events = events;
         this.structure = structure;
         this.outlines = outlines;
+        this.conditionRules = conditionRules;
         this.trash = new TrashPolicy(properties.trash().retention());
         this.clock = clock;
     }
@@ -97,7 +98,7 @@ public class ModuleService {
         Instant publishAt = patch.publishAt().applyTo(current.publishAt());
         requireScheduleDate(visibility, publishAt);
         Map<String, Object> conditions = patch.conditions().isPresent()
-                ? ItemRules.conditions(patch.conditions().value(), "conditions") : current.conditions();
+                ? conditionRules.forModule(user.tenantId(), current.courseId(), patch.conditions().value()) : current.conditions();
         CourseModule updated = current.withContent(patch.title().applyTo(current.title()).trim(), visibility, publishAt, conditions);
         if (!modules.update(updated, expectedVersion)) {
             throw new ConflictException(IfMatch.VERSION_CONFLICT_CODE, "Module was modified by someone else");

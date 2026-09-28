@@ -7,7 +7,6 @@ import com.tutorcraft.core.access.domain.Permission;
 import com.tutorcraft.core.enrollment.domain.InviteLink;
 import com.tutorcraft.core.shared.config.AppProperties;
 import com.tutorcraft.core.shared.domain.Ids;
-import com.tutorcraft.core.shared.domain.NotFoundException;
 import com.tutorcraft.core.shared.security.CurrentUser;
 import com.tutorcraft.core.shared.security.CurrentUserProvider;
 import com.tutorcraft.core.shared.security.TokenHasher;
@@ -62,7 +61,7 @@ public class InviteLinkService {
         return new InviteLinkView.Created(link.id(), publicBaseUrl + JOIN_PATH + token);
     }
 
-    @Transactional(noRollbackFor = NotFoundException.class)
+    @Transactional(readOnly = true)
     public List<InviteLinkView> list(UUID courseId) {
         CurrentUser actor = currentUser.require();
         access.require(Permission.ENROLLMENT_MANAGE, AccessContext.course(courseId));

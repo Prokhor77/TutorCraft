@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { SkeletonList } from '@/components/ui/skeleton';
-import { Section } from '@/components/ui/page-header';
+import { PageHeader } from '@/components/ui/page-header';
 import { useCourseContext } from '@/features/courses/course-context';
 import { useOutlineMutations, useTrash } from '@/features/courses/use-outline';
 import { formatRelative } from '@/lib/utils/format';
@@ -21,8 +21,13 @@ export default function TrashPage() {
   const { restore } = useOutlineMutations(course.id);
 
   return (
-    <Section title={t('title')}>
-      <p className="text-sm text-text-muted">{t('retention')}</p>
+    <section className="flex flex-col gap-3">
+      <PageHeader
+        className="mb-2"
+        eyebrow={course.title}
+        title={t('title')}
+        description={t('retention')}
+      />
       {trash.isLoading ? <SkeletonList label={tCommon('loading')} /> : null}
       {trash.isError ? (
         <ErrorState
@@ -38,7 +43,7 @@ export default function TrashPage() {
         {trash.data?.map((entry) => (
           <li
             key={entry.id}
-            className="flex items-center gap-3 rounded-md border border-border bg-surface px-3 py-2.5"
+            className="flex items-center gap-3 rounded border border-card-border bg-surface px-3 py-2.5 shadow-sm"
           >
             {entry.itemType ? <ItemTypeIcon type={entry.itemType} /> : null}
             <span className="flex min-w-0 flex-1 flex-col">
@@ -59,6 +64,6 @@ export default function TrashPage() {
           </li>
         ))}
       </ul>
-    </Section>
+    </section>
   );
 }

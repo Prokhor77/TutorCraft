@@ -25,9 +25,9 @@ test.describe.configure({ mode: 'serial' });
 
 async function login(page: Page, email: string) {
   await page.goto('/login');
-  await page.getByLabel(t.auth.email).fill(email);
-  await page.getByLabel(t.auth.password).fill(PASSWORD);
-  await page.getByRole('button', { name: t.auth.login, exact: true }).click();
+  await page.getByLabel(t.auth.email, { exact: true }).fill(email);
+  await page.getByLabel(t.auth.password, { exact: true }).fill(PASSWORD);
+  await page.getByRole('button', { name: t.auth.loginCta }).click();
   await expect(page).toHaveURL(/\/(home|courses)/);
 }
 
@@ -42,8 +42,8 @@ test('teacher builds the course', async ({ page }) => {
     await page.goto('/register');
     await page.getByLabel(t.auth.firstName).fill('Анна');
     await page.getByLabel(t.auth.lastName).fill('Смирнова');
-    await page.getByLabel(t.auth.email).fill(teacherEmail);
-    await page.getByLabel(t.auth.password).fill(PASSWORD);
+    await page.getByLabel(t.auth.email, { exact: true }).fill(teacherEmail);
+    await page.getByLabel(t.auth.password, { exact: true }).fill(PASSWORD);
     await page.getByRole('button', { name: t.auth.register }).click();
     await expect(page).toHaveURL(/\/courses/);
   });
@@ -93,13 +93,13 @@ test('teacher builds the course', async ({ page }) => {
   });
 
   await test.step('question bank: 5 questions', async () => {
-    await page.getByRole('link', { name: t.course.tabQuestionBank }).click();
+    await page.getByRole('link', { name: t.shell.quizBuilder }).click();
     for (let index = 1; index <= QUESTION_COUNT; index += 1) {
       await page.getByRole('button', { name: t.qbank.newQuestion }).first().click();
       await page.getByLabel(t.qbank.title).fill(`Вопрос ${index}: 2 + ${index} = ?`);
       await page.getByLabel(t.qbank.optionText.replace('{index}', '1')).fill(String(2 + index));
       await page.getByLabel(t.qbank.optionText.replace('{index}', '2')).fill(String(3 + index));
-      await page.getByRole('button', { name: t.common.save }).click();
+      await page.getByRole('button', { name: t.qbank.createQuestion }).click();
       await expect(page.getByText(`Вопрос ${index}: 2 + ${index} = ?`)).toBeVisible();
     }
   });
@@ -117,7 +117,7 @@ test('teacher builds the course', async ({ page }) => {
         name: t.quizSlots.addSelected.replace('{count}', String(QUESTION_COUNT)),
       })
       .click();
-    await page.getByRole('button', { name: t.common.save }).click();
+    await page.getByRole('button', { name: t.common.save, exact: true }).click();
     await expect(page.getByText(t.quizSlots.saved)).toBeVisible();
   });
 
@@ -133,7 +133,7 @@ test('teacher builds the course', async ({ page }) => {
     await page.goto('/admin/users');
     await page.getByRole('button', { name: t.adminUsers.create }).first().click();
     const dialog = page.getByRole('dialog');
-    await dialog.getByLabel(t.auth.email).fill(studentEmail);
+    await dialog.getByLabel(t.auth.email, { exact: true }).fill(studentEmail);
     await dialog.getByLabel(t.auth.firstName).fill('Иван');
     await dialog.getByLabel(t.auth.lastName).fill('Петров');
     await dialog.getByRole('button', { name: t.common.create }).click();
@@ -155,7 +155,7 @@ test('student joins, submits the assignment and takes the quiz', async ({ browse
     await page.goto(acceptUrl);
     await page.getByLabel(t.auth.firstName).fill('Иван');
     await page.getByLabel(t.auth.lastName).fill('Петров');
-    await page.getByLabel(t.auth.password).fill(PASSWORD);
+    await page.getByLabel(t.auth.password, { exact: true }).fill(PASSWORD);
     await page.getByRole('button', { name: t.auth.acceptInvite }).click();
     await expect(page).toHaveURL(/\/home/);
   });

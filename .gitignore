@@ -13,3 +13,6 @@ dist/
 .vscode/
 coverage/
 /services/*/bin/
+
+# javac @argfiles from ad-hoc compile harnesses
+javac.*.args

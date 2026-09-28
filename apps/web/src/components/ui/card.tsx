@@ -1,9 +1,17 @@
 import { cn } from '@/lib/utils/cn';
 
-export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+type CardProps = React.HTMLAttributes<HTMLDivElement> & { interactive?: boolean };
+
+/** Stitch card: white, radius md, L1 shadow + faint violet hairline; `interactive` lifts to L2 on hover/focus. */
+export function Card({ className, interactive, ...props }: CardProps) {
   return (
     <div
-      className={cn('rounded-lg border border-border bg-surface shadow-sm', className)}
+      className={cn(
+        'rounded-md border border-card-border bg-surface shadow-sm',
+        interactive &&
+          'transition-[box-shadow,border-color] duration-fast focus-within:border-card-border-hover focus-within:shadow-md hover:border-card-border-hover hover:shadow-md',
+        className,
+      )}
       {...props}
     />
   );
@@ -11,7 +19,10 @@ export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElemen
 
 export function CardHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn('flex items-start justify-between gap-3 p-5 pb-3', className)} {...props} />
+    <div
+      className={cn('flex flex-wrap items-start justify-between gap-3 p-6 pb-3', className)}
+      {...props}
+    />
   );
 }
 
@@ -20,9 +31,9 @@ export function CardTitle({
   as: Tag = 'h2',
   ...props
 }: React.HTMLAttributes<HTMLHeadingElement> & { as?: 'h2' | 'h3' }) {
-  return <Tag className={cn('text-base font-semibold', className)} {...props} />;
+  return <Tag className={cn('text-lg', className)} {...props} />;
 }
 
 export function CardContent({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('p-5 pt-0', className)} {...props} />;
+  return <div className={cn('p-6 pt-0', className)} {...props} />;
 }

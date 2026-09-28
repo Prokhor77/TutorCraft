@@ -9,7 +9,7 @@ export const DialogTrigger = DialogPrimitive.Trigger;
 export const DialogClose = DialogPrimitive.Close;
 
 const overlayClass =
-  'fixed inset-0 z-50 bg-overlay/50 backdrop-blur-[2px] data-[state=open]:animate-fade-in';
+  'fixed inset-0 z-50 bg-overlay/40 backdrop-blur-sm data-[state=open]:animate-fade-in';
 
 type ContentProps = React.ComponentProps<typeof DialogPrimitive.Content> & {
   title: ReactNode;
@@ -32,7 +32,7 @@ export function DialogContent({
       <DialogPrimitive.Overlay className={overlayClass} />
       <DialogPrimitive.Content
         className={cn(
-          'fixed left-1/2 top-1/2 z-50 flex max-h-[90dvh] w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-y-auto rounded-lg border border-border bg-surface p-6 shadow-lg focus:outline-none data-[state=open]:animate-slide-up',
+          'fixed left-1/2 top-1/2 z-50 flex max-h-[90dvh] w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-y-auto rounded-lg border border-card-border bg-surface p-7 shadow-lg focus:outline-none data-[state=open]:animate-slide-up',
           className,
         )}
         {...props}
@@ -50,7 +50,7 @@ export function DialogContent({
         ) : null}
         {children}
         <DialogPrimitive.Close
-          className="absolute right-4 top-4 rounded-sm p-1 text-text-muted hover:bg-surface-muted hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+          className="absolute right-4 top-4 rounded-full p-1.5 text-text-muted hover:bg-accent/10 hover:text-primary focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus-ring/20"
           aria-label={closeLabel}
         >
           <X className="size-4" aria-hidden />
@@ -83,7 +83,7 @@ export function SheetContent({
       <DialogPrimitive.Overlay className={overlayClass} />
       <DialogPrimitive.Content
         className={cn(
-          'fixed inset-x-0 bottom-0 z-50 flex max-h-[92dvh] flex-col gap-4 overflow-y-auto rounded-t-xl border border-border bg-surface p-6 shadow-lg focus:outline-none data-[state=open]:animate-slide-up md:inset-y-0 md:left-auto md:right-0 md:max-h-none md:w-[32rem] md:rounded-none md:rounded-l-xl md:data-[state=open]:animate-slide-in-right',
+          'fixed inset-x-0 bottom-0 z-50 flex max-h-[92dvh] flex-col gap-4 overflow-y-auto rounded-t-lg border border-card-border bg-surface p-6 shadow-lg focus:outline-none data-[state=open]:animate-slide-up md:inset-y-0 md:left-auto md:right-0 md:max-h-none md:w-[32rem] md:rounded-none md:rounded-l-lg md:data-[state=open]:animate-slide-in-right',
           className,
         )}
         {...props}
@@ -98,7 +98,7 @@ export function SheetContent({
         </div>
         {children}
         <DialogPrimitive.Close
-          className="absolute right-4 top-4 rounded-sm p-1 text-text-muted hover:bg-surface-muted hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+          className="absolute right-4 top-4 rounded-full p-1.5 text-text-muted hover:bg-accent/10 hover:text-primary focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus-ring/20"
           aria-label={closeLabel}
         >
           <X className="size-4" aria-hidden />

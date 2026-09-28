@@ -8,9 +8,6 @@ import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -25,29 +22,18 @@ class DeadlineReminderScheduler {
     private static final Duration SCAN_WINDOW = Duration.ofMinutes(SCAN_INTERVAL_MINUTES);
     private static final Logger log = LoggerFactory.getLogger(DeadlineReminderScheduler.class);
 
-    private final ObjectProvider<DueItemsSource> sources;
+    private final DueItemsSource source;
     private final DeadlineReminderService reminders;
     private final Clock clock;
 
-    DeadlineReminderScheduler(ObjectProvider<DueItemsSource> sources, DeadlineReminderService reminders, Clock clock) {
-        this.sources = sources;
+    DeadlineReminderScheduler(DueItemsSource source, DeadlineReminderService reminders, Clock clock) {
+        this.source = source;
         this.reminders = reminders;
         this.clock = clock;
     }
 
-    @EventListener(ApplicationReadyEvent.class)
-    void warnIfSourceMissing() {
-        if (sources.getIfAvailable() == null) {
-            log.warn("No DueItemsSource bean: deadline reminders are disabled until CoursesApi.itemsDueBetween is wired");
-        }
-    }
-
     @Scheduled(fixedRate = SCAN_INTERVAL_MINUTES, timeUnit = TimeUnit.MINUTES)
     void scan() {
-        DueItemsSource source = sources.getIfAvailable();
-        if (source == null) {
-            return;
-        }
         Instant now = clock.instant();
         for (Reminder reminder : Reminder.values()) {
             Instant windowEnd = now.plus(reminder.offset());
