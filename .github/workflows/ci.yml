@@ -27,8 +27,9 @@ jobs:
         with: { distribution: temurin, java-version: '21', cache: maven }
       - name: Unit + architecture tests
         run: mvn -B verify -DskipITs
-      - name: Integration tests (Testcontainers)
-        run: mvn -B failsafe:integration-test failsafe:verify
+      # Интеграционные тесты (Testcontainers) перенесены в .github/workflows/integration.yml —
+      # по той же причине, что и e2e: они поднимают Postgres/Mongo/Redis/Kafka в контейнерах,
+      # зависят от версии докера на раннере и не должны блокировать выкладку проверенного кода.
       - name: Dependency vulnerability scan (NFR-SEC-10)
         # Теги этого action идут с префиксом v (v0.28.0, v0.33.1, …). Без него job падал
         # за 2 секунды на разрешении action, так и не дойдя до Maven.

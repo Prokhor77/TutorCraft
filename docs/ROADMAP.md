@@ -14,7 +14,15 @@
 такую версию JVM. Это среда, а не код — на JDK 21 (как в CI) всё зелёное; локально обходится флагом
 `-Dnet.bytebuddy.experimental=true`.
 
-**Осталось прогнать:** `mvn failsafe:integration-test` (нужен Docker) и `npm run test:e2e` (workflow `e2e`).
+**Обновления 2026-09-28** (все — закрытие HIGH/CRITICAL по trivy, NFR-SEC-10):
+Spring Boot 3.3.5 → 3.5.16 и springdoc 2.6.0 → 2.8.17 (CRITICAL `CVE-2026-22732`, обход политики
+безопасности в spring-security-web, плюс RCE в spring-kafka и spring-data-mongodb); переопределены
+netty 4.1.137, tomcat 10.1.60, postgresql 42.7.12, bouncycastle 1.85. Правок в коде не потребовалось,
+463 юнит-теста и ArchUnit зелёные. Testcontainers 1.20.3 → 1.21.4: старая версия не договаривается
+о версии API с Docker Engine 29.
+
+**Осталось прогнать:** `mvn failsafe:integration-test` (workflow `integration`, нужен Docker) и
+`npm run test:e2e` (workflow `e2e`). Оба вынесены из `ci`, чтобы не блокировать автодеплой.
 
 ## P0 (MVP) — ТЗ + гибрид
 | Область | Статус | Примечание |

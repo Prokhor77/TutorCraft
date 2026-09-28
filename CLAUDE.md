@@ -152,8 +152,18 @@ build 4 images to GHCR → scp compose files → `pull` + `up -d` → wait for h
 
 Server-side prod config lives in `application-prod.yml` (Swagger/OpenAPI/`/actuator` disabled, Tomcat timeouts,
 `X-Forwarded-*` trusted only from proxies) and `infra/deploy/nginx/tutorcraft-ip.conf` (rate limits, scanner
-blocking, separate `:9000` server for the S3 gateway). `e2e` is a standalone workflow, not part of `ci`, so a
-flaky browser test cannot block a deploy.
+blocking, separate `:9000` server for the S3 gateway).
+
+**What gates a deploy.** `ci` runs only fast, hermetic checks: gitleaks, `mvn verify -DskipITs` + trivy,
+`go vet`/`test -race`/govulncheck, and the web lint/type/format/i18n/contrast/test/build/audit chain. The two
+container-dependent suites are standalone workflows on a nightly schedule plus `workflow_dispatch`, so neither
+can block a deploy of already-verified code:
+
+- `.github/workflows/integration.yml` — core-api `*IT.java` on Testcontainers (03:45 UTC)
+- `.github/workflows/e2e.yml` — Playwright against the compose stack, plus the OpenAPI drift check (03:15 UTC)
+
+Run both before a release. Testcontainers must stay ≥ 1.21.x: 1.20.3 cannot negotiate an API version with
+Docker Engine 29 and dies with HTTP 400 on `/info` before any container starts.
 
 ## Known gaps in the repo (don't be surprised)
 
