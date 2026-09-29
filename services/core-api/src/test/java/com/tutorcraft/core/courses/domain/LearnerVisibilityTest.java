@@ -80,7 +80,7 @@ class LearnerVisibilityTest {
     @Test
     void deletedCourseIsNotVisible() {
         Course deleted = new Course(COURSE, TENANT, null, "C", null, "c", null, null, null, null, Visibility.PUBLISHED, null,
-                null, null, null, null, null, 0, NOW, NOW, NOW);
+                null, null, null, null, 0, NOW, NOW, NOW);
         assertThat(LearnerVisibility.courseVisible(deleted, NOW)).isFalse();
     }
 
