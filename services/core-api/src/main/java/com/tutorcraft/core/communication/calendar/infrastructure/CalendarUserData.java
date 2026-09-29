@@ -5,13 +5,14 @@ import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
-/** Удаление пользователя: личные события календаря и iCal-токен. */
+/** Удаление пользователя: личные события календаря, iCal-токен и участие в занятиях. */
 @Component
 class CalendarUserData implements UserDataEraser {
 
     private static final String[] STATEMENTS = {
         "DELETE FROM calendar_personal_events WHERE tenant_id = :tenantId AND user_id = :userId",
         "DELETE FROM ical_tokens WHERE tenant_id = :tenantId AND user_id = :userId",
+        "DELETE FROM calendar_lesson_attendees WHERE tenant_id = :tenantId AND user_id = :userId",
     };
 
     private final JdbcClient jdbc;

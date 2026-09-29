@@ -1,7 +1,8 @@
 package com.tutorcraft.core.communication.calendar.web;
 
 import com.tutorcraft.core.communication.calendar.application.CalendarService;
-import com.tutorcraft.core.communication.calendar.domain.CalendarEvent;
+import com.tutorcraft.core.communication.calendar.application.PersonalEventDraft;
+import com.tutorcraft.core.communication.calendar.domain.CalendarRules;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -29,7 +30,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1")
 class CalendarController {
 
-    private static final int MAX_TITLE = 200;
+    private static final int MAX_TITLE = CalendarRules.MAX_TITLE;
+    private static final int MAX_DESCRIPTION = CalendarRules.MAX_DESCRIPTION;
     private static final MediaType TEXT_CALENDAR = MediaType.parseMediaType("text/calendar; charset=UTF-8");
 
     private final CalendarService calendar;
@@ -46,13 +48,15 @@ class CalendarController {
     @PostMapping("/me/calendar/events")
     @ResponseStatus(HttpStatus.CREATED)
     EventView create(@Valid @RequestBody CreateEventRequest request) {
-        return EventView.of(calendar.createPersonal(request.title(), request.startsAt(), request.endsAt()));
+        return EventView.of(calendar.createPersonal(PersonalEventDraft.forCreate(request.title(), request.description(),
+                request.startsAt(), request.endsAt(), request.allDay())));
     }
 
     @PatchMapping("/me/calendar/events/{eventId}")
     EventView update(@PathVariable UUID eventId, @Valid @RequestBody UpdateEventRequest request) {
-        return EventView.of(calendar.updatePersonal(eventId, request.title(), request.startsAt(), request.endsAt(),
-                Boolean.TRUE.equals(request.clearEnd())));
+        return EventView.of(calendar.updatePersonal(eventId, new PersonalEventDraft(request.title(), request.description(),
+                request.startsAt(), request.endsAt(), request.allDay(), Boolean.TRUE.equals(request.clearEnd()),
+                Boolean.TRUE.equals(request.clearDescription()))));
     }
 
     @DeleteMapping("/me/calendar/events/{eventId}")
@@ -75,21 +79,17 @@ class CalendarController {
                 .body(calendar.ical(token));
     }
 
-    record CreateEventRequest(@NotBlank @Size(max = MAX_TITLE) String title, @NotNull Instant startsAt, Instant endsAt) {
+    record CreateEventRequest(@NotBlank @Size(max = MAX_TITLE) String title,
+                              @Size(max = MAX_DESCRIPTION) String description, @NotNull Instant startsAt, Instant endsAt,
+                              Boolean allDay) {
     }
 
-    record UpdateEventRequest(@Size(max = MAX_TITLE) String title, Instant startsAt, Instant endsAt, Boolean clearEnd) {
+    record UpdateEventRequest(@Size(max = MAX_TITLE) String title, @Size(max = MAX_DESCRIPTION) String description,
+                              Instant startsAt, Instant endsAt, Boolean allDay, Boolean clearEnd,
+                              Boolean clearDescription) {
     }
 
     record IcalLink(String url) {
     }
 
-    /** Контракт CalendarEvent. */
-    record EventView(UUID id, String title, Instant startsAt, Instant endsAt, UUID courseId, UUID itemId, String kind) {
-
-        static EventView of(CalendarEvent event) {
-            return new EventView(event.id(), event.title(), event.startsAt(), event.endsAt(), event.courseId(), event.itemId(),
-                    event.kind().key());
-        }
-    }
 }

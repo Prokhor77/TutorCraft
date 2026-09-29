@@ -14,7 +14,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 class JdbcCalendarRepository implements CalendarRepository {
 
-    private static final String FIELDS = "id, tenant_id, user_id, title, starts_at, ends_at, created_at, updated_at";
+    private static final String FIELDS =
+            "id, tenant_id, user_id, title, description, all_day, starts_at, ends_at, created_at, updated_at";
 
     private final JdbcClient jdbc;
 
@@ -25,11 +26,13 @@ class JdbcCalendarRepository implements CalendarRepository {
     @Override
     public void insertEvent(PersonalEvent event) {
         jdbc.sql("""
-                INSERT INTO calendar_personal_events (id, tenant_id, user_id, title, starts_at, ends_at, created_at, updated_at)
-                VALUES (:id, :tenantId, :userId, :title, :startsAt, :endsAt, :createdAt, :updatedAt)
+                INSERT INTO calendar_personal_events (id, tenant_id, user_id, title, description, all_day, starts_at, ends_at,
+                    created_at, updated_at)
+                VALUES (:id, :tenantId, :userId, :title, :description, :allDay, :startsAt, :endsAt, :createdAt, :updatedAt)
                 """)
             .param("id", event.id()).param("tenantId", event.tenantId()).param("userId", event.userId())
-            .param("title", event.title()).param("startsAt", Timestamps.of(event.startsAt()))
+            .param("title", event.title()).param("description", event.description()).param("allDay", event.allDay())
+            .param("startsAt", Timestamps.of(event.startsAt()))
             .param("endsAt", Timestamps.of(event.endsAt())).param("createdAt", Timestamps.of(event.createdAt()))
             .param("updatedAt", Timestamps.of(event.updatedAt()))
             .update();
@@ -47,10 +50,12 @@ class JdbcCalendarRepository implements CalendarRepository {
     @Override
     public void updateEvent(PersonalEvent event) {
         jdbc.sql("""
-                UPDATE calendar_personal_events SET title = :title, starts_at = :startsAt, ends_at = :endsAt, updated_at = :updatedAt
+                UPDATE calendar_personal_events SET title = :title, description = :description, all_day = :allDay,
+                    starts_at = :startsAt, ends_at = :endsAt, updated_at = :updatedAt
                 WHERE tenant_id = :tenantId AND user_id = :userId AND id = :id
                 """)
-            .param("title", event.title()).param("startsAt", Timestamps.of(event.startsAt()))
+            .param("title", event.title()).param("description", event.description()).param("allDay", event.allDay())
+            .param("startsAt", Timestamps.of(event.startsAt()))
             .param("endsAt", Timestamps.of(event.endsAt())).param("updatedAt", Timestamps.of(event.updatedAt()))
             .param("tenantId", event.tenantId()).param("userId", event.userId()).param("id", event.id())
             .update();
@@ -95,7 +100,8 @@ class JdbcCalendarRepository implements CalendarRepository {
 
     private static PersonalEvent toEvent(ResultSet rs) throws SQLException {
         return new PersonalEvent(rs.getObject("id", UUID.class), rs.getObject("tenant_id", UUID.class),
-                rs.getObject("user_id", UUID.class), rs.getString("title"), Timestamps.read(rs, "starts_at"),
+                rs.getObject("user_id", UUID.class), rs.getString("title"), rs.getString("description"),
+                rs.getBoolean("all_day"), Timestamps.read(rs, "starts_at"),
                 Timestamps.read(rs, "ends_at"), Timestamps.read(rs, "created_at"), Timestamps.read(rs, "updated_at"));
     }
 }

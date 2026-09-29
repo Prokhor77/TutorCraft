@@ -56,9 +56,9 @@ com.tutorcraft.core.<module>/
 | V14 | communication.forum | forum_discussions, forum_posts, forum_subscriptions, forum_reads |
 | V15 | integrations | api_tokens, webhooks, webhook_deliveries |
 | V16 | activity | activity_log |
-| V16 | activity | activity_log |
 | V17 | billing | tenant_subscriptions, subscription_payments |
 | V18 | identity | users: created_by, created_via, platform_blocked_at, platform_block_reason |
+| V19 | communication.calendar | calendar_lessons, calendar_lesson_attendees; calendar_personal_events: description, all_day |
 
 ## MongoDB
 - `MongoTemplate`, коллекции: `modules`, `items` (courses); `question_categories`, `questions`, `question_versions`, `quiz_layouts` (assessment.quiz).
@@ -99,6 +99,6 @@ return idempotency.execute(new IdempotencyScope(tenantId, userId, "submission.su
 | `ActivityType(assignment)`, `ItemStatusProvider(assignment)`, `GradingQueueSource(submission)`, `FileOwnerAccess('submission','feedback')` | assessment.assignment |
 | `ActivityType(quiz)`, `ItemStatusProvider(quiz)`, `GradingQueueSource(essay)`, `FileOwnerAccess('attempt','question')` | assessment.quiz |
 | `NotificationsApi` (в т.ч. `pushCounter` — счётчики WebSocket), порт `DueItemsSource` → `CoursesApi.itemsDueBetween` | communication.notifications |
-| `courses.spi.CourseDataOwner` (удержание курса при очистке корзины, ADR-010) | enrollment, assessment.assignment, assessment.quiz, gradebook, billing, progress |
+| `courses.spi.CourseDataOwner` (удержание курса при очистке корзины, ADR-010) | enrollment, assessment.assignment, assessment.quiz, gradebook, billing, progress, communication.calendar (только очистка) |
 | `ActivityType(forum)`, `FileOwnerAccess('post')`, `dashboard.spi.RecentPostsSource` | communication.forum |
 | `LearnerStateProvider`, `ProgressApi`, `LearnerAccess`, `ConditionSchema` (статическая валидация условий) | progress |

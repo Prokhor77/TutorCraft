@@ -10,7 +10,10 @@ export const queryKeys = {
   notifications: ['notifications'] as const,
   notificationPreferences: ['me', 'notification-preferences'] as const,
   telegramLinkStatus: ['me', 'telegram-link-status'] as const,
+  calendarRoot: ['me', 'calendar'] as const,
   calendar: (from: string, to: string) => ['me', 'calendar', from, to] as const,
+  lessonCourses: ['me', 'lesson-courses'] as const,
+  lessonStudents: (courseId: string) => ['courses', courseId, 'calendar-students'] as const,
   completion: (courseId: string) => ['courses', courseId, 'completion'] as const,
 
   courses: ['courses'] as const,

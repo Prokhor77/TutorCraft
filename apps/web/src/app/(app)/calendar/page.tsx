@@ -1,23 +1,26 @@
 'use client';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { CalendarDays, ChevronLeft, ChevronRight, Copy, Rss } from 'lucide-react';
-import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
+import { CalendarDays, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
-import { Badge, type BadgeTone } from '@/components/ui/badge';
+import { EventChip } from '@/components/calendar/event-chip';
+import { EventDetailsDialog } from '@/components/calendar/event-details-dialog';
+import { EventFormDialog, type EventDraftTarget } from '@/components/calendar/event-form-dialog';
+import { EventList } from '@/components/calendar/event-list';
+import { KIND_DOT } from '@/components/calendar/event-style';
+import { IcalDialog } from '@/components/calendar/ical-dialog';
+import { KindLegend } from '@/components/calendar/kind-legend';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
-import { Input } from '@/components/ui/input';
 import { PageHeader, Panel } from '@/components/ui/page-header';
 import { Segmented } from '@/components/ui/segmented';
 import { SkeletonList } from '@/components/ui/skeleton';
-import { toast } from '@/components/ui/toast';
-import { ROUTES } from '@/features/auth/routes';
+import { useLessonCourses } from '@/features/calendar/use-calendar';
 import { queryKeys } from '@/features/query-keys';
 import { meApi } from '@/lib/api/endpoints/me';
-import { CALENDAR_EVENT_KINDS, type CalendarEvent } from '@/lib/api/schemas/me';
+import type { CalendarEvent } from '@/lib/api/schemas/me';
 import {
   dayKey,
   monthGrid,
@@ -28,167 +31,62 @@ import {
   type CalendarView,
 } from '@/lib/utils/calendar';
 import { cn } from '@/lib/utils/cn';
-import { copyToClipboard } from '@/lib/utils/clipboard';
-import { formatDate, formatTime } from '@/lib/utils/format';
+import { formatDate } from '@/lib/utils/format';
 
-const KIND_TONE: Record<CalendarEvent['kind'], BadgeTone> = {
-  due: 'danger',
-  open: 'success',
-  close: 'warning',
-  personal: 'info',
-};
-const KIND_DOT: Record<CalendarEvent['kind'], string> = {
-  due: 'bg-danger',
-  open: 'bg-success',
-  close: 'bg-warning',
-  personal: 'bg-info',
-};
 const MAX_EVENTS_IN_CELL = 3;
 const MAX_DOTS_IN_CELL = 4;
 
-function EventChip({ event, pill }: { event: CalendarEvent; pill?: boolean }) {
-  const locale = useLocale();
-  const content = (
-    <span className="flex min-w-0 items-center gap-1.5 text-xs">
-      <span className={cn('size-1.5 shrink-0 rounded-full', KIND_DOT[event.kind])} aria-hidden />
-      <span className="shrink-0 font-medium text-text-muted">
-        {formatTime(event.startsAt, locale)}
-      </span>
-      <span className="truncate">{event.title}</span>
-    </span>
-  );
-  const shape = pill
-    ? 'block rounded-full bg-surface px-2 py-0.5 shadow-sm'
-    : 'block rounded-full px-1.5 py-0.5';
-  if (event.courseId && event.itemId) {
-    return (
-      <Link
-        href={ROUTES.item(event.courseId, event.itemId)}
-        className={cn(
-          shape,
-          'transition-colors duration-fast hover:bg-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
-        )}
-      >
-        {content}
-      </Link>
-    );
-  }
-  return <span className={shape}>{content}</span>;
-}
-
-function KindLegend() {
-  const t = useTranslations('calendar');
-  return (
-    <ul className="flex flex-wrap items-center gap-x-4 gap-y-1.5" aria-label={t('legend')}>
-      {CALENDAR_EVENT_KINDS.map((kind) => (
-        <li key={kind} className="flex items-center gap-1.5 text-label-md text-text-muted">
-          <span className={cn('size-2 rounded-full', KIND_DOT[kind])} aria-hidden />
-          {t(`kinds.${kind}`)}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-/** Stitch list rows: date block, event chip, kind chip. */
-function EventList({ events }: { events: CalendarEvent[] }) {
+/** Day number that opens «new event» for that day. */
+function DayButton({
+  day,
+  isToday,
+  onAdd,
+  className,
+}: {
+  day: Date;
+  isToday: boolean;
+  onAdd: (day: Date) => void;
+  className?: string;
+}) {
   const t = useTranslations('calendar');
   const locale = useLocale();
   return (
-    <ul className="flex flex-col gap-2">
-      {[...events]
-        .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
-        .map((event) => {
-          const date = new Date(event.startsAt);
-          return (
-            <li
-              key={event.id}
-              className="flex items-center gap-3 rounded-md bg-surface-muted/50 p-2 pr-3 sm:pr-4"
-            >
-              <time
-                dateTime={event.startsAt}
-                title={formatDate(event.startsAt, locale)}
-                className="flex w-14 shrink-0 flex-col items-center rounded bg-surface py-1.5 shadow-sm"
-              >
-                <span className="font-heading text-lg font-semibold leading-none">
-                  {date.getDate()}
-                </span>
-                <span className="text-label-sm uppercase text-text-muted">
-                  {new Intl.DateTimeFormat(locale, { month: 'short' }).format(date)}
-                </span>
-              </time>
-              <span className="min-w-0 flex-1">
-                <EventChip event={event} />
-              </span>
-              <Badge tone={KIND_TONE[event.kind]} className="hidden sm:inline-flex">
-                {t(`kinds.${event.kind}`)}
-              </Badge>
-            </li>
-          );
-        })}
-    </ul>
+    <button
+      type="button"
+      onClick={() => onAdd(day)}
+      aria-label={t('addOnDay', { date: formatDate(day.toISOString(), locale) })}
+      className={cn(
+        'flex items-center justify-center rounded-full font-semibold transition-colors duration-fast hover:bg-primary-soft hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
+        isToday &&
+          'bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 hover:text-primary-foreground',
+        className,
+      )}
+    >
+      {day.getDate()}
+    </button>
   );
 }
 
-function IcalDialog() {
-  const t = useTranslations('calendar');
-  const tCommon = useTranslations('common');
-  const issue = useMutation({ mutationFn: meApi.icalToken });
-  return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button variant="secondary" size="sm">
-          <Rss aria-hidden /> {t('subscribe')}
-        </Button>
-      </DialogTrigger>
-      <DialogContent
-        title={t('icalTitle')}
-        description={t('icalHint')}
-        closeLabel={tCommon('close')}
-      >
-        {issue.data ? (
-          <div className="flex gap-2">
-            <Input
-              readOnly
-              value={issue.data.url}
-              aria-label={t('icalUrl')}
-              onFocus={(event) => event.target.select()}
-            />
-            <Button
-              onClick={() =>
-                issue.data &&
-                void copyToClipboard(issue.data.url).then((ok) =>
-                  toast({
-                    tone: ok ? 'success' : 'error',
-                    title: ok ? t('copied') : t('copyFailed'),
-                  }),
-                )
-              }
-            >
-              <Copy aria-hidden /> {t('copy')}
-            </Button>
-          </div>
-        ) : null}
-        <Button
-          variant={issue.data ? 'ghost' : 'primary'}
-          loading={issue.isPending}
-          onClick={() => issue.mutate()}
-        >
-          {issue.data ? t('reissue') : t('getLink')}
-        </Button>
-        {issue.data ? <p className="text-xs text-text-muted">{t('reissueHint')}</p> : null}
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-/** FR-DASH-03: month / week / list, iCal subscription by secret link. */
+/**
+ * FR-DASH-03: month / week / list, iCal subscription by secret link. Anyone can add personal notes; tutors schedule
+ * lessons for the whole course or chosen students, and students see lessons addressed to them.
+ */
 export default function CalendarPage() {
   const t = useTranslations('calendar');
   const tCommon = useTranslations('common');
   const locale = useLocale();
   const [view, setView] = useState<CalendarView>('month');
   const [anchor, setAnchor] = useState(() => new Date());
+  const [draft, setDraft] = useState<EventDraftTarget | null>(null);
+  const [selected, setSelected] = useState<CalendarEvent | null>(null);
+  const lessonCourses = useLessonCourses();
+  const courses = lessonCourses.data ?? [];
+  const onlyCourseId = courses.length === 1 ? courses[0]?.id : undefined;
+  const addOn = (date: Date) => setDraft({ date, courseId: onlyCourseId });
+  const editEvent = (event: CalendarEvent) => {
+    setSelected(null);
+    setDraft({ event });
+  };
   const { from, to } = rangeFor(view, anchor);
   const events = useQuery({
     queryKey: queryKeys.calendar(from.toISOString(), to.toISOString()),
@@ -229,7 +127,14 @@ export default function CalendarPage() {
             </Badge>
           ) : null
         }
-        actions={<IcalDialog />}
+        actions={
+          <>
+            <IcalDialog />
+            <Button size="sm" onClick={() => addOn(new Date())}>
+              <Plus aria-hidden /> {t('add')}
+            </Button>
+          </>
+        }
       >
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <Button
@@ -310,14 +215,12 @@ export default function CalendarPage() {
                           isToday && 'bg-primary-soft/70 ring-2 ring-primary/30',
                         )}
                       >
-                        <span
-                          className={cn(
-                            'flex size-6 items-center justify-center self-center rounded-full text-xs font-semibold sm:size-7 sm:self-start',
-                            isToday && 'bg-primary text-primary-foreground shadow-sm',
-                          )}
-                        >
-                          {day.getDate()}
-                        </span>
+                        <DayButton
+                          day={day}
+                          isToday={isToday}
+                          onAdd={addOn}
+                          className="size-6 self-center text-xs sm:size-7 sm:self-start"
+                        />
                         {dayEvents.length > 0 ? (
                           <span
                             className="flex flex-wrap justify-center gap-0.5 sm:hidden"
@@ -333,7 +236,7 @@ export default function CalendarPage() {
                         ) : null}
                         <div className="hidden min-w-0 flex-col gap-1 sm:flex">
                           {dayEvents.slice(0, MAX_EVENTS_IN_CELL).map((event) => (
-                            <EventChip key={event.id} event={event} pill />
+                            <EventChip key={event.id} event={event} pill onSelect={setSelected} />
                           ))}
                           {dayEvents.length > MAX_EVENTS_IN_CELL ? (
                             <span className="px-2 text-label-sm text-text-muted">
@@ -354,7 +257,7 @@ export default function CalendarPage() {
                 {t('monthEmpty')}
               </p>
             ) : (
-              <EventList events={monthEvents} />
+              <EventList events={monthEvents} onSelect={setSelected} />
             )}
           </Panel>
         </div>
@@ -377,17 +280,15 @@ export default function CalendarPage() {
                     <span className="text-label-md uppercase text-text-muted">
                       {new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(day)}
                     </span>
-                    <span
-                      className={cn(
-                        'flex size-8 items-center justify-center rounded-full font-heading text-lg font-semibold',
-                        isToday && 'bg-primary text-primary-foreground shadow-sm',
-                      )}
-                    >
-                      {day.getDate()}
-                    </span>
+                    <DayButton
+                      day={day}
+                      isToday={isToday}
+                      onAdd={addOn}
+                      className="size-8 font-heading text-lg"
+                    />
                   </span>
                   {dayEvents.map((event) => (
-                    <EventChip key={event.id} event={event} pill />
+                    <EventChip key={event.id} event={event} pill onSelect={setSelected} />
                   ))}
                 </li>
               );
@@ -400,10 +301,12 @@ export default function CalendarPage() {
           <EmptyState icon={CalendarDays} title={t('emptyTitle')} description={t('emptyText')} />
         ) : (
           <Panel actions={<KindLegend />}>
-            <EventList events={events.data} />
+            <EventList events={events.data} onSelect={setSelected} />
           </Panel>
         )
       ) : null}
+      <EventFormDialog target={draft} courses={courses} onClose={() => setDraft(null)} />
+      <EventDetailsDialog event={selected} onClose={() => setSelected(null)} onEdit={editEvent} />
     </>
   );
 }

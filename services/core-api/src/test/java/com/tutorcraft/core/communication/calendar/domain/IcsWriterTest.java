@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.tutorcraft.core.communication.calendar.domain.CalendarEvent.Kind;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -69,5 +70,29 @@ class IcsWriterTest {
         assertThat(events).extracting(CalendarEvent::kind).containsExactly(Kind.DUE);
         assertThat(events.get(0).id()).isEqualTo(CourseCalendar.eventId(itemId, Kind.DUE));
         assertThat(CourseCalendar.eventId(itemId, Kind.DUE)).isNotEqualTo(CourseCalendar.eventId(itemId, Kind.CLOSE));
+    }
+
+    @Test
+    void allDayNotesBecomeDatesInOwnerTimezone() {
+        CalendarEvent note = new CalendarEvent(UUID.randomUUID(), "Контрольная", Instant.parse("2026-10-04T21:00:00Z"), null,
+                null, null, Kind.PERSONAL, null, CalendarEvent.Details.personal("Взять калькулятор", true));
+
+        String ics = IcsWriter.write("TutorCraft", List.of(note), STAMP, CalendarEvent::title, ZoneId.of("Europe/Minsk"));
+
+        assertThat(ics).contains("DTSTART;VALUE=DATE:20261005\r\n", "DTEND;VALUE=DATE:20261006\r\n",
+                "DESCRIPTION:Взять калькулятор\r\n");
+        assertThat(ics).doesNotContain("DTSTART:");
+    }
+
+    @Test
+    void lessonDescriptionListsCourseModuleItemAndText() {
+        CalendarEvent.Details details = new CalendarEvent.Details("Повторить тему", false, UUID.randomUUID(), "Модуль 2",
+                "Дроби", LessonAudience.COURSE, List.of(), false, 0L);
+        CalendarEvent lesson = new CalendarEvent(UUID.randomUUID(), "Урок", Instant.parse("2026-10-05T15:00:00Z"), null,
+                UUID.randomUUID(), null, Kind.LESSON, "Математика", details);
+
+        String ics = IcsWriter.write("TutorCraft", List.of(lesson), STAMP, CalendarEvent::title);
+
+        assertThat(ics.replace("\r\n ", "")).contains("DESCRIPTION:Математика\\nМодуль 2\\nДроби\\nПовторить тему\r\n");
     }
 }

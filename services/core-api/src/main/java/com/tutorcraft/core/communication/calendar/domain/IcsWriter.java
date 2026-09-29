@@ -2,9 +2,14 @@ package com.tutorcraft.core.communication.calendar.domain;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.function.Function;
 
 /**
@@ -19,6 +24,8 @@ public final class IcsWriter {
     private static final String PRODID = "-//TutorCraft//Calendar//RU";
     private static final String UID_DOMAIN = "@tutorcraft";
     private static final DateTimeFormatter UTC = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'").withZone(ZoneOffset.UTC);
+    private static final DateTimeFormatter DATE = DateTimeFormatter.BASIC_ISO_DATE;
+    private static final String DESCRIPTION_SEPARATOR = "\n";
 
     private IcsWriter() {
     }
@@ -26,6 +33,12 @@ public final class IcsWriter {
     /** @param summaryOf заголовок события (например, «Срок: Эссе») — локализует вызывающий код */
     public static String write(String calendarName, List<CalendarEvent> events, Instant stamp,
                                Function<CalendarEvent, String> summaryOf) {
+        return write(calendarName, events, stamp, summaryOf, ZoneOffset.UTC);
+    }
+
+    /** @param zone часовой пояс владельца: по нему события «весь день» превращаются в даты (VALUE=DATE) */
+    public static String write(String calendarName, List<CalendarEvent> events, Instant stamp,
+                               Function<CalendarEvent, String> summaryOf, ZoneId zone) {
         StringBuilder out = new StringBuilder();
         line(out, "BEGIN:VCALENDAR");
         line(out, "VERSION:2.0");
@@ -33,24 +46,50 @@ public final class IcsWriter {
         line(out, "CALSCALE:GREGORIAN");
         line(out, "METHOD:PUBLISH");
         line(out, "X-WR-CALNAME:" + escape(calendarName));
-        events.forEach(event -> event(out, event, stamp, summaryOf.apply(event)));
+        events.forEach(event -> event(out, event, stamp, summaryOf.apply(event), zone));
         line(out, "END:VCALENDAR");
         return out.toString();
     }
 
-    private static void event(StringBuilder out, CalendarEvent event, Instant stamp, String summary) {
+    private static void event(StringBuilder out, CalendarEvent event, Instant stamp, String summary, ZoneId zone) {
         line(out, "BEGIN:VEVENT");
         line(out, "UID:" + event.id() + UID_DOMAIN);
         line(out, "DTSTAMP:" + UTC.format(stamp));
+        if (event.details().allDay()) {
+            allDay(out, event, zone);
+        } else {
+            timed(out, event);
+        }
+        line(out, "SUMMARY:" + escape(summary));
+        String description = description(event);
+        if (!description.isEmpty()) {
+            line(out, "DESCRIPTION:" + escape(description));
+        }
+        line(out, "END:VEVENT");
+    }
+
+    private static void timed(StringBuilder out, CalendarEvent event) {
         line(out, "DTSTART:" + UTC.format(event.startsAt()));
         if (event.endsAt() != null) {
             line(out, "DTEND:" + UTC.format(event.endsAt()));
         }
-        line(out, "SUMMARY:" + escape(summary));
-        if (event.courseTitle() != null && !event.courseTitle().isBlank()) {
-            line(out, "DESCRIPTION:" + escape(event.courseTitle()));
-        }
-        line(out, "END:VEVENT");
+    }
+
+    /** RFC 5545 §3.6.1: DTEND у события-даты не включается, поэтому это следующий день после последнего. */
+    private static void allDay(StringBuilder out, CalendarEvent event, ZoneId zone) {
+        LocalDate first = LocalDate.ofInstant(event.startsAt(), zone);
+        LocalDate last = event.endsAt() == null ? first : LocalDate.ofInstant(event.endsAt(), zone);
+        line(out, "DTSTART;VALUE=DATE:" + DATE.format(first));
+        line(out, "DTEND;VALUE=DATE:" + DATE.format(last.plusDays(1)));
+    }
+
+    /** Курс, модуль, элемент и текст события — через перевод строки. */
+    private static String description(CalendarEvent event) {
+        CalendarEvent.Details details = event.details();
+        return Stream.of(event.courseTitle(), details.moduleTitle(), details.itemTitle(), details.description())
+                .filter(Objects::nonNull)
+                .filter(part -> !part.isBlank())
+                .collect(Collectors.joining(DESCRIPTION_SEPARATOR));
     }
 
     /** Экранирование значения типа TEXT (RFC 5545 §3.3.11). */

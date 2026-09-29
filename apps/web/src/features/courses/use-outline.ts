@@ -15,6 +15,7 @@ export function useOutline(courseId: string) {
   return useQuery({
     queryKey: queryKeys.outline(courseId),
     queryFn: () => coursesApi.outline(courseId),
+    enabled: !!courseId,
   });
 }
 

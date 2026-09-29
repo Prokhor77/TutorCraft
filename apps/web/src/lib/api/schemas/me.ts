@@ -95,7 +95,9 @@ export type NotificationPreferences = {
   matrix: Record<NotificationCategory, Record<NotificationChannel, boolean>>;
 };
 
-export const CALENDAR_EVENT_KINDS = ['due', 'open', 'close', 'personal'] as const;
+export const CALENDAR_EVENT_KINDS = ['due', 'open', 'close', 'lesson', 'personal'] as const;
+export const LESSON_AUDIENCES = ['course', 'students'] as const;
+/** Detail fields are optional on the wire: older core-api builds return only the base contract. */
 export const calendarEventSchema = z.object({
   id: idSchema,
   title: z.string(),
@@ -104,5 +106,27 @@ export const calendarEventSchema = z.object({
   courseId: idSchema.nullable(),
   itemId: idSchema.nullable(),
   kind: z.enum(CALENDAR_EVENT_KINDS),
+  description: z.string().nullish(),
+  allDay: z.boolean().optional().default(false),
+  courseTitle: z.string().nullish(),
+  moduleId: idSchema.nullish(),
+  moduleTitle: z.string().nullish(),
+  itemTitle: z.string().nullish(),
+  audience: z.enum(LESSON_AUDIENCES).nullish(),
+  attendeeIds: z.array(idSchema).optional().default([]),
+  canEdit: z.boolean().optional().default(false),
+  version: z.number().nullish(),
 });
 export type CalendarEvent = z.infer<typeof calendarEventSchema>;
+export type LessonAudience = (typeof LESSON_AUDIENCES)[number];
+
+export const lessonCourseSchema = z.object({ id: idSchema, title: z.string() });
+export type LessonCourse = z.infer<typeof lessonCourseSchema>;
+
+export const lessonStudentSchema = z.object({
+  id: idSchema,
+  firstName: z.string(),
+  lastName: z.string(),
+  email: z.string(),
+});
+export type LessonStudent = z.infer<typeof lessonStudentSchema>;

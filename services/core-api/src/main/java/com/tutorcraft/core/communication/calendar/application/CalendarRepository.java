@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-/** Личные события и iCal-токены пользователей. */
+/** Личные события (заметки) и iCal-токены пользователей. */
 public interface CalendarRepository {
 
     void insertEvent(PersonalEvent event);
@@ -24,8 +24,8 @@ public interface CalendarRepository {
 
     Optional<IcalOwner> findIcalOwner(String tokenHash);
 
-    record PersonalEvent(UUID id, UUID tenantId, UUID userId, String title, Instant startsAt, Instant endsAt,
-                         Instant createdAt, Instant updatedAt) {
+    record PersonalEvent(UUID id, UUID tenantId, UUID userId, String title, String description, boolean allDay,
+                         Instant startsAt, Instant endsAt, Instant createdAt, Instant updatedAt) {
     }
 
     record IcalOwner(UUID tenantId, UUID userId) {

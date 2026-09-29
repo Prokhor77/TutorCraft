@@ -107,11 +107,16 @@ type Branding = { logoUrl: string | null; primaryColor: string | null }
 | POST | `/me/notifications/read` | `{ ids?: Id[]; all?: boolean }` → 204 |
 | GET/PUT | `/me/notification-preferences` | `NotificationPreferences` |
 | GET | `/me/calendar?from&to` | → `CalendarEvent[]` |
-| POST | `/me/calendar/events` | `{ title, startsAt, endsAt? }` → 201 `CalendarEvent` (`kind: 'personal'`) |
-| PATCH | `/me/calendar/events/{id}` | `{ title?, startsAt?, endsAt?, clearEnd?: boolean }` → `CalendarEvent` |
+| POST | `/me/calendar/events` | `{ title, description?, startsAt, endsAt?, allDay?: boolean }` → 201 `CalendarEvent` (`kind: 'personal'` — заметка) |
+| PATCH | `/me/calendar/events/{id}` | `{ title?, description?, startsAt?, endsAt?, allDay?, clearEnd?: boolean, clearDescription?: boolean }` → `CalendarEvent` |
 | DELETE | `/me/calendar/events/{id}` | 204 |
 | POST | `/me/calendar/ical-token` | → `{ url }` (перевыпуск, старый отзывается) |
 | GET | `/calendar/ical/{token}.ics` | публичный iCal |
+| GET | `/me/calendar/lesson-courses` | → `{ id, title }[]` — курсы, где пользователь может назначать занятия (`course.edit`) |
+| GET | `/courses/{courseId}/calendar/students` | → `{ id, firstName, lastName, email }[]` — активные ученики курса (`course.edit`) |
+| POST | `/courses/{courseId}/calendar/lessons` | `LessonInput` → 201 `CalendarEvent` (`kind: 'lesson'`) |
+| PUT | `/courses/{courseId}/calendar/lessons/{lessonId}` | `LessonInput & { version }` + `If-Match` → `CalendarEvent` (412/409 `conflict.version`) |
+| DELETE | `/courses/{courseId}/calendar/lessons/{lessonId}` | 204 |
 
 ```ts
 type TaskEntry = { itemId: Id; courseId: Id; courseTitle: string; itemTitle: string;
@@ -128,7 +133,12 @@ type Notification = { id: Id; type: string; title: string; body: string; link: s
 type NotificationCategory = 'new_item' | 'deadline' | 'grade_published' | 'forum_reply' | 'announcement' | 'submission_received' | 'video_ready'
 type NotificationChannel = 'web' | 'email' | 'telegram'
 type NotificationPreferences = { matrix: Record<NotificationCategory, Record<NotificationChannel, boolean>> }
-type CalendarEvent = { id: Id; title: string; startsAt: Instant; endsAt: Instant | null; courseId: Id | null; itemId: Id | null; kind: 'due' | 'open' | 'close' | 'personal' }
+type CalendarEvent = { id: Id; title: string; startsAt: Instant; endsAt: Instant | null; courseId: Id | null; itemId: Id | null;
+  kind: 'due' | 'open' | 'close' | 'lesson' | 'personal';
+  description: string | null; allDay: boolean; courseTitle: string | null; moduleId: Id | null; moduleTitle: string | null;
+  itemTitle: string | null; audience: 'course' | 'students' | null; attendeeIds: Id[]; canEdit: boolean; version: number | null }
+type LessonInput = { title: string; description?: string | null; startsAt: Instant; endsAt?: Instant | null;
+  moduleId?: Id | null; itemId?: Id | null; attendeeIds?: Id[] }   // пусто — всем ученикам курса
 type MyGradesOverview = { courses: { courseId: Id; courseTitle: string; finalPercent: number | null; finalLabel: string | null }[] }
 ```
 
@@ -140,7 +150,9 @@ type MyGradesOverview = { courses: { courseId: Id; courseTitle: string; finalPer
 - `/me/notification-preferences`: матрица по всем категориям, кроме `account` (не отключается), и всем каналам; PUT принимает полную или частичную матрицу (неизвестная категория/канал → 400). Умолчания: web — везде; email — `deadline`, `grade_published`, `announcement`; telegram — `deadline`, `grade_published`, `announcement`, `video_ready`, `new_item` (доставляется, только если Telegram привязан). `submission_received` по умолчанию только web.
 - Напоминания о сроке (`deadline`) — за 24 ч и за 1 ч, только студентам, не сдавшим работу; новый элемент (`new_item`) — один раз на элемент, когда он становится видимым студентам.
 - `/me/calendar`: `from < to`, диапазон ≤ 366 дней (иначе 400). События курсов — `due`/`open`/`close` активностей (преподавателю — все элементы его курсов, студенту — только видимые); `id` события курса стабилен. Личное событие чужого пользователя → 404 `calendar.event_not_found`.
-- iCal: `url` = `${PUBLIC_BASE_URL}/api/v1/calendar/ical/<token>.ics`; в БД — только SHA-256 токена. Окно: 30 дней назад — 365 дней вперёд, время в UTC, `SUMMARY` локализован по языку пользователя. Неизвестный/перевыпущенный токен → 404 `calendar.ical_not_found`.
+- Заметки (`personal`): видит только автор; `allDay: true` — событие на весь день (клиент передаёт `startsAt` = локальная полночь), `description` ≤ 4000.
+- Занятия (`lesson`, FR-DASH-03): назначает пользователь с `course.edit` в курсе. `moduleId`/`itemId` — необязательная привязка к модулю и элементу курса (элемент должен лежать в указанном модуле), иначе 400 с полем `not_in_course`; `attendeeIds` — только активные студенты курса (≤ 500), иначе 400 `not_students`. Преподавателю курса видны все занятия с `attendeeIds`; ученику — занятия всего курса (`audience: 'course'`) и назначенные ему лично, без `attendeeIds`; неопубликованный элемент ученику не показывается (`itemId`/`itemTitle` = null). `canEdit` — можно менять/удалять. Ученики получают уведомления категории `announcement`: назначено / перенесено (изменилось время) / отменено (`calendar.lesson_*`). Чужое/несуществующее занятие → 404 `calendar.lesson_not_found`.
+- iCal: `url` = `${PUBLIC_BASE_URL}/api/v1/calendar/ical/<token>.ics`; в БД — только SHA-256 токена. Окно: 30 дней назад — 365 дней вперёд, время в UTC (события «весь день» — `VALUE=DATE` в часовом поясе пользователя), `SUMMARY` локализован по языку пользователя, `DESCRIPTION` — курс, модуль, элемент и текст события. Неизвестный/перевыпущенный токен → 404 `calendar.ical_not_found`.
 
 ## 3. Организация (`org`)
 
