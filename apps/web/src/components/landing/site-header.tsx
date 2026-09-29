@@ -18,7 +18,7 @@ export const LANDING_ANCHORS = {
 } as const;
 
 /**
- * Public site header (landing, auth, catalog, course landing, checkout, invites): glass bar with the logo,
+ * Public site header (landing, auth, catalog, course landing, invites): glass bar with the logo,
  * pill anchors to landing sections (xl+), «Войти в кабинет» and «Попробовать бесплатно».
  * The «Отзывы» anchor exists only when real testimonials are configured.
  */

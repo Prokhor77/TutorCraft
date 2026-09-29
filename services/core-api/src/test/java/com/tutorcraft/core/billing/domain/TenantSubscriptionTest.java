@@ -61,7 +61,7 @@ class TenantSubscriptionTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"month, 1, 4000", "quarter, 3, 12000", "year, 12, 24000"})
+    @CsvSource({"month, 1, 3000", "quarter, 3, 7500", "year, 12, 15000"})
     void termsHaveFixedDurationAndUsdPrice(String key, int months, long priceMinor) {
         SubscriptionTerm term = SubscriptionTerm.fromKey(key);
 

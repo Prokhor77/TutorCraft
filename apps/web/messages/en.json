@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "TutorCraft — a friendly online learning platform",
-    "description": "Build a course in 15 minutes, grade everything in one place, sell your courses and get Telegram notifications."
+    "description": "Build a course in 15 minutes, grade everything in one place and get Telegram notifications."
   },
   "common": {
     "cancel": "Cancel",
@@ -137,7 +137,7 @@
   },
   "landing": {
     "metaTitle": "TutorCraft Studio — courses, assignments and quizzes for tutors",
-    "metaDescription": "The tutor's studio: course builder with access conditions, 8 question types, a unified grading queue, HLS video, Telegram notifications and paid courses.",
+    "metaDescription": "The tutor's studio: course builder with access conditions, 8 question types, a unified grading queue, HLS video and Telegram notifications.",
     "product": "TutorCraft Studio",
     "nav": {
       "label": "Page sections",
@@ -398,15 +398,13 @@
     "catalogDescription": "Online courses by {school}",
     "catalogEmpty": "No open courses yet",
     "catalogEmptyHint": "Check back later — courses will appear here soon.",
-    "free": "Free",
     "program": "Programme · {count, plural, one {# item} other {# items}}",
     "itemsCount": "{count, plural, one {# item} other {# items}}",
     "joinCourse": "Join the course",
-    "buyFor": "Buy for {price}",
     "byInvitation": "Enrolment by teacher invitation",
     "enrolCode": "Enrolment key",
     "enrolCodeOptional": "Enrolment key (if any)",
-    "enrolFree": "Enrol for free",
+    "enrol": "Enrol",
     "catalogEyebrow": "Online school",
     "coursesHeading": "School courses",
     "coursesCount": "{count, plural, one {# course} other {# courses}}",
@@ -415,26 +413,8 @@
     "openCourse": "Learn more",
     "allCourses": "All school courses",
     "aboutCourse": "About the course",
-    "priceLabel": "Price",
     "includesTitle": "What's inside",
     "teacherLabel": "Teacher"
-  },
-  "checkout": {
-    "loading": "Loading order…",
-    "orderNotFound": "Order not found",
-    "fakeTitle": "Test payment",
-    "fakeHint": "This simulates a payment provider for development. No real money is charged.",
-    "course": "Course",
-    "amount": "Amount",
-    "pay": "Pay",
-    "waiting": "Waiting for payment confirmation…",
-    "successTitle": "Payment successful",
-    "successHint": "You are enrolled. Enjoy the course!",
-    "failedTitle": "Payment failed",
-    "failedHint": "You were not charged. Try again or use another payment method.",
-    "goToCourse": "Go to course",
-    "goHome": "Go home",
-    "orderSummary": "Order details"
   },
   "notifications": {
     "title": "Notifications",
@@ -485,10 +465,6 @@
         "title": "New submission to grade",
         "hint": "For teachers"
       },
-      "sale": {
-        "title": "Course sale",
-        "hint": "New payment"
-      },
       "video_ready": {
         "title": "Video processed",
         "hint": "An uploaded video is ready"
@@ -502,7 +478,17 @@
     "telegramHint": "The bot will open — press “Start” and notifications will arrive in Telegram.",
     "telegramDisabledColumn": "The Telegram column becomes available after connecting the bot.",
     "saved": "Settings saved",
-    "loadError": "Could not load settings"
+    "loadError": "Could not load settings",
+    "linkedToast": "Telegram connected — notifications will arrive in the bot",
+    "linkError": "Could not get the bot link. Please try again.",
+    "fallbackTitle": "Telegram didn't open?",
+    "fallbackHint": "Pick an option below and press “Start” in the bot. The link is valid for 15 minutes.",
+    "openApp": "Open the app",
+    "openWeb": "Telegram Web",
+    "openTme": "Open t.me",
+    "copyLink": "Copy link",
+    "linkCopied": "Link copied",
+    "copyFailed": "Could not copy the link"
   },
   "home": {
     "greeting": "Hello, {name}!",
@@ -675,10 +661,6 @@
     "enrolCodeHint": "Empty — no key",
     "maxStudents": "Seat limit",
     "enrolUntil": "Enrolment until",
-    "price": "Course sales",
-    "priceAmount": "Price",
-    "priceHint": "Empty — the course is free",
-    "currency": "Currency",
     "completion": "Course completion",
     "minFinalPercent": "Minimum final grade, %",
     "minFinalHint": "Empty — final grade is not required",
@@ -1156,8 +1138,6 @@
     "moveUp": "Move up",
     "moveDown": "Move down",
     "remove": "Remove",
-    "saved": "Quiz questions saved",
-    "unsaved": "Unsaved changes",
     "drag": "Drag question {index}",
     "number": "Question {index}",
     "random": "Random question",
@@ -1218,6 +1198,7 @@
     "editTitle": "Edit question",
     "versionHint": "Saving creates a new version — past attempts are unchanged until you regrade.",
     "fixIssues": "Fix the errors",
+    "autosavePending": "The question is saved automatically once it is complete",
     "issues": {
       "title_required": "Enter a question title",
       "no_correct_option": "Mark at least one correct option",
@@ -1666,7 +1647,7 @@
   "admin": {
     "adminChip": "Main administrator",
     "title": "Administration",
-    "description": "Users, categories, branding, audit, activity, sales and integrations of the selected school",
+    "description": "Users, categories, branding, audit, activity and integrations of the selected school",
     "sections": "Administration sections",
     "nav": {
       "users": "Users",
@@ -1674,7 +1655,6 @@
       "branding": "Branding",
       "audit": "Audit log",
       "activity": "Activity",
-      "orders": "Sales",
       "integrations": "Integrations",
       "accounts": "All accounts"
     },
@@ -1897,26 +1877,6 @@
       "copyFailed": "Could not copy"
     }
   },
-  "adminOrders": {
-    "shownCount": "Showing: {count}",
-    "panelHint": "Paid course purchases and their payment statuses",
-    "created": "Date",
-    "course": "Course",
-    "buyer": "Buyer",
-    "amount": "Amount",
-    "status": "Status",
-    "statuses": {
-      "pending": "Pending",
-      "paid": "Paid",
-      "failed": "Failed",
-      "refunded": "Refunded",
-      "canceled": "Canceled"
-    },
-    "provider": "Provider",
-    "loadError": "Could not load orders",
-    "emptyTitle": "No sales yet",
-    "emptyText": "Set a price in the course settings and share the landing page link."
-  },
   "adminIntegrations": {
     "tokensHint": "Tokens for accessing the school API",
     "webhooksHint": "Outgoing event notifications to your server",
@@ -1937,7 +1897,7 @@
     "webhookHint": "We will send signed POST requests (X-TC-Signature) to the HTTPS URL.",
     "url": "URL (HTTPS)",
     "noWebhooks": "No webhooks",
-    "noWebhooksHint": "Receive enrolment, submission, grade and payment events in your systems.",
+    "noWebhooksHint": "Receive enrolment, submission and grade events in your systems.",
     "deliveries": "Deliveries",
     "deliveryStatuses": {
       "pending": "Queued",
@@ -2122,8 +2082,6 @@
     "attempts": "Attempts",
     "shuffleAnswersHint": "Answer options are shuffled too",
     "showAnswers": "Show correct answers",
-    "paramsSaved": "Quiz parameters saved",
-    "saveParams": "Save parameters",
     "allSettings": "All quiz settings",
     "statQuestions": "Questions",
     "questionsUnit": "{count, plural, one {item} other {items}}",
@@ -2135,7 +2093,6 @@
     "statAttempts": "Attempts",
     "attemptsUnit": "{count, plural, one {attempt} other {attempts}}",
     "structure": "Question structure",
-    "unsaved": "Unsaved",
     "summary": "Quiz summary",
     "pointsDefault": "bank defaults",
     "panes": "Builder section",
@@ -2149,12 +2106,9 @@
   "math": {
     "title": "Formula editor",
     "editTitle": "Edit formula",
-    "description": "Type like in Word: / — fraction, ^ — power, _ — subscript, sqrt — root, pi, alpha… Tab jumps to the next slot.",
-    "fieldLabel": "Formula",
+    "description": "Type LaTeX on the left or edit the formula right on the right — both stay in sync. On the right, type like in Word: / — fraction, ^ — power, _ — subscript, sqrt — root, pi, alpha… Empty template fields are □, Tab moves to the next one.",
     "latexSource": "Formula LaTeX source",
-    "mode": "Input mode",
-    "modeVisual": "Visual",
-    "modeLatex": "LaTeX",
+    "visualField": "Formula (visual editor)",
     "search": "Search: root, integral, Pythagoras…",
     "searchEmpty": "Nothing found — try another word",
     "section": "Section",
@@ -2237,7 +2191,7 @@
     "eraseOwnerDisabled": "Cannot delete a school owner",
     "eraseTitle": "Delete {name} permanently?",
     "eraseWarningTitle": "This cannot be undone",
-    "eraseWarning": "Enrollments, submissions, quiz attempts, grades, progress, notifications and tokens are deleted, forum post text is wiped. The account is anonymized; grades the user gave to others and paid orders stay without personal data.",
+    "eraseWarning": "Enrollments, submissions, quiz attempts, grades, progress, notifications and tokens are deleted, forum post text is wiped. The account is anonymized; grades the user gave to others stay without personal data.",
     "eraseConfirm": "To confirm, type the email: {email}",
     "erasedToast": "{email} deleted from the platform"
   }

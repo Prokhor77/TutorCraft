@@ -27,7 +27,8 @@ public interface NotificationsApi {
     String GRADING_QUEUE_COUNTER = "grading_queue";
 
     /**
-     * @param messageCode код сообщения: заголовок = {@code <code>.title}, текст = {@code <code>.body}; args — позиционные {0},{1}
+     * @param messageCode код сообщения: заголовок = {@code <code>.title}, текст = {@code <code>.body}, необязательный
+     *                    текст кнопки ссылки = {@code <code>.action}; args — позиционные {0},{1}
      * @param dedupeKey   уникален на событие; уведомление получателю на канал создаётся один раз
      * @param force       true — игнорировать настройки пользователя (служебные: сброс пароля, приглашение)
      * @param directEmail для писем получателям без аккаунта (приглашения); иначе null

@@ -41,12 +41,9 @@ export const ROUTES = {
   adminBranding: '/admin/branding',
   adminAudit: '/admin/audit',
   adminActivity: '/admin/activity',
-  adminOrders: '/admin/orders',
   adminIntegrations: '/admin/integrations',
   catalog: (tenantSlug: string) => `/c/${tenantSlug}`,
   courseLanding: (tenantSlug: string, courseSlug: string) => `/c/${tenantSlug}/${courseSlug}`,
-  fakeCheckout: (orderId: string) => `/checkout/fake/${orderId}`,
-  checkoutReturn: '/checkout/return',
 } as const;
 
 export const NEXT_PARAM = 'next';

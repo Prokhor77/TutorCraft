@@ -22,12 +22,12 @@ import {
   GripVertical,
   ListPlus,
   Plus,
-  Save,
   Search,
   Trash2,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useDeferredValue, useEffect, useImperativeHandle, useState, type Ref } from 'react';
+import { SaveIndicator } from '@/components/editor/save-indicator';
 import { QuestionEditor } from '@/components/qbank/question-editor';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -39,10 +39,14 @@ import { Input, NativeSelect } from '@/components/ui/input';
 import { LoadMore } from '@/components/ui/load-more';
 import { SkeletonList } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
+import { useProblemToast } from '@/features/app/use-problem-toast';
+import { useAutosave } from '@/features/editor/use-autosave';
 import { useQCategories, useQuestions } from '@/features/qbank/use-qbank';
+import { isValidLayout } from '@/features/quiz/quiz-layout';
 import { useQuizSlots, useSaveSlots } from '@/features/quiz/use-quiz';
 import { flattenPages } from '@/lib/api/pagination';
 import {
+  AUTO_PAGE,
   QUESTION_TYPES,
   type Question,
   type QuestionSummary,
@@ -290,10 +294,11 @@ function AddRandomDialog({
         </Field>
         <DialogFooter>
           <Button
+            disabled={!categoryId && !tag.trim()}
             onClick={() => {
               onAdd({
                 random: { categoryId: categoryId || undefined, tag: tag || undefined, count },
-                page: 0,
+                page: AUTO_PAGE,
               });
               setOpen(false);
             }}
@@ -499,7 +504,7 @@ function SlotCard({
                 {t('page')}
                 <Input
                   type="number"
-                  min={0}
+                  min={AUTO_PAGE}
                   className="h-9 w-20"
                   value={slot.page}
                   onChange={(event) => onChange({ page: Number(event.target.value) })}
@@ -533,9 +538,14 @@ export function toQuestionSummary(question: Question): QuestionSummary {
   };
 }
 
+/** Composition changes are persisted shortly after the last edit; typing into «points» should not fire a PUT per key. */
+const SLOTS_AUTOSAVE_DEBOUNCE_MS = 700;
+
 export type SlotsEditorHandle = {
-  /** Appends bank questions (skipping ones already in the quiz) and saves the composition right away. */
+  /** Appends bank questions (skipping ones already in the quiz); autosave persists the composition. */
   addQuestions: (questions: QuestionSummary[], options?: { notify?: boolean }) => void;
+  /** Refreshes the title/type shown on a slot card after the question was edited. */
+  refreshQuestion: (question: QuestionSummary) => void;
   /** Number of slots the next appended question will get. */
   nextNumber: () => number;
 };
@@ -569,6 +579,16 @@ export function SlotsEditor({
   const [rows, setRows] = useState<SlotRow[]>([]);
   const [questions, setQuestions] = useState<Map<string, QuestionSummary>>(new Map());
   const [creating, setCreating] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  const showProblem = useProblemToast();
+  const autosave = useAutosave({
+    value: rows.map((row) => row.slot),
+    save: (slots) => save.mutateAsync(slots),
+    enabled: hydrated,
+    isValid: isValidLayout,
+    debounceMs: SLOTS_AUTOSAVE_DEBOUNCE_MS,
+    onError: showProblem,
+  });
   const inQuiz = new Set(
     rows.flatMap((row) => ('questionId' in row.slot ? [row.slot.questionId] : [])),
   );
@@ -584,33 +604,37 @@ export function SlotsEditor({
       ...rows,
       ...fresh.map((question) => ({
         key: localId('slot'),
-        slot: { questionId: question.id, page: 0 } as QuizSlot,
+        slot: { questionId: question.id, page: AUTO_PAGE } as QuizSlot,
       })),
     ];
     setRows(next);
-    save.mutate(
-      next.map((row) => row.slot),
-      {
-        onSuccess: () => {
-          if (notify) toast({ tone: 'success', title: t('added', { count: fresh.length }) });
-        },
-      },
-    );
+    if (notify) toast({ tone: 'success', title: t('added', { count: fresh.length }) });
   };
-  useImperativeHandle(handleRef, () => ({ addQuestions, nextNumber: () => rows.length + 1 }));
+  const refreshQuestion: SlotsEditorHandle['refreshQuestion'] = (question) =>
+    setQuestions((current) => new Map(current).set(question.id, question));
+  useImperativeHandle(handleRef, () => ({
+    addQuestions,
+    refreshQuestion,
+    nextNumber: () => rows.length + 1,
+  }));
   const startCreate = () => (onCreateQuestion ? onCreateQuestion() : setCreating(true));
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: DRAG_DISTANCE_PX } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
+  const { markSaved } = autosave;
   useEffect(() => {
     if (!slotsQuery.data) return;
+    const summaries = slotsQuery.data.questions ?? [];
+    setQuestions((current) => new Map([...current, ...summaries.map((q) => [q.id, q] as const)]));
+    // Only the first load replaces the rows: later answers are our own saves, and edits made while a save
+    // was in flight must not be overwritten by the server echo.
+    if (hydrated) return;
+    setHydrated(true);
     setRows(slotsQuery.data.slots.map((slot) => ({ key: localId('slot'), slot })));
-    setQuestions(
-      new Map((slotsQuery.data.questions ?? []).map((question) => [question.id, question])),
-    );
-  }, [slotsQuery.data]);
+    markSaved(slotsQuery.data.slots);
+  }, [slotsQuery.data, hydrated, markSaved]);
 
   const update = (key: string, patch: Partial<QuizSlot>) =>
     setRows((current) =>
@@ -635,9 +659,6 @@ export function SlotsEditor({
   };
 
   if (slotsQuery.isLoading) return <SkeletonList label={tCommon('loading')} />;
-  const dirty =
-    !!slotsQuery.data &&
-    JSON.stringify(rows.map((row) => row.slot)) !== JSON.stringify(slotsQuery.data.slots);
   return (
     <div className="flex flex-col gap-4">
       <div
@@ -646,18 +667,11 @@ export function SlotsEditor({
           compact && 'order-last grid grid-cols-1 border-t border-border pt-4',
         )}
       >
-        {dirty ? (
-          <p
-            role="status"
-            className={cn(
-              'flex items-center gap-1.5 text-label-md text-warning',
-              !compact && 'w-full',
-            )}
-          >
-            <span className="size-1.5 rounded-full bg-current" aria-hidden />
-            {t('unsaved')}
-          </p>
-        ) : null}
+        <SaveIndicator
+          status={autosave.status}
+          lastSavedAt={autosave.lastSavedAt}
+          className={cn(!compact && 'w-full')}
+        />
         <Button size="sm" className={compact ? 'w-full' : undefined} onClick={startCreate}>
           <Plus aria-hidden /> {t('newQuestion')}
         </Button>
@@ -673,19 +687,6 @@ export function SlotsEditor({
           triggerClassName={compact ? 'w-full' : undefined}
           onAdd={(slot) => setRows((current) => [...current, { key: localId('slot'), slot }])}
         />
-        <Button
-          variant={dirty ? 'primary' : 'soft'}
-          className={compact ? 'w-full' : 'ml-auto'}
-          loading={save.isPending}
-          onClick={() =>
-            save.mutate(
-              rows.map((row) => row.slot),
-              { onSuccess: () => toast({ tone: 'success', title: t('saved') }) },
-            )
-          }
-        >
-          <Save aria-hidden /> {tCommon('save')}
-        </Button>
       </div>
       {rows.length === 0 ? (
         <EmptyState icon={ListPlus} title={t('emptyTitle')} description={t('emptyText')} />

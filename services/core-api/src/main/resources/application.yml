@@ -136,10 +136,6 @@ tutorcraft:
     requests-per-minute-ip: 300
   payments:
     provider: ${PAYMENT_PROVIDER:fake}
-    yookassa-shop-id: ${YOOKASSA_SHOP_ID:}
-    yookassa-secret-key: ${YOOKASSA_SECRET_KEY:}
-    stripe-secret-key: ${STRIPE_SECRET_KEY:}
-    stripe-webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
   quiz:
     time-grace: PT5S
   trash:

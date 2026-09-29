@@ -18,8 +18,13 @@ describe('subscription term pricing', () => {
     expect(savingPercent(TERMS[2]!, [])).toBe(0);
   });
 
-  it('keeps the landing plans consistent with the advertised saving', () => {
+  it('keeps the landing plans in sync with core-api SubscriptionTerm (30 / 75 / 150 USD)', () => {
     const plans = LANDING.pricing.plans;
-    expect(plans.map((plan) => savingPercent(plan, plans))).toEqual([0, 0, 50]);
+    expect(plans.map((plan) => [plan.id, plan.months, plan.price])).toEqual([
+      ['month', 1, 30],
+      ['quarter', 3, 75],
+      ['year', 12, 150],
+    ]);
+    expect(plans.map((plan) => savingPercent(plan, plans))).toEqual([0, 17, 58]);
   });
 });

@@ -6,9 +6,9 @@ import java.util.Arrays;
 
 /** Сроки подписки: функционал одинаковый, отличаются длительность и цена (в центах USD). */
 public enum SubscriptionTerm {
-    MONTH("month", 1, 4_000),
-    QUARTER("quarter", 3, 12_000),
-    YEAR("year", 12, 24_000);
+    MONTH("month", 1, 3_000),
+    QUARTER("quarter", 3, 7_500),
+    YEAR("year", 12, 15_000);
 
     public static final String CURRENCY = "USD";
     private static final String FIELD = "term";

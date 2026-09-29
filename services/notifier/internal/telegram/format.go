@@ -39,10 +39,18 @@ func FormatNotification(chatID int64, n notification.Requested, absoluteLink str
 		LinkPreviewOptions: &LinkPreviewOptions{IsDisabled: true},
 	}
 	if absoluteLink != "" {
-		button := InlineKeyboardButton{Text: openButtonLabel(n.Language()), URL: absoluteLink}
+		button := InlineKeyboardButton{Text: buttonLabel(n), URL: absoluteLink}
 		req.ReplyMarkup = &InlineKeyboardMarkup{InlineKeyboard: [][]InlineKeyboardButton{{button}}}
 	}
 	return req
+}
+
+// buttonLabel prefers the producer's action label over the generic «Открыть».
+func buttonLabel(n notification.Requested) string {
+	if label := strings.TrimSpace(n.ActionLabel); label != "" {
+		return label
+	}
+	return openButtonLabel(n.Language())
 }
 
 func openButtonLabel(language string) string {

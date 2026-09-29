@@ -28,8 +28,8 @@ class JdbcCourseRepository implements CourseRepository {
 
     private static final String SELECT = """
             SELECT id, tenant_id, category_id, title, short_name, slug, description::text AS description, cover_file_id,
-                   starts_at, ends_at, visibility, publish_at, self_enrol::text AS self_enrol, price_amount_minor,
-                   price_currency, completion_rule::text AS completion_rule, group_mode, created_by, version,
+                   starts_at, ends_at, visibility, publish_at, self_enrol::text AS self_enrol,
+                   completion_rule::text AS completion_rule, group_mode, created_by, version,
                    created_at, updated_at, deleted_at
             FROM courses
             """;
@@ -57,11 +57,11 @@ class JdbcCourseRepository implements CourseRepository {
         try {
             rows.bindAll(jdbc.sql("""
                     INSERT INTO courses (id, tenant_id, category_id, title, short_name, slug, description, cover_file_id,
-                                         starts_at, ends_at, visibility, publish_at, self_enrol, price_amount_minor,
-                                         price_currency, completion_rule, group_mode, created_by, version, created_at, updated_at)
+                                         starts_at, ends_at, visibility, publish_at, self_enrol,
+                                         completion_rule, group_mode, created_by, version, created_at, updated_at)
                     VALUES (:id, :tenantId, :categoryId, :title, :shortName, :slug, :description, :coverFileId,
-                            :startsAt, :endsAt, :visibility, :publishAt, :selfEnrol, :priceAmountMinor,
-                            :priceCurrency, :completionRule, :groupMode, :createdBy, 0, :createdAt, :createdAt)
+                            :startsAt, :endsAt, :visibility, :publishAt, :selfEnrol,
+                            :completionRule, :groupMode, :createdBy, 0, :createdAt, :createdAt)
                     """), course)
                 .param("createdBy", course.createdBy()).param("createdAt", Timestamps.of(course.createdAt()))
                 .update();
@@ -77,7 +77,6 @@ class JdbcCourseRepository implements CourseRepository {
                     UPDATE courses SET category_id = :categoryId, title = :title, short_name = :shortName, slug = :slug,
                         description = :description, cover_file_id = :coverFileId, starts_at = :startsAt, ends_at = :endsAt,
                         visibility = :visibility, publish_at = :publishAt, self_enrol = :selfEnrol,
-                        price_amount_minor = :priceAmountMinor, price_currency = :priceCurrency,
                         completion_rule = :completionRule, group_mode = :groupMode,
                         version = version + 1, updated_at = :now
                     WHERE tenant_id = :tenantId AND id = :id AND version = :expected AND deleted_at IS NULL

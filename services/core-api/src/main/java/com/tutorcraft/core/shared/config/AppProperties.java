@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.Duration;
+import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
@@ -46,6 +47,31 @@ public record AppProperties(
     public record OAuth(String googleClientId, String telegramBotToken, String telegramBotUsername,
                         @NotNull Duration telegramAuthMaxAge) {
 
+        private static final List<String> BOT_USERNAME_PREFIXES =
+                List.of("https://t.me/", "http://t.me/", "t.me/", "@");
+
+        /**
+         * В env имя бота часто пишут как {@code @MyBot} или ссылкой {@code https://t.me/MyBot}; Telegram же понимает
+         * только голое имя — {@code t.me/@MyBot} уводит на telegram.org, а виджет входа не находит бота.
+         */
+        public OAuth {
+            telegramBotUsername = normalizeBotUsername(telegramBotUsername);
+        }
+
+        static String normalizeBotUsername(String raw) {
+            if (raw == null) {
+                return null;
+            }
+            String name = raw.strip();
+            for (String prefix : BOT_USERNAME_PREFIXES) {
+                if (name.regionMatches(true, 0, prefix, 0, prefix.length())) {
+                    name = name.substring(prefix.length());
+                }
+            }
+            int trailing = name.indexOf('/');
+            return trailing < 0 ? name : name.substring(0, trailing);
+        }
+
         public boolean googleEnabled() {
             return googleClientId != null && !googleClientId.isBlank();
         }
@@ -84,8 +110,8 @@ public record AppProperties(
     public record RateLimit(@Min(1) int requestsPerMinuteUser, @Min(1) int requestsPerMinuteIp) {
     }
 
-    public record Payments(@NotBlank String provider, String yookassaShopId, String yookassaSecretKey,
-                           String stripeSecretKey, String stripeWebhookSecret) {
+    /** Платёжный провайдер подписки школы; пока поддерживается только {@code fake} (мгновенная активация). */
+    public record Payments(@NotBlank String provider) {
     }
 
     public record Quiz(@NotNull Duration timeGrace) {

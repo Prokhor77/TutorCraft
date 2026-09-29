@@ -3,7 +3,6 @@ package com.tutorcraft.core.courses.application;
 import com.tutorcraft.core.courses.domain.CourseCompletionRule;
 import com.tutorcraft.core.courses.domain.Patch;
 import com.tutorcraft.core.courses.domain.SelfEnrolSettings;
-import com.tutorcraft.core.shared.domain.Money;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -20,14 +19,14 @@ public final class CourseCommands {
                                Instant endsAt, UUID coverFileId) {
     }
 
-    /** PATCH /courses/{id}: visibility/publishAt/price требуют course.publish; selfEnrol — enrollment.manage. */
+    /** PATCH /courses/{id}: visibility/publishAt требуют course.publish; selfEnrol — enrollment.manage. */
     public record CoursePatch(Patch<String> title, Patch<String> shortName, Patch<UUID> categoryId, Patch<Object> description,
                               Patch<UUID> coverFileId, Patch<Instant> startsAt, Patch<Instant> endsAt,
                               Patch<String> visibility, Patch<Instant> publishAt, Patch<SelfEnrolSettings> selfEnrol,
-                              Patch<Money> price, Patch<CourseCompletionRule> completionRule, Patch<String> groupMode) {
+                              Patch<CourseCompletionRule> completionRule, Patch<String> groupMode) {
 
         boolean touchesPublication() {
-            return visibility.isPresent() || publishAt.isPresent() || price.isPresent();
+            return visibility.isPresent() || publishAt.isPresent();
         }
 
         /** Имена переданных полей — для аудита (без значений: описание может быть большим). */
@@ -36,7 +35,7 @@ public final class CourseCommands {
                     Map.entry("categoryId", categoryId), Map.entry("description", description),
                     Map.entry("coverFileId", coverFileId), Map.entry("startsAt", startsAt), Map.entry("endsAt", endsAt),
                     Map.entry("visibility", visibility), Map.entry("publishAt", publishAt), Map.entry("selfEnrol", selfEnrol),
-                    Map.entry("price", price), Map.entry("completionRule", completionRule), Map.entry("groupMode", groupMode)));
+                    Map.entry("completionRule", completionRule), Map.entry("groupMode", groupMode)));
         }
     }
 

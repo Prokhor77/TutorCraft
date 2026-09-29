@@ -26,6 +26,8 @@ public class InvitationService {
 
     private static final String ACCEPT_PATH = "/accept-invite?token=";
     private static final String INVITATION_MESSAGE = "identity.invitation";
+    private static final String COURSE_INVITATION_MESSAGE = "identity.course_invitation";
+    private static final long MIN_TTL_DAYS = 1;
     private static final String PASSWORD_FIELD = "password";
     private static final int MAX_NAME_LENGTH = 100;
 
@@ -56,21 +58,56 @@ public class InvitationService {
     }
 
     /**
-     * Новая ссылка-приглашение (предыдущие аннулируются) и письмо со ссылкой. Вызывать в транзакции операции над
-     * пользователем.
+     * Новая ссылка-приглашение в школу (предыдущие аннулируются) и письмо со ссылкой. Вызывать в транзакции операции
+     * над пользователем.
      *
      * @return ссылка активации — показывается только пригласившему (письмо может не дойти, если SMTP не настроен)
      */
     @Transactional
     public String sendInvitation(UserAccount user, UUID actorId) {
+        return issue(user, actorId, INVITATION_MESSAGE, List.<Object>of(tenantName(user), ttlDays()));
+    }
+
+    /**
+     * То же, что {@link #sendInvitation}, но письмо называет курс и того, кто пригласил (приглашение репетитором).
+     *
+     * @param courseTitle название курса, на который пользователь уже записан
+     */
+    @Transactional
+    public String sendCourseInvitation(UserAccount user, UUID actorId, String courseTitle) {
+        String tenantName = tenantName(user);
+        String inviter = users.findById(user.tenantId(), actorId)
+                .map(InvitationService::fullName)
+                .filter(name -> !name.isBlank())
+                .orElse(tenantName);
+        return issue(user, actorId, COURSE_INVITATION_MESSAGE,
+                List.<Object>of(tenantName, courseTitle, inviter, ttlDays()));
+    }
+
+    /** Ссылка сама в текст письма не входит: notifier рисует кнопку {@code <code>.action} и запасную ссылку под ней. */
+    private String issue(UserAccount user, UUID actorId, String messageCode, List<Object> args) {
         IssuedToken token = tokens.issue(Kind.INVITATION, user.tenantId(), user.id(), invitationTtl);
         String link = publicBaseUrl + ACCEPT_PATH + token.value();
-        String tenantName = org.require(user.tenantId()).name();
         notifications.notify(new NotificationCommand(user.tenantId(), List.of(user.id()), NotificationCategory.ACCOUNT,
-                INVITATION_MESSAGE, List.<Object>of(tenantName, link), link, INVITATION_MESSAGE + ":" + token.id(), true,
-                user.email()));
+                messageCode, args, link, messageCode + ":" + token.id(), true, user.email()));
         audit.record(AuditRecord.of(user.tenantId(), actorId, "user.invited", "user", user.id().toString()));
         return link;
+    }
+
+    private String tenantName(UserAccount user) {
+        return org.require(user.tenantId()).name();
+    }
+
+    private long ttlDays() {
+        return Math.max(MIN_TTL_DAYS, invitationTtl.toDays());
+    }
+
+    private static String fullName(UserAccount account) {
+        return (nullToEmpty(account.firstName()) + " " + nullToEmpty(account.lastName())).strip();
+    }
+
+    private static String nullToEmpty(String value) {
+        return value == null ? "" : value;
     }
 
     @Transactional

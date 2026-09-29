@@ -18,7 +18,7 @@
   без query, секретные сегменты замаскированы) и `X-Client-Session` (случайный id вкладки) — по ним журнал показывает, где
   произошло действие, и связывает действия одной вкладки (в том числе до входа).
 - Пагинация (API-04): `?cursor=&limit=` (по умолчанию 25, максимум 100). Ответ: `{ items: T[], nextCursor: string | null }` → тип `Page<T>`.
-- Идемпотентность (API-05): заголовок `Idempotency-Key: <uuid>` обязателен для `POST /items/{id}/submissions/submit`, `POST /attempts/{id}/finish`, `POST /courses/{id}/orders`. Повтор с тем же ключом возвращает сохранённый ответ.
+- Идемпотентность (API-05): заголовок `Idempotency-Key: <uuid>` обязателен для `POST /items/{id}/submissions/submit`, `POST /attempts/{id}/finish`, `POST /billing/subscription/purchases`. Повтор с тем же ключом возвращает сохранённый ответ.
 - Оптимистичная блокировка (API-06): ресурсы с полем `version: number`; `PATCH` принимает `If-Match: "<version>"`, при конфликте — 412 `code: "conflict.version"`.
 - Rate limit (API-07): заголовки `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset`; при превышении 429.
 - Локаль: `Accept-Language: ru|en` — для текстов ошибок и писем.
@@ -125,7 +125,7 @@ type TeacherHome = {
   upcomingDeadlines: TaskEntry[];
   recentPosts: { discussionId: Id; courseId: Id; title: string; authorName: string; createdAt: Instant }[] }
 type Notification = { id: Id; type: string; title: string; body: string; link: string | null; readAt: Instant | null; createdAt: Instant }
-type NotificationCategory = 'new_item' | 'deadline' | 'grade_published' | 'forum_reply' | 'announcement' | 'submission_received' | 'sale' | 'video_ready'
+type NotificationCategory = 'new_item' | 'deadline' | 'grade_published' | 'forum_reply' | 'announcement' | 'submission_received' | 'video_ready'
 type NotificationChannel = 'web' | 'email' | 'telegram'
 type NotificationPreferences = { matrix: Record<NotificationCategory, Record<NotificationChannel, boolean>> }
 type CalendarEvent = { id: Id; title: string; startsAt: Instant; endsAt: Instant | null; courseId: Id | null; itemId: Id | null; kind: 'due' | 'open' | 'close' | 'personal' }
@@ -137,7 +137,7 @@ type MyGradesOverview = { courses: { courseId: Id; courseTitle: string; finalPer
 - `/me/teaching`: `toGrade` — непроверенные работы (сдачи + эссе) по курсам, где пользователь — teacher/assistant с правом `submission.grade`, по убыванию количества; `upcomingDeadlines` — до 10 сроков в ближайшие 14 дней, `status: null`; `recentPosts` — до 10 последних постов форумов.
 - `/me/courses`: курсы с активной записью; `role` — старшая роль (teacher > assistant > student > observer > guest); студенту/наблюдателю — только опубликованные курсы; `progressPercent` — только для роли student. `coverUrl` пока `null` (нужен `coverFileId` в `CourseRef`).
 - `/me/notifications`: новые первыми; `type` — категория. Категория `account` (сброс пароля, приглашение) в центр уведомлений не попадает — только письмо. `/me/notifications/read`: `ids` — от 1 до 500, либо `all: true`.
-- `/me/notification-preferences`: матрица по всем категориям, кроме `account` (не отключается), и всем каналам; PUT принимает полную или частичную матрицу (неизвестная категория/канал → 400). Умолчания: web — везде; email — `deadline`, `grade_published`, `announcement`, `sale`; telegram — `deadline`, `grade_published`, `announcement`, `sale`, `video_ready`, `new_item` (доставляется, только если Telegram привязан). `submission_received` по умолчанию только web.
+- `/me/notification-preferences`: матрица по всем категориям, кроме `account` (не отключается), и всем каналам; PUT принимает полную или частичную матрицу (неизвестная категория/канал → 400). Умолчания: web — везде; email — `deadline`, `grade_published`, `announcement`; telegram — `deadline`, `grade_published`, `announcement`, `video_ready`, `new_item` (доставляется, только если Telegram привязан). `submission_received` по умолчанию только web.
 - Напоминания о сроке (`deadline`) — за 24 ч и за 1 ч, только студентам, не сдавшим работу; новый элемент (`new_item`) — один раз на элемент, когда он становится видимым студентам.
 - `/me/calendar`: `from < to`, диапазон ≤ 366 дней (иначе 400). События курсов — `due`/`open`/`close` активностей (преподавателю — все элементы его курсов, студенту — только видимые); `id` события курса стабилен. Личное событие чужого пользователя → 404 `calendar.event_not_found`.
 - iCal: `url` = `${PUBLIC_BASE_URL}/api/v1/calendar/ical/<token>.ics`; в БД — только SHA-256 токена. Окно: 30 дней назад — 365 дней вперёд, время в UTC, `SUMMARY` локализован по языку пользователя. Неизвестный/перевыпущенный токен → 404 `calendar.ical_not_found`.
@@ -261,13 +261,13 @@ type PlatformUser = { id: Id; email: string; firstName: string; lastName: string
 ```ts
 type ItemType = 'page' | 'file' | 'url' | 'folder' | 'video' | 'assignment' | 'quiz' | 'forum'
 type CourseCard = { id: Id; title: string; shortName: string | null; coverUrl: string | null; categoryId: Id | null;
-                    role: CourseRole | null; progressPercent: number | null; visibility: Visibility; price: Money | null }
-type Money = { amountMinor: number; currency: string }  // 500000 RUB = 5000,00 ₽
+                    role: CourseRole | null; progressPercent: number | null; visibility: Visibility }
+type Money = { amountMinor: number; currency: string }  // только подписка (§13): 3000 USD = 30,00 $
 type Course = { id: Id; title: string; shortName: string | null; slug: string; categoryId: Id | null; description: BlockDoc | null;
                 coverFileId: Id | null; coverUrl: string | null; startsAt: Instant | null; endsAt: Instant | null;
                 visibility: Visibility; publishAt: Instant | null;
                 selfEnrol: { enabled: boolean; code: string | null; maxStudents: number | null; until: Instant | null };
-                price: Money | null; completionRule: CourseCompletionRule; groupMode: 'none' | 'visible' | 'separate';
+                completionRule: CourseCompletionRule; groupMode: 'none' | 'visible' | 'separate';
                 myRole: CourseRole | null; permissions: string[]; version: number }
 type CourseCompletionRule = { requiredItemIds: Id[]; minFinalPercent: number | null }
 type CourseOutline = { courseId: Id; modules: OutlineModule[] }
@@ -312,11 +312,11 @@ type TrashEntry = { kind: 'course' | 'module' | 'item'; id: Id; courseId: Id; ti
 Детали (courses):
 - Права: создание курса — `course.create` в категории (или tenant, если `categoryId` не задан); автор записывается `teacher`
   (method `manual`). Курс создаётся **скрытым** (`visibility: 'hidden'`), slug генерируется из названия (транслитерация,
-  уникален в tenant, не меняется при переименовании). `PATCH /courses/{id}`: `course.edit`; `visibility`/`publishAt`/`price` —
+  уникален в tenant, не меняется при переименовании). `PATCH /courses/{id}`: `course.edit`; `visibility`/`publishAt` —
   дополнительно `course.publish`; `selfEnrol` — `enrollment.manage`; `groupMode` — `group.manage`; смена `categoryId` —
-  `course.create` в целевой категории. `PUT /courses/{id}/price` (`course.publish`) → `Course`.
+  `course.create` в целевой категории.
   `Course.selfEnrol.code` отдаётся только имеющим `enrollment.manage` (иначе `null`). `shortName` занят → 409 `course.short_name_taken`.
-- Платный курс (`price != null`) не может иметь включённую самозапись без кода → 400 `selfEnrol.code: paid_course_requires_code`.
+- Цены курса нет: курсы для учеников бесплатны, платит только школа — подписка (§13.2, ADR-012). Поле `price` в PATCH игнорируется.
 - Модули: один уровень вложенности (→ 422 `module.depth_exceeded`); модуль верхнего уровня создаётся `published`, подмодуль и
   новый элемент наследуют видимость родителя (AC-2). Правка структуры (модули/элементы, их видимость, корзина) — `course.edit`.
   `move`: `position` — индекс среди соседей (обрезается в допустимый диапазон), `parentId: null` — верхний уровень.
@@ -353,7 +353,7 @@ type TrashEntry = { kind: 'course' | 'module' | 'item'; id: Id; courseId: Id; ti
 
 ```ts
 type Enrollment = { id: Id; user: { id: Id; firstName: string; lastName: string; email: string; avatarUrl: string | null };
-                    role: CourseRole; status: 'active'|'suspended'|'completed'; method: 'manual'|'self'|'invite_link'|'payment'|'import';
+                    role: CourseRole; status: 'active'|'suspended'|'completed'; method: 'manual'|'self'|'invite_link'|'payment'|'import'; // 'payment' — только старые записи (ADR-012)
                     startsAt: Instant | null; endsAt: Instant | null; groupIds: Id[]; lastAccessAt: Instant | null }
 type Group = { id: Id; name: string; memberIds: Id[] }
 type InviteLink = { id: Id; role: CourseRole; expiresAt: Instant | null; maxUses: number | null; uses: number;
@@ -368,8 +368,7 @@ type InviteLink = { id: Id; role: CourseRole; expiresAt: Instant | null; maxUses
   оценки сохраняются. Нельзя удалить/приостановить/понизить последнего активного преподавателя → 422 `enrollment.last_teacher`.
 - `?q` — подстрока имени, фамилии или email; `?role` — ключ роли; `?groupId` — участники группы.
 - Самозапись (`POST /courses/{id}/self-enrol`, только опубликованный курс своего tenant, иначе 404 `course.not_found`), по
-  порядку проверки: платный курс без самозаписи по коду → 422 `enrollment.payment_required` (путь — покупка);
-  выключена → `enrollment.self_enrol_disabled`; срок `until` прошёл → `enrollment.self_enrol_closed`; неверный код →
+  порядку проверки: выключена → `enrollment.self_enrol_disabled`; срок `until` прошёл → `enrollment.self_enrol_closed`; неверный код →
   `enrollment.invalid_code`; мест нет (активных студентов ≥ `maxStudents`) → `enrollment.course_full`. Уже активная запись
   возвращается как есть; приостановленная/завершённая → 422 `enrollment.not_active`.
 - Ссылка-приглашение: `url = ${PUBLIC_BASE_URL}/join/{token}` (токен 256 бит, хранится хеш). `expiresAt` — в будущем,
@@ -644,27 +643,17 @@ type ClientEvent = { kind: 'page_view' | 'client_error'; page?: string; name?: s
 type AuditEntry = { id: Id; at: Instant; actorId: Id | null; actorName: string | null; action: string; objectType: string; objectId: string; ip: string | null; diff: object | null }
 ```
 
-## 13. Биллинг (`billing`, гибрид)
+## 13. Биллинг (`billing`) — только подписка школы (ADR-012)
 
-| PUT | `/courses/{id}/price` | `{ price: Money | null }` |
-|---|---|---|
-| POST | `/courses/{id}/orders` | `Idempotency-Key`, `{ returnUrl }` → `{ orderId, status, confirmationUrl: string | null }` |
-| GET | `/orders/{id}` | `Order` |
-| GET | `/billing/orders?courseId&cursor` | `Page<Order>` (teacher/admin) |
-| POST | `/billing/webhooks/{provider}` | вебхук провайдера (подпись проверяется) |
-| POST | `/billing/fake/{orderId}/pay` | только при `PAYMENT_PROVIDER=fake`: имитация успешной оплаты покупателем → `Order` |
+Продажи курсов нет: единственный платёж на платформе — подписка школы (§13.2). Эндпоинты заказов
+(`/courses/{id}/orders`, `/orders/{id}`, `/billing/orders`, `/billing/fake/{orderId}/pay`), вебхуки платёжных
+провайдеров (`/billing/webhooks/{provider}`) и `PUT /courses/{id}/price` удалены.
 
 ```ts
-type Order = { id: Id; courseId: Id; courseTitle: string; buyerId: Id; buyerName: string; amount: Money; status: 'pending' | 'paid' | 'failed' | 'refunded' | 'canceled'; provider: string; createdAt: Instant; paidAt: Instant | null }
-type PublicCourse = { id: Id; slug: string; title: string; description: BlockDoc | null; coverUrl: string | null; price: Money | null;
+type PublicCourse = { id: Id; slug: string; title: string; description: BlockDoc | null; coverUrl: string | null;
                       teacher: { name: string; avatarUrl: string | null }; modules: { title: string; itemCount: number }[];
                       selfEnrolEnabled: boolean; tenantSlug: string; tenantName: string }
 ```
-
-Детали (биллинг):
-- `POST /courses/{id}/orders` → 201; покупатель — текущий пользователь. `returnUrl` — только адреса `WEB_ORIGIN`/`PUBLIC_BASE_URL` (иначе 400 `returnUrl`/`not_allowed`). Курс не опубликован или без цены → 422 `billing.course_not_for_sale`; уже записан → 422 `billing.already_enrolled`; провайдер недоступен → 422 `billing.provider_unavailable` (заказ не создаётся, запрос можно повторить с тем же ключом).
-- `GET /orders/{id}`: покупатель или `billing.manage` в курсе (иначе 404 `billing.order_not_found`). `GET /billing/orders`: с `courseId` — `billing.manage` в курсе, без — в tenant.
-- Вебхуки: `provider` ≠ настроенному → 404 `billing.provider_not_found`; неверная подпись/тело → 401 `billing.webhook_invalid`. Stripe — проверка `Stripe-Signature` (HMAC-SHA256, допуск 5 мин); ЮKassa — статус платежа перепроверяется запросом к API. Повторное событие игнорируется. Оплата: `pending → paid` один раз → запись на курс (`method: 'payment'`), вебхук `order.paid`, уведомление `sale` преподавателям курса и автору («Новая продажа курса «…» на 5 000,00 ₽!»).
 
 ### 13.2. Подписка школы на платформу
 
@@ -679,7 +668,7 @@ type Subscription = { status: 'trial' | 'active' | 'expired'; trialEndsAt: Insta
 ```
 
 Детали (подписка):
-- Все сроки открывают одинаковый функционал; цены: месяц — 40 USD, 3 месяца — 120 USD, год — 240 USD.
+- Все сроки открывают одинаковый функционал (без ограничений на число курсов и учеников); цены: месяц — 30 USD, 3 месяца — 75 USD, год — 150 USD.
 - Пробный период 14 дней начинается при первом обращении к подписке (обычно сразу после регистрации школы).
 - Без активной подписки школа работает только на чтение: создание, копирование и публикация курса (скрытый → опубликован/по расписанию) → 422 `billing.subscription_inactive`. Ученики продолжают учиться, преподаватели — проверять работы.
 - Покупка продлевает доступ от его текущего конца (срок во время пробного периода или действующей подписки не теряется). Повтор с тем же `Idempotency-Key` не продлевает второй раз. `payments` — последние 20 оплат, только при `canManage`.
@@ -701,11 +690,10 @@ type WebhookDelivery = { id: Id; event: string; status: 'pending' | 'succeeded' 
 
 Права: `integration.manage`. Токен: `tcpat_<random>`, передаётся как `Authorization: Bearer tcpat_...` и действует от имени создавшего пользователя (его права); `read` — только GET/HEAD/OPTIONS (иначе 403 `integrations.token_read_only`), `write` — любые методы; отозванный/истёкший токен или приостановленный владелец → 401 `auth.invalid_token`.
 
-События вебхуков: `enrollment.created`, `submission.submitted`, `grade.published`, `course.completed`, `order.paid`. Подпись: заголовок `X-TC-Signature: t=<unix>,v1=<hex(hmac_sha256(secret, t + "." + body))>`.
+События вебхуков: `enrollment.created`, `submission.submitted`, `grade.published`, `course.completed`. Подпись: заголовок `X-TC-Signature: t=<unix>,v1=<hex(hmac_sha256(secret, t + "." + body))>`.
 Тело: `{ id: Id /* id доставки, для идемпотентности получателя */; event: string; occurredAt: Instant; data: object }`; `data`:
 `enrollment.created { courseId, userId, role, method }`, `submission.submitted { courseId, itemId, userId, submissionId, late }`,
-`grade.published { courseId, itemId, userId, score, maxScore }`, `course.completed { courseId, userId }`,
-`order.paid { orderId, courseId, buyerId, amountMinor, currency }`.
+`grade.published { courseId, itemId, userId, score, maxScore }`, `course.completed { courseId, userId }`.
 URL — только `https` на публичный адрес (частные/loopback/link-local адреса запрещены, проверка и при отправке); `http://localhost` — только в dev. Ответ 2xx — успех; иначе повтор через 30 с × 2^(n−1), максимум 8 попыток; таймаут 10 с; редиректы не выполняются.
 
 ## 15. Служебное

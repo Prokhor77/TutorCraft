@@ -50,7 +50,6 @@ public interface CoursesApi {
 
     /**
      * Самозапись: {@code code != null} — требуется код; {@code maxStudents}/{@code until} — лимит мест и срок записи.
-     * Правило гибрида: у платного курса самозапись без кода не включается; бесплатная самозапись в платный курс — только по коду.
      */
     record SelfEnrolment(boolean enabled, String code, Integer maxStudents, Instant until) {
     }

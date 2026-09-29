@@ -28,7 +28,7 @@ import {
   type CalendarView,
 } from '@/lib/utils/calendar';
 import { cn } from '@/lib/utils/cn';
-import { copyToClipboard } from '@/lib/utils/download';
+import { copyToClipboard } from '@/lib/utils/clipboard';
 import { formatDate, formatTime } from '@/lib/utils/format';
 
 const KIND_TONE: Record<CalendarEvent['kind'], BadgeTone> = {

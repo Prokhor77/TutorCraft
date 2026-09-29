@@ -16,7 +16,7 @@ import { toast } from '@/components/ui/toast';
 import { useDeliveries, useIntegrations } from '@/features/admin/use-admin';
 import { flattenPages } from '@/lib/api/pagination';
 import { TOKEN_SCOPES, WEBHOOK_EVENTS } from '@/lib/api/schemas/integrations';
-import { copyToClipboard } from '@/lib/utils/download';
+import { copyToClipboard } from '@/lib/utils/clipboard';
 import { formatDateTime } from '@/lib/utils/format';
 
 function SecretOnce({ value }: { value: string }) {

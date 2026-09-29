@@ -11,6 +11,7 @@ import com.tutorcraft.core.billing.domain.SubscriptionPayment;
 import com.tutorcraft.core.billing.domain.SubscriptionTerm;
 import com.tutorcraft.core.billing.domain.TenantSubscription;
 import com.tutorcraft.core.shared.api.IfMatch;
+import com.tutorcraft.core.shared.config.AppProperties;
 import com.tutorcraft.core.shared.domain.BusinessRuleException;
 import com.tutorcraft.core.shared.domain.ConflictException;
 import com.tutorcraft.core.shared.domain.ForbiddenException;
@@ -32,11 +33,13 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Подписка школы в кабинете: статус, сроки, история оплат и покупка срока.
  * Пока платёжный провайдер — fake: покупка активирует срок сразу, без перехода на страницу оплаты.
+ * Это единственный платёж на платформе: курсы для учеников бесплатны (ADR-012).
  */
 @Service
 public class SubscriptionService {
 
     static final String PURCHASE_OPERATION = "subscription.purchase";
+    static final String FAKE_PROVIDER = "fake";
     private static final Logger log = LoggerFactory.getLogger(SubscriptionService.class);
     private static final int PAYMENTS_SHOWN = 20;
     private static final String OBJECT_TYPE = "subscription";
@@ -46,19 +49,19 @@ public class SubscriptionService {
     private final AccessService access;
     private final Subscriptions subscriptions;
     private final SubscriptionRepository repository;
-    private final PaymentGateway gateway;
+    private final String paymentProvider;
     private final IdempotencyService idempotency;
     private final AuditLog audit;
     private final Clock clock;
 
     SubscriptionService(CurrentUserProvider currentUser, AccessService access, Subscriptions subscriptions,
-                        SubscriptionRepository repository, PaymentGateway gateway, IdempotencyService idempotency,
+                        SubscriptionRepository repository, AppProperties properties, IdempotencyService idempotency,
                         AuditLog audit, Clock clock) {
         this.currentUser = currentUser;
         this.access = access;
         this.subscriptions = subscriptions;
         this.repository = repository;
-        this.gateway = gateway;
+        this.paymentProvider = properties.payments().provider();
         this.idempotency = idempotency;
         this.audit = audit;
         this.clock = clock;
@@ -97,7 +100,7 @@ public class SubscriptionService {
             throw new ConflictException(IfMatch.VERSION_CONFLICT_CODE, "Subscription was modified concurrently");
         }
         SubscriptionPayment payment = new SubscriptionPayment(Ids.newId(), user.tenantId(), term, term.price(),
-                gateway.provider(), start, end, user.userId(), now);
+                paymentProvider, start, end, user.userId(), now);
         repository.insertPayment(payment);
         audit.record(AuditRecord.of(user.tenantId(), user.userId(), "subscription.purchased", OBJECT_TYPE,
                 user.tenantId().toString()).withDiff(Map.of("term", term.key(), "paidUntil", end.toString())));
@@ -107,9 +110,9 @@ public class SubscriptionService {
 
     /** Мгновенная активация допустима только с fake-провайдером; реальная оплата подключается отдельно. */
     private void requireInstantCheckout() {
-        if (!PaymentWebhookService.FAKE_PROVIDER.equals(gateway.provider())) {
+        if (!FAKE_PROVIDER.equals(paymentProvider)) {
             throw new BusinessRuleException(BillingErrors.SUBSCRIPTION_CHECKOUT_UNAVAILABLE,
-                    "Subscription checkout is not available for provider " + gateway.provider());
+                    "Subscription checkout is not available for provider " + paymentProvider);
         }
     }
 

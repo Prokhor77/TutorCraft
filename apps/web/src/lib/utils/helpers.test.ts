@@ -6,7 +6,7 @@ import { localeFromAcceptLanguage } from '@/i18n/config';
 import { cn } from './cn';
 import { buildBrandCss, parseHexColor, readableForeground } from './color';
 import { monthGrid, rangeFor, startOfWeek } from './calendar';
-import { formatMoney, toMinor } from './money';
+import { formatMoney } from './money';
 
 describe('safeNextPath (open-redirect guard)', () => {
   it('allows only same-origin relative paths', () => {
@@ -41,7 +41,7 @@ describe('money', () => {
     expect(formatMoney({ amountMinor: 500000, currency: 'RUB' }, 'ru').replace(/\s/g, ' ')).toBe(
       '5 000,00 ₽',
     );
-    expect(toMinor(49.99, 'USD')).toBe(4999);
+    expect(formatMoney({ amountMinor: 3000, currency: 'USD' }, 'en')).toBe('$30.00');
   });
 });
 

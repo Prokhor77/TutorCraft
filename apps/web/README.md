@@ -32,7 +32,7 @@ Full stack (from the repo root): `cp .env.example .env && docker compose up --bu
 ```
 src/
   app/                    routes (App Router). (auth) public forms, (app) authenticated client app,
-                          c/[tenantSlug] SSR storefront, checkout, join, api/v1/[...path] proxy
+                          c/[tenantSlug] SSR storefront, join, api/v1/[...path] proxy
   lib/api/                data layer: fetch client, RFC 9457 problems, zod schemas = contract types,
                           endpoint modules per domain (auth, me, org, courses, enrollment, files,
                           assessment, gradebook, quiz, forum, billing, integrations)
@@ -52,7 +52,7 @@ messages/{ru,en}.json     all UI strings (next-intl, default ru)
   unless a form maps `errors[]` to fields (`features/forms/server-errors.ts`).
 - **API client** (`lib/api/client.ts`) — access token only in memory (Zustand), `credentials: 'include'`
   for the `tc_refresh` cookie, **single-flight** silent refresh on 401, `Idempotency-Key`
-  (`crypto.randomUUID`) for submit/finish/orders, `If-Match` for versioned PATCHes, zod validation of every
+  (`crypto.randomUUID`) for submit/finish/subscription purchases, `If-Match` for versioned PATCHes, zod validation of every
   response (contract mismatches become `client.invalid_response`), cursor pagination helpers.
 - **Auth** — the `(app)` layout restores the session via `POST /auth/refresh` and guards routes client-side
   (ADR-003: no authenticated SSR). Tokens are never persisted or logged. Logout also purges the
@@ -124,7 +124,6 @@ searchable block picker; paste and drag-and-drop upload files via the presigned 
 | `/login` `/register` `/forgot-password` `/reset-password` `/accept-invite` | auth: card with «Вход · Регистрация» tabs, icon inputs, password toggle (Google / Telegram tiles appear when `/auth/providers` enables them; tenant chooser on `auth.tenant_required`)                                                                                                                         |
 | `/join/[token]`                                                            | accept a course invite link                                                                                                                                                                                                                                                                                    |
 | `/c/[tenantSlug]` · `/c/[tenantSlug]/[courseSlug]`                         | SSR catalog and course landing (SEO metadata, OpenGraph) with Buy / Enroll CTA                                                                                                                                                                                                                                 |
-| `/checkout/fake/[orderId]` · `/checkout/return`                            | dev fake payment page, return page polling the order                                                                                                                                                                                                                                                           |
 | `/home`                                                                    | «Мои задачи» (student) / teaching dashboard (teacher) / tabs for both — stat cards on top                                                                                                                                                                                                                      |
 | `/courses`                                                                 | course cards, search, create dialog (title only)                                                                                                                                                                                                                                                               |
 | `/courses/[id]`                                                            | 3-pane builder: course tree, outline canvas, item inspector (`?item=`, `?type=quiz` filter); collapsible modules, status/lock reasons; teacher inline editing, DnD, `+` type picker → quick create, visibility, duplicate, delete+undo, bulk hide/show/move/shift dates, settings sheet, «Как студент» preview |
@@ -141,7 +140,7 @@ searchable block picker; paste and drag-and-drop upload files via the presigned 
 | `/grades` · `/grades/[courseId]`                                           | my grades                                                                                                                                                                                                                                                                                                      |
 | `/calendar`                                                                | month / week / list, iCal subscription                                                                                                                                                                                                                                                                         |
 | `/notifications` · `/settings/notifications` · `/settings/profile`         | notification center, channel matrix + Telegram link, profile/password                                                                                                                                                                                                                                          |
-| `/admin/*`                                                                 | users (+CSV import), categories (DnD), branding (live preview), audit log, orders, API tokens & webhooks                                                                                                                                                                                                       |
+| `/admin/*`                                                                 | users (+CSV import), categories (DnD), branding (live preview), audit log, activity, API tokens & webhooks                                                                                                                                                                                                     |
 
 ## API assumptions (contract gaps)
 
@@ -154,7 +153,7 @@ Coded strictly against `docs/api/contract.md`; where it is silent the client ass
 5. `POST /modules/{id}/restore` exists (the contract lists restore only for courses/items) — used by trash & undo.
 6. `position` in `/items/{id}/move`, `/modules/{id}/move` and category `PATCH` is a 0-based index in the target list.
 7. Quick creation sends a partial `settings` with `kind`; the server fills AC-2 defaults.
-8. The fake payment provider's `confirmationUrl` points to `/checkout/fake/{orderId}`; `returnUrl` is `/checkout/return?courseId=…`.
+8. Courses have no price (ADR-012): the storefront CTA is self-enrolment (optionally by code) or «by invitation».
 9. Teachers can `GET /attempts/{id}` to read essay responses; essay queue ids are `attemptId:slot`.
 10. WebSocket close codes 1008/4001/4401 mean “token invalid” → refresh and reconnect.
 11. Logo upload uses `purpose: 'cover'` (no `logo` purpose in the contract).

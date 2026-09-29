@@ -1,7 +1,7 @@
 # TutorCraft — архитектура
 
 > Источник требований: [`docs/SPEC.md`](SPEC.md) (ТЗ v1.0) + инфраструктурные решения команды (стек «Паши»).
-> Режим продукта — **гибрид** (ADR-002): ядро LMS из ТЗ (P0) + вход через Google/Telegram, продажа курсов и Telegram-уведомления в P0.
+> Режим продукта — **гибрид** (ADR-002): ядро LMS из ТЗ (P0) + вход через Google/Telegram и Telegram-уведомления в P0. Монетизация — только подписка школы на платформу (ADR-012), курсы для учеников бесплатны.
 
 ## 1. Карта системы
 
@@ -57,7 +57,7 @@ com.tutorcraft.core
 ├── progress      — движок условий доступа (чистые функции), выполнение, завершение курса
 ├── communication — форумы, уведомления, календарь
 ├── dashboard     — «Мои задачи», главная преподавателя (BFF-агрегации)
-├── billing       — заказы, PaymentGateway (YooKassa / Stripe / Fake), выдача доступа после оплаты
+├── billing       — подписка школы на платформу (сроки, пробный период, режим «только чтение»)
 └── integrations  — API-токены, исходящие вебхуки
 ```
 
@@ -108,8 +108,8 @@ com.tutorcraft.core
 ### 5.3 Уведомления (FR-NOTIF-01..04)
 Модуль в core-api решает, *кому и что* (с учётом `NotificationPreference`), пишет `notifications` (in-app, с `dedupe_key` — идемпотентность) и outbox-событие `tc.notify.requested.v1` для внешних каналов. notifier доставляет в Telegram/email/WebSocket.
 
-### 5.4 Покупка курса (гибрид, FR-ENROL-09 поднят в P0)
-`POST /courses/{id}/orders` (Idempotency-Key) → `PaymentGateway.createPayment` → redirect URL → вебхук провайдера `POST /billing/webhooks/{provider}` (проверка подписи) → заказ `paid` → запись на курс (enrollment, method=`payment`) → уведомление репетитору в Telegram «Новая продажа».
+### 5.4 Подписка школы (ADR-012)
+`POST /billing/subscription/purchases` (Idempotency-Key, право `billing.manage`) → продление `paid_until` на выбранный срок + строка `subscription_payments` + аудит. Пока провайдер только `fake` (мгновенная активация). Без активной подписки `SubscriptionApi.requireActive` запрещает создание, копирование и публикацию курсов (422 `billing.subscription_inactive`). Продажи курсов нет.
 
 ### 5.5 Outbox (ARCH-04)
 Любое изменение + событие пишутся в одной транзакции PostgreSQL (`outbox`). `OutboxRelay` (scheduled, `SELECT … FOR UPDATE SKIP LOCKED`) публикует в Kafka и помечает `published_at`. Консьюмеры идемпотентны по `eventId`.

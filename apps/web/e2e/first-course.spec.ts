@@ -117,8 +117,10 @@ test('teacher builds the course', async ({ page }) => {
         name: t.quizSlots.addSelected.replace('{count}', String(QUESTION_COUNT)),
       })
       .click();
-    await page.getByRole('button', { name: t.common.save, exact: true }).click();
-    await expect(page.getByText(t.quizSlots.saved)).toBeVisible();
+    // The composition autosaves: wait for a real save («Сохранено в …»), not the initial «all saved» state.
+    await expect(
+      page.getByRole('status').filter({ hasText: t.autosave.saved }).first(),
+    ).toBeVisible({ timeout: 20_000 });
   });
 
   await test.step('invite link for students', async () => {

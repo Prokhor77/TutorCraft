@@ -8,8 +8,7 @@ public enum WebhookEvent {
     ENROLLMENT_CREATED("enrollment.created"),
     SUBMISSION_SUBMITTED("submission.submitted"),
     GRADE_PUBLISHED("grade.published"),
-    COURSE_COMPLETED("course.completed"),
-    ORDER_PAID("order.paid");
+    COURSE_COMPLETED("course.completed");
 
     private final String key;
 

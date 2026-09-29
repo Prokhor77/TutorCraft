@@ -14,7 +14,6 @@ import { ROUTES } from '@/features/auth/routes';
 import { docToPlainText } from '@/lib/blockdoc/doc';
 import { mathTextToPlain } from '@/lib/math/inline-math';
 import { fetchPublicCourse } from '@/lib/server/public-api';
-import { formatMoney } from '@/lib/utils/money';
 
 type Params = { params: Promise<{ tenantSlug: string; courseSlug: string }> };
 const META_DESCRIPTION_MAX = 160;
@@ -49,7 +48,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   };
 }
 
-/** SSR course landing with Buy / Enroll CTA (FR-COURSE-HYB-01, FR-ENROL-09). */
+/** SSR course landing with the enrol CTA (FR-COURSE-HYB-01); courses are free for students (ADR-012). */
 export default async function CourseLandingPage({ params }: Params) {
   const { tenantSlug, courseSlug } = await params;
   const locale = await getLocale();
@@ -58,7 +57,6 @@ export default async function CourseLandingPage({ params }: Params) {
   if (!course) notFound();
   const totalItems = course.modules.reduce((sum, module) => sum + module.itemCount, 0);
   const hasDescription = docToPlainText(course.description).trim().length > 0;
-  const priceText = course.price ? formatMoney(course.price, locale) : t('free');
 
   return (
     <div className="flex min-h-dvh flex-col bg-background">
@@ -102,15 +100,6 @@ export default async function CourseLandingPage({ params }: Params) {
                     <ListChecks className="size-4 text-primary" aria-hidden />
                     {t('itemsCount', { count: totalItems })}
                   </li>
-                  <li
-                    className={
-                      course.price
-                        ? 'flex items-center rounded-full bg-primary-soft px-4 py-2 text-label-lg text-primary'
-                        : 'flex items-center rounded-full bg-success-soft px-4 py-2 text-label-lg text-success'
-                    }
-                  >
-                    {priceText}
-                  </li>
                 </ul>
               </div>
               {course.coverUrl ? (
@@ -130,24 +119,8 @@ export default async function CourseLandingPage({ params }: Params) {
         <div className="mx-auto grid max-w-content grid-cols-1 gap-gutter px-page-x py-8 md:py-12 lg:grid-cols-[minmax(0,1fr)_22rem]">
           <aside className="lg:col-start-2 lg:row-start-1">
             <div className="flex flex-col gap-5 rounded-lg border border-card-border bg-surface p-6 shadow-md lg:sticky lg:top-[calc(var(--size-header-public)+1.5rem)]">
-              <div className="flex flex-col gap-1">
-                <span className="text-label-md uppercase text-text-muted">{t('priceLabel')}</span>
-                <p
-                  className={
-                    course.price
-                      ? 'font-heading text-3xl font-bold'
-                      : 'font-heading text-3xl font-bold text-success'
-                  }
-                >
-                  {priceText}
-                </p>
-              </div>
-              <h2 className="sr-only">{t('joinCourse')}</h2>
-              <CourseCta
-                courseId={course.id}
-                price={course.price}
-                selfEnrolEnabled={course.selfEnrolEnabled}
-              />
+              <h2 className="font-heading text-xl font-bold">{t('joinCourse')}</h2>
+              <CourseCta courseId={course.id} selfEnrolEnabled={course.selfEnrolEnabled} />
               <div className="flex flex-col gap-3 border-t border-border pt-5">
                 <h3 className="text-label-md uppercase text-text-muted">{t('includesTitle')}</h3>
                 <ul className="flex flex-col gap-2.5 text-sm">

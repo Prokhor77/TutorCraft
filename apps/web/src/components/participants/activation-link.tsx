@@ -5,7 +5,7 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/toast';
-import { copyToClipboard } from '@/lib/utils/download';
+import { copyToClipboard } from '@/lib/utils/clipboard';
 
 /** One-time activation link for an invited account: shown to the inviter once, to pass on via any messenger. */
 export function ActivationLink({ url }: { url: string }) {

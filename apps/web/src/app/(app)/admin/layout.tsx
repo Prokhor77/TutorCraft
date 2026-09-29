@@ -7,7 +7,6 @@ import {
   Lock,
   Palette,
   PlugZap,
-  Receipt,
   ScrollText,
   ShieldCheck,
   UserCog,
@@ -38,7 +37,6 @@ const SECTIONS: readonly { href: string; key: string; icon: LucideIcon }[] = [
   { href: ROUTES.adminBranding, key: 'branding', icon: Palette },
   { href: ROUTES.adminAudit, key: 'audit', icon: ScrollText },
   { href: ROUTES.adminActivity, key: 'activity', icon: Activity },
-  { href: ROUTES.adminOrders, key: 'orders', icon: Receipt },
   { href: ROUTES.adminIntegrations, key: 'integrations', icon: PlugZap },
 ];
 

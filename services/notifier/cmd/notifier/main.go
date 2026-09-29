@@ -90,7 +90,7 @@ func newDispatcher(cfg config.Config, log *slog.Logger, producer *kafkax.Produce
 	var mailer email.Transport
 	if cfg.SMTP.Host != "" {
 		mailer = email.SMTPTransport{Host: cfg.SMTP.Host, Port: cfg.SMTP.Port, Username: cfg.SMTP.Username,
-			Password: cfg.SMTP.Password, Timeout: cfg.SMTP.Timeout}
+			Password: cfg.SMTP.Password, Timeout: cfg.SMTP.Timeout, ImplicitTLS: cfg.SMTP.ImplicitTLS}
 	}
 	var telegramAPI telegram.MessageAPI
 	if telegramClient != nil {

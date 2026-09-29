@@ -33,6 +33,19 @@ func TestLoadDefaults(t *testing.T) {
 	}
 }
 
+func TestLoadSMTPImplicitTLSOnPort465(t *testing.T) {
+	env := baseEnv()
+	cfg, err := Load(envconfig.FromMap(env))
+	if err != nil || cfg.SMTP.ImplicitTLS {
+		t.Fatalf("port 1025 must use STARTTLS/plain: %v", err)
+	}
+	env["SMTP_PORT"] = "465"
+	cfg, err = Load(envconfig.FromMap(env))
+	if err != nil || !cfg.SMTP.ImplicitTLS {
+		t.Fatalf("port 465 must use implicit TLS: %v", err)
+	}
+}
+
 func TestLoadSMTPOptional(t *testing.T) {
 	env := baseEnv()
 	delete(env, "SMTP_HOST")

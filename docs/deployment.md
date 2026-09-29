@@ -183,8 +183,7 @@ curl -sI https://confeek.com/ | head -1               # соседа не зад
 
 Внешние сервисы, которым нужен новый домен:
 - Google OAuth: Authorized JavaScript origins → `https://<домен>`;
-- Telegram: `/setdomain` у @BotFather → домен (для Login Widget);
-- YooKassa/Stripe: вебхук `https://<домен>/api/v1/billing/webhooks/yookassa|stripe`.
+- Telegram: `/setdomain` у @BotFather → домен (для Login Widget).
 
 ### 4.9. Бэкапы
 ```bash

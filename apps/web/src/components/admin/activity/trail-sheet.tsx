@@ -12,6 +12,7 @@ import { entryObjects, entryTarget, entryTone } from '@/features/activity/descri
 import { useActivityTrail } from '@/features/activity/use-activity';
 import type { ActivityEntry, ActivityTrail } from '@/lib/api/schemas/activity';
 import { cn } from '@/lib/utils/cn';
+import { copyToClipboard } from '@/lib/utils/clipboard';
 import { formatDateTimePrecise, formatTime, formatTimePrecise } from '@/lib/utils/format';
 import { KindIcon, OutcomeBadge } from './entry-parts';
 
@@ -211,12 +212,8 @@ function Detail({ label, mono, children }: { label: string; mono?: boolean; chil
 function CopyValue({ value }: { value: string }) {
   const t = useTranslations('adminActivity.trail');
   const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(value);
-      toast({ tone: 'success', title: t('copied') });
-    } catch {
-      toast({ tone: 'error', title: t('copyFailed') });
-    }
+    const ok = await copyToClipboard(value);
+    toast({ tone: ok ? 'success' : 'error', title: ok ? t('copied') : t('copyFailed') });
   };
   return (
     <span className="flex items-center gap-1">

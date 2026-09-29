@@ -5,15 +5,13 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.tutorcraft.core.courses.Visibility;
-import com.tutorcraft.core.shared.domain.FieldViolation;
-import com.tutorcraft.core.shared.domain.Money;
 import com.tutorcraft.core.shared.domain.ValidationException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
-/** Инварианты курса: даты, публикация по расписанию, самозапись платного курса, корзина. */
+/** Инварианты курса: даты, публикация по расписанию, самозапись, корзина. */
 class CourseTest {
 
     private static final Instant NOW = Instant.parse("2026-09-27T10:00:00Z");
@@ -48,20 +46,6 @@ class CourseTest {
         assertThatThrownBy(() -> draft().visibility(Visibility.SCHEDULED).build().validate())
                 .isInstanceOf(ValidationException.class);
         assertThat(draft().visibility(Visibility.PUBLISHED).publishAt(NOW).build().publishAt()).isNull();
-    }
-
-    @Test
-    void paidCourseCannotHaveFreeSelfEnrolWithoutCode() {
-        Course.Builder paid = draft().price(new Money(500_000, "RUB"));
-
-        assertThatThrownBy(() -> paid.selfEnrol(new SelfEnrolSettings(true, null, null, null)).build().validate())
-                .isInstanceOf(ValidationException.class)
-                .satisfies(e -> assertThat(((ValidationException) e).violations()).extracting(FieldViolation::code)
-                        .containsExactly("paid_course_requires_code"));
-        assertThatCode(() -> paid.selfEnrol(new SelfEnrolSettings(true, "VIP", null, null)).build().validate())
-                .doesNotThrowAnyException();
-        assertThatCode(() -> paid.selfEnrol(new SelfEnrolSettings(false, null, null, null)).build().validate())
-                .doesNotThrowAnyException();
     }
 
     @Test

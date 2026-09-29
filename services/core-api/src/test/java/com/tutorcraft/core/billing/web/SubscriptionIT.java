@@ -46,7 +46,7 @@ class SubscriptionIT extends IntegrationTest {
             .andExpect(jsonPath("$.status").value("trial"))
             .andExpect(jsonPath("$.canManage").value(true))
             .andExpect(jsonPath("$.terms.length()").value(3))
-            .andExpect(jsonPath("$.terms[2].price.amountMinor").value(24000))
+            .andExpect(jsonPath("$.terms[2].price.amountMinor").value(15000))
             .andExpect(jsonPath("$.terms[2].price.currency").value("USD"));
 
         createCourse().andExpect(status().isCreated());
@@ -76,7 +76,7 @@ class SubscriptionIT extends IntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.status").value("active"))
             .andExpect(jsonPath("$.payments.length()").value(1))
-            .andExpect(jsonPath("$.payments[0].amount.amountMinor").value(24000))
+            .andExpect(jsonPath("$.payments[0].amount.amountMinor").value(15000))
             .andReturn().getResponse().getContentAsString();
         String repeated = purchase("year", key).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
 

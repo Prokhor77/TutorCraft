@@ -36,6 +36,7 @@ const (
 	CategoryCounter = "counter"
 	MaxTitleRunes   = 200
 	MaxBodyRunes    = 4000
+	MaxActionRunes  = 64
 	maxLinkRunes    = 2048
 	maxEmailRunes   = 254
 	maxCategoryLen  = 64
@@ -60,6 +61,8 @@ type Requested struct {
 	Locale         string    `json:"locale"`
 	Email          string    `json:"email"`
 	TelegramChatID int64     `json:"telegramChatId"`
+	// ActionLabel is the optional localized text of the link button ("Задать пароль"); empty = channel default.
+	ActionLabel string `json:"actionLabel"`
 }
 
 // IsCounter reports whether this is a real-time counter update (web only).
@@ -91,6 +94,7 @@ func Decode(raw json.RawMessage) (Requested, error) {
 	}
 	c.MaxLen("body", r.Body, MaxBodyRunes)
 	c.Check(r.Link == "" || isAllowedLink(r.Link), "link", validate.ProblemInvalid)
+	c.MaxLen("actionLabel", r.ActionLabel, MaxActionRunes)
 	c.Check(r.Locale == "" || localePattern.MatchString(r.Locale), "locale", validate.ProblemInvalid)
 	c.Check(r.Email == "" || isEmail(r.Email), "email", validate.ProblemInvalid)
 	if r.IsCounter() {

@@ -1,14 +1,23 @@
 'use client';
 import type { MathfieldElement } from 'mathlive';
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Textarea } from '@/components/ui/input';
+import {
+  forwardRef,
+  type ReactNode,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react';
 import { cn } from '@/lib/utils/cn';
 import { loadMathLive, RUSSIAN_INLINE_SHORTCUTS } from './mathlive';
 
 export type MathFieldHandle = {
-  /** Inserts a LaTeX fragment/template (`#0`, `#?` placeholders) at the caret. */
-  insert: (latex: string) => void;
-  /** Replaces the whole formula. */
+  /**
+   * Inserts a LaTeX fragment/template (`#0`, `#?` placeholders) at the caret and selects its first
+   * slot. Returns false while MathLive is not ready (or failed), so the caller can fall back.
+   */
+  insert: (latex: string) => boolean;
+  /** Replaces the whole formula without echoing it back through `onChange`. */
   setValue: (latex: string) => void;
   focus: () => void;
 };
@@ -20,6 +29,9 @@ type Props = {
   /** Ctrl/Cmd+Enter. */
   onSubmit?: () => void;
   ariaLabel: string;
+  autoFocus?: boolean;
+  /** Rendered instead of the field when MathLive cannot be loaded. */
+  fallback?: ReactNode;
   className?: string;
 };
 
@@ -39,39 +51,33 @@ function createField(module: typeof import('mathlive'), initialValue: string): M
 
 /**
  * WYSIWYG formula input (MathLive `<math-field>`), created imperatively so SSR and JSX typings stay
- * untouched. Falls back to a LaTeX textarea when MathLive cannot be loaded.
+ * untouched. Empty slots are drawn as boxes (`\placeholder{}`); Tab moves between them.
  */
 export const MathField = forwardRef<MathFieldHandle, Props>(function MathField(
-  { initialValue, onChange, onSubmit, ariaLabel, className },
+  { initialValue, onChange, onSubmit, ariaLabel, autoFocus = false, fallback = null, className },
   ref,
 ) {
   const hostRef = useRef<HTMLDivElement>(null);
   const fieldRef = useRef<MathfieldElement | null>(null);
-  const fallbackRef = useRef<HTMLTextAreaElement>(null);
   const callbacks = useRef({ onChange, onSubmit });
   callbacks.current = { onChange, onSubmit };
   const initialRef = useRef(initialValue);
+  const autoFocusRef = useRef(autoFocus);
   const [state, setState] = useState<LoadState>('loading');
 
   useImperativeHandle(ref, () => ({
     insert: (latex) => {
       const field = fieldRef.current;
-      if (field) {
-        field.insert(latex, { selectionMode: 'placeholder', focus: true, scrollIntoView: true });
-        callbacks.current.onChange(field.value);
-        return;
-      }
-      const textarea = fallbackRef.current;
-      if (!textarea) return;
-      textarea.setRangeText(latex, textarea.selectionStart, textarea.selectionEnd, 'end');
-      callbacks.current.onChange(textarea.value);
+      if (!field) return false;
+      field.insert(latex, { selectionMode: 'placeholder', focus: true, scrollIntoView: true });
+      callbacks.current.onChange(field.value);
+      return true;
     },
     setValue: (latex) => {
-      if (fieldRef.current) fieldRef.current.value = latex;
-      else if (fallbackRef.current) fallbackRef.current.value = latex;
-      callbacks.current.onChange(latex);
+      const field = fieldRef.current;
+      if (field && field.value !== latex) field.setValue(latex, { silenceNotifications: true });
     },
-    focus: () => (fieldRef.current ?? fallbackRef.current)?.focus(),
+    focus: () => fieldRef.current?.focus(),
   }));
 
   useEffect(() => {
@@ -93,7 +99,7 @@ export const MathField = forwardRef<MathFieldHandle, Props>(function MathField(
         hostRef.current.replaceChildren(field);
         fieldRef.current = field;
         setState('ready');
-        requestAnimationFrame(() => field?.focus());
+        if (autoFocusRef.current) requestAnimationFrame(() => field?.focus());
       })
       .catch((error: unknown) => {
         console.warn(
@@ -111,22 +117,7 @@ export const MathField = forwardRef<MathFieldHandle, Props>(function MathField(
     };
   }, [ariaLabel]);
 
-  if (state === 'failed') {
-    return (
-      <Textarea
-        ref={fallbackRef}
-        aria-label={ariaLabel}
-        defaultValue={initialRef.current}
-        spellCheck={false}
-        autoFocus
-        className={cn('min-h-24 font-mono text-sm', className)}
-        onChange={(event) => onChange(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === SUBMIT_KEY && (event.ctrlKey || event.metaKey)) onSubmit?.();
-        }}
-      />
-    );
-  }
+  if (state === 'failed') return <>{fallback}</>;
   return (
     <div
       ref={hostRef}

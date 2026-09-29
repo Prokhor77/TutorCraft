@@ -1,11 +1,12 @@
 'use client';
 import { CheckCircle2, ListChecks, Save, XCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BlockEditor } from '@/components/editor/block-editor';
 import { COMPACT_BLOCK_KINDS } from '@/components/editor/block-kinds';
 import { QuestionInput } from '@/components/quiz/question-input';
 import { QUESTION_TYPE_ICONS } from '@/components/quiz/question-type';
+import { SaveIndicator } from '@/components/editor/save-indicator';
 import { SkeletonList } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils/cn';
 import { Alert } from '@/components/ui/alert';
@@ -15,6 +16,8 @@ import { Sheet, SheetContent } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import { Input, NativeSelect } from '@/components/ui/input';
 import { toast } from '@/components/ui/toast';
+import { useProblemToast } from '@/features/app/use-problem-toast';
+import { useAutosave } from '@/features/editor/use-autosave';
 import {
   emptyQuestion,
   toPreviewView,
@@ -107,7 +110,15 @@ type FormProps = {
   number?: number;
   /** `card` = inline Stitch question card (quiz builder, bank); `plain` = inside a sheet. */
   variant?: 'card' | 'plain';
+  /**
+   * Save without a button: a new question is created once it is valid, then every pause in editing stores a new
+   * version. `onSaved` fires after each save.
+   */
+  autosave?: boolean;
 };
+
+/** Every save is a new question version (FR-QBANK-05): wait for a pause in typing rather than saving per keystroke. */
+const QUESTION_AUTOSAVE_DEBOUNCE_MS = 2000;
 
 /** Type pills («Один ответ · Несколько ответов · …»); locked once the question exists (versions keep the type). */
 function TypePills({
@@ -163,6 +174,7 @@ export function QuestionForm({
   onCancel,
   number,
   variant = 'plain',
+  autosave: autosaveMode = false,
 }: FormProps) {
   const t = useTranslations('qbank');
   const tCommon = useTranslations('common');
@@ -174,15 +186,44 @@ export function QuestionForm({
     emptyQuestion('single_choice', defaultCategoryId),
   );
   const [showIssues, setShowIssues] = useState(false);
+  const showProblem = useProblemToast();
+  // Server id of the question being edited: the prop, or the one this form's autosave has just created.
+  const savedId = useRef(questionId);
+  // The question id whose server state is loaded into `input`; later cache updates are our own saves.
+  const hydratedFor = useRef<string | null>(null);
+  const discarded = useRef(false);
+  const [ready, setReady] = useState(!questionId);
+
+  const persist = async (value: QuestionInputData): Promise<Question> => {
+    const id = savedId.current;
+    const saved = id
+      ? await update.mutateAsync({ id, input: value })
+      : await create.mutateAsync(value);
+    savedId.current = saved.id;
+    hydratedFor.current = saved.id;
+    onSaved?.(saved);
+    return saved;
+  };
+  const autosave = useAutosave({
+    value: input,
+    save: (value) => (discarded.current ? Promise.resolve() : persist(value)),
+    enabled: autosaveMode && ready,
+    isValid: (value) => validateQuestion(value).length === 0,
+    debounceMs: QUESTION_AUTOSAVE_DEBOUNCE_MS,
+    onError: showProblem,
+  });
+  const { markSaved } = autosave;
 
   useEffect(() => {
+    if (!questionId || hydratedFor.current === questionId || !existing.data) return;
+    const { id: _id, version: _version, versionId: _versionId, ...rest } = existing.data;
+    savedId.current = questionId;
+    hydratedFor.current = questionId;
     setShowIssues(false);
-    if (!questionId) return setInput(emptyQuestion('single_choice', defaultCategoryId));
-    if (existing.data) {
-      const { id: _id, version: _version, versionId: _versionId, ...rest } = existing.data;
-      setInput(rest);
-    }
-  }, [questionId, existing.data, defaultCategoryId]);
+    setInput(rest);
+    markSaved(rest);
+    setReady(true);
+  }, [questionId, existing.data, markSaved]);
 
   const issues = validateQuestion(input);
   const set = <K extends keyof QuestionInputData>(key: K, value: QuestionInputData[K]) =>
@@ -208,7 +249,12 @@ export function QuestionForm({
               {number}
             </span>
           ) : null}
-          <h2 className="flex-1 text-xl">{questionId ? t('editTitle') : t('createTitle')}</h2>
+          <div className="flex min-w-0 flex-1 flex-col">
+            <h2 className="text-xl">{questionId ? t('editTitle') : t('createTitle')}</h2>
+            {autosaveMode ? (
+              <SaveIndicator status={autosave.status} lastSavedAt={autosave.lastSavedAt} />
+            ) : null}
+          </div>
           <label className="flex items-center gap-2 rounded-full bg-primary-soft py-1 pl-3.5 pr-1 text-label-md text-primary">
             {t('weight')}
             <Input
@@ -223,8 +269,11 @@ export function QuestionForm({
           </label>
         </div>
       ) : null}
-      {showIssues && issues.length > 0 ? (
-        <Alert tone="danger" title={t('fixIssues')}>
+      {(showIssues || autosave.status === 'invalid') && issues.length > 0 ? (
+        <Alert
+          tone={autosaveMode ? 'warning' : 'danger'}
+          title={autosaveMode ? t('autosavePending') : t('fixIssues')}
+        >
           <ul className="list-disc pl-4">
             {issues.map((issue) => (
               <li key={issue}>{t(`issues.${issue}`)}</li>
@@ -313,14 +362,23 @@ export function QuestionForm({
         </details>
       ) : null}
       <div className="flex justify-end gap-2">
-        {onCancel ? (
-          <Button variant="ghost" onClick={onCancel}>
+        {/* With autosave, «Cancel» only makes sense until the draft became a real question. */}
+        {onCancel && !(autosaveMode && questionId) ? (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              discarded.current = true;
+              onCancel();
+            }}
+          >
             {tCommon('cancel')}
           </Button>
         ) : null}
-        <Button onClick={save} loading={create.isPending || update.isPending}>
-          <Save aria-hidden /> {questionId ? t('applyChanges') : t('createQuestion')}
-        </Button>
+        {autosaveMode ? null : (
+          <Button onClick={save} loading={create.isPending || update.isPending}>
+            <Save aria-hidden /> {questionId ? t('applyChanges') : t('createQuestion')}
+          </Button>
+        )}
       </div>
     </div>
   );

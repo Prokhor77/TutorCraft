@@ -1,19 +1,17 @@
 'use client';
-import { Send } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import { Alert } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ErrorState } from '@/components/ui/error-state';
 import { PageHeader, Panel } from '@/components/ui/page-header';
 import { SkeletonList } from '@/components/ui/skeleton';
 import { SettingsTabs } from '@/components/settings/settings-tabs';
+import { TelegramConnect } from '@/components/settings/telegram-connect';
 import { toast } from '@/components/ui/toast';
 import { useMe } from '@/features/auth/use-auth';
 import {
-  useLinkTelegram,
   useNotificationPreferences,
   useSaveNotificationPreferences,
 } from '@/features/notifications/use-notifications';
@@ -31,7 +29,6 @@ export default function NotificationSettingsPage() {
   const me = useMe();
   const prefs = useNotificationPreferences();
   const save = useSaveNotificationPreferences();
-  const link = useLinkTelegram();
   const [matrix, setMatrix] = useState<NotificationPreferences['matrix'] | null>(null);
   useEffect(() => {
     if (prefs.data) setMatrix(prefs.data.matrix);
@@ -71,37 +68,7 @@ export default function NotificationSettingsPage() {
   return (
     <>
       {header}
-      <Panel className="mb-4 sm:flex-row sm:items-center sm:justify-between md:mb-gutter">
-        <div className="flex items-start gap-3 sm:items-center">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-info-soft text-info">
-            <Send className="size-5" aria-hidden />
-          </span>
-          <div className="flex min-w-0 flex-col gap-1">
-            <span className="flex flex-wrap items-center gap-2">
-              <h2 className="text-lg">Telegram</h2>
-              {me?.telegramLinked ? (
-                <Badge tone="success" dot>
-                  {t('linked')}
-                </Badge>
-              ) : (
-                <Badge dot>{t('notLinked')}</Badge>
-              )}
-            </span>
-            <span className="text-sm text-text-muted">{t('telegramHint')}</span>
-          </div>
-        </div>
-        <Button
-          variant={me?.telegramLinked ? 'secondary' : 'primary'}
-          loading={link.isPending}
-          onClick={() =>
-            link.mutate(undefined, {
-              onSuccess: ({ deepLink }) => window.open(deepLink, '_blank', 'noopener,noreferrer'),
-            })
-          }
-        >
-          <Send aria-hidden /> {me?.telegramLinked ? t('relink') : t('link')}
-        </Button>
-      </Panel>
+      <TelegramConnect />
       {!me?.telegramLinked ? (
         <Alert tone="info" className="mb-4 md:mb-gutter" title={t('telegramDisabledColumn')} />
       ) : null}

@@ -18,6 +18,9 @@ type Options<T> = {
   /** Local draft key: protects against tab close / crash before the server save. */
   draftKey?: string;
   intervalMs?: number;
+  /** Also save this long after the last change (quick feedback for forms); off by default. */
+  debounceMs?: number;
+  /** Reported once per failure streak (retries stay silent until a save succeeds again). */
   onError?: (error: unknown) => void;
 };
 
@@ -62,6 +65,7 @@ export function useAutosave<T>({
   isValid,
   draftKey,
   intervalMs = AUTOSAVE_INTERVAL_MS,
+  debounceMs,
   onError,
 }: Options<T>) {
   const [status, setStatus] = useState<AutosaveStatus>('idle');
@@ -69,8 +73,10 @@ export function useAutosave<T>({
   const latest = useRef(value);
   const savedSnapshot = useRef(JSON.stringify(value));
   const inFlight = useRef<Promise<void> | null>(null);
-  const saveRef = useRef(save);
-  saveRef.current = save;
+  const failing = useRef(false);
+  // Callbacks live in refs so `flush` stays stable: inline props must not restart the timers on every render.
+  const config = useRef({ save, isValid, onError, enabled, draftKey });
+  config.current = { save, isValid, onError, enabled, draftKey };
 
   latest.current = value;
   const serialized = JSON.stringify(value);
@@ -84,32 +90,41 @@ export function useAutosave<T>({
 
   const flush = useCallback(async (): Promise<void> => {
     if (inFlight.current) await inFlight.current;
+    const { save: persist, isValid: valid, enabled: on, draftKey: key } = config.current;
     const snapshot = JSON.stringify(latest.current);
-    if (!enabled || snapshot === savedSnapshot.current) return;
-    if (isValid && !isValid(latest.current)) {
+    if (!on || snapshot === savedSnapshot.current) return;
+    if (valid && !valid(latest.current)) {
       setStatus('invalid');
       return;
     }
     setStatus('saving');
-    const run = saveRef
-      .current(latest.current)
+    const run = persist(latest.current)
       .then(() => {
         savedSnapshot.current = snapshot;
+        failing.current = false;
         setLastSavedAt(new Date());
         useSaveStore.getState().markSaved();
-        setStatus(JSON.stringify(latest.current) === snapshot ? 'saved' : 'dirty');
-        if (draftKey && JSON.stringify(latest.current) === snapshot) clearLocalDraft(draftKey);
+        const upToDate = JSON.stringify(latest.current) === snapshot;
+        setStatus(upToDate ? 'saved' : 'dirty');
+        if (key && upToDate) clearLocalDraft(key);
       })
       .catch((error: unknown) => {
         setStatus('error');
-        onError?.(error);
+        if (!failing.current) config.current.onError?.(error);
+        failing.current = true;
       })
       .finally(() => {
         inFlight.current = null;
       });
     inFlight.current = run;
     await run;
-  }, [enabled, isValid, draftKey, onError]);
+  }, []);
+
+  useEffect(() => {
+    if (!enabled || !dirty || !debounceMs) return;
+    const timer = setTimeout(() => void flush(), debounceMs);
+    return () => clearTimeout(timer);
+  }, [serialized, dirty, enabled, debounceMs, flush]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -130,6 +145,9 @@ export function useAutosave<T>({
       window.removeEventListener('beforeunload', onBeforeUnload);
     };
   }, [enabled, flush, intervalMs]);
+
+  // In-app navigation (another question, another page) unmounts the editor: persist what is pending.
+  useEffect(() => () => void flush(), [flush]);
 
   /** Call after the server-side value is (re)loaded so it is not considered dirty. */
   const markSaved = useCallback((persisted: T) => {

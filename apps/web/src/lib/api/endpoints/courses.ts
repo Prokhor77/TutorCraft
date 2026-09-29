@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { http } from '../http';
 import type { BlockDoc } from '../schemas/blockdoc';
-import { pageSchema, type ItemType, type Money, type Visibility } from '../schemas/common';
+import { pageSchema, type ItemType, type Visibility } from '../schemas/common';
 import {
   courseCardSchema,
   courseOutlineSchema,
@@ -85,8 +85,6 @@ export const coursesApi = {
   restore: (id: string) => http.request(`/courses/${id}/restore`, { method: 'POST' }),
   duplicate: (id: string) =>
     http.request(`/courses/${id}/duplicate`, { method: 'POST', schema: courseSchema }),
-  setPrice: (id: string, price: Money | null) =>
-    http.request(`/courses/${id}/price`, { method: 'PUT', body: { price } }),
   outline: (id: string) => http.request(`/courses/${id}/outline`, { schema: courseOutlineSchema }),
   trash: (courseId: string) =>
     http.request('/trash', { query: { courseId }, schema: z.array(trashEntrySchema) }),

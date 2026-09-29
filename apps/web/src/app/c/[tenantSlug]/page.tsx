@@ -103,7 +103,7 @@ export default async function CatalogPage({ params }: Params) {
             <ul className="grid grid-cols-1 gap-gutter sm:grid-cols-2 lg:grid-cols-3">
               {courses.map((course) => (
                 <li key={course.id}>
-                  <StorefrontCourseCard course={course} tenantSlug={tenantSlug} locale={locale} />
+                  <StorefrontCourseCard course={course} tenantSlug={tenantSlug} />
                 </li>
               ))}
             </ul>

@@ -99,7 +99,7 @@ self-hosted variable fonts from npm. `cn()` knows the custom sizes (`src/lib/uti
   filters / queue) · centre canvas · right inspector 320 px. Tablet: left dock becomes an icon rail, inspector
   moves under the canvas or into a sheet. Mobile: single column, segmented control
   «Конструктор / Структура / Предпросмотр».
-- **Public pages** (landing, auth, catalog, course landing, checkout, invites): `SiteHeader` + `SiteFooter` from
+- **Public pages** (landing, auth, catalog, course landing, invites): `SiteHeader` + `SiteFooter` from
   `src/components/landing`.
 - **Page rhythm:** every app page is a stack of white 2rem panels on `--background`: header card → KPI `StatGrid`
   (real data only) → content panels; lists inside panels are rounded rows with avatars and status chips.

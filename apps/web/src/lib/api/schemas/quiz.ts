@@ -160,6 +160,14 @@ const randomSlot = z.object({
 });
 export const quizSlotSchema = z.union([fixedSlot, randomSlot]);
 export type QuizSlot = z.infer<typeof quizSlotSchema>;
+
+/** Client-side `page` value meaning "place by `questionsPerPage`"; the API encodes it as `null` (explicit pages are ≥ 1). */
+export const AUTO_PAGE = 0;
+
+/** Client slot → PUT /items/{id}/quiz/slots body item (inverse of the `null → 0` read normalisation). */
+export function toQuizSlotPayload(slot: QuizSlot) {
+  return { ...slot, page: slot.page > AUTO_PAGE ? slot.page : null };
+}
 /** GET /items/{id}/quiz/slots → "то же + разрешённые вопросы": assumed `{ slots, questions?: QuestionSummary[] }`. */
 export const quizSlotsResponseSchema = z.object({
   slots: z.array(quizSlotSchema),

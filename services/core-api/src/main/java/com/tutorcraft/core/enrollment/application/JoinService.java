@@ -52,7 +52,7 @@ public class JoinService {
         this.clock = clock;
     }
 
-    /** Платный курс без кода → 422 enrollment.payment_required (путь — покупка, POST /courses/{id}/orders). */
+    /** Самозапись студентом (FR-ENROL-02); отказ по правилам {@link SelfEnrolPolicy} → 422. */
     @Transactional
     public EnrollmentView selfEnrol(UUID courseId, String code) {
         CurrentUser user = currentUser.require();
@@ -65,7 +65,7 @@ public class JoinService {
         enrollments.lockCourse(courseId);
         SelfEnrolment settings = courses.selfEnrolment(user.tenantId(), courseId).orElseThrow(EnrollmentErrors::courseNotFound);
         SelfEnrolPolicy.check(new SelfEnrolPolicy.Request(settings.enabled(), settings.code(), settings.maxStudents(),
-                settings.until(), course.price() != null, code,
+                settings.until(), code,
                 enrollments.countActiveByRole(user.tenantId(), courseId, CourseRole.STUDENT), now));
         return views.view(join(user, courseId, CourseRole.STUDENT, EnrolCommand.METHOD_SELF));
     }

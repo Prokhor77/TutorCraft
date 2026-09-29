@@ -31,7 +31,7 @@ export function useQuestion(id: string | null) {
 
 export function useQuestionVersions(id: string | null) {
   return useQuery({
-    queryKey: [...queryKeys.question(id ?? 'new'), 'versions'],
+    queryKey: queryKeys.questionVersions(id ?? 'new'),
     queryFn: () => quizApi.versions(id as string),
     enabled: !!id,
   });
@@ -61,6 +61,7 @@ export function useQbankMutations(courseId: string) {
         quizApi.updateQuestion(id, input),
       onSuccess: (question) => {
         queryClient.setQueryData(queryKeys.question(question.id), question);
+        void queryClient.invalidateQueries({ queryKey: queryKeys.questionVersions(question.id) });
         invalidate();
       },
     }),

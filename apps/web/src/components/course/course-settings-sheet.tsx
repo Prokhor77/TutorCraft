@@ -9,13 +9,11 @@ import { Field, Label } from '@/components/ui/field';
 import { FileDropzone } from '@/components/ui/file-dropzone';
 import { DateTimeInput, Input, NativeSelect } from '@/components/ui/input';
 import { toast } from '@/components/ui/toast';
-import { useSetCoursePrice, useUpdateCourse } from '@/features/courses/use-courses';
+import { useUpdateCourse } from '@/features/courses/use-courses';
 import { flattenModules, useOutline } from '@/features/courses/use-outline';
 import { useFileUpload } from '@/features/files/use-files';
-import { PERMISSIONS } from '@/lib/access/permissions';
 import type { Visibility } from '@/lib/api/schemas/common';
 import { GROUP_MODES, type Course } from '@/lib/api/schemas/courses';
-import { SUPPORTED_CURRENCIES, toMajor, toMinor } from '@/lib/utils/money';
 import { fromDateTimeLocalValue, toDateTimeLocalValue } from '@/lib/utils/time';
 import { useCourseContext } from '@/features/courses/course-context';
 
@@ -31,8 +29,6 @@ type Draft = {
   groupMode: Course['groupMode'];
   minFinalPercent: string;
   requiredItemIds: string[];
-  priceAmount: string;
-  currency: string;
 };
 
 function draftFromCourse(course: Course): Draft {
@@ -48,12 +44,10 @@ function draftFromCourse(course: Course): Draft {
     groupMode: course.groupMode,
     minFinalPercent: course.completionRule.minFinalPercent?.toString() ?? '',
     requiredItemIds: course.completionRule.requiredItemIds,
-    priceAmount: course.price ? String(toMajor(course.price)) : '',
-    currency: course.price?.currency ?? SUPPORTED_CURRENCIES[0],
   };
 }
 
-/** Course settings (title, dates, cover, self-enrol, price, completion rule, group mode). */
+/** Course settings (title, dates, cover, self-enrol, completion rule, group mode). */
 type SheetControl = {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -67,10 +61,9 @@ export function CourseSettingsSheet({
 }: SheetControl = {}) {
   const t = useTranslations('courseSettings');
   const tCommon = useTranslations('common');
-  const { course, can } = useCourseContext();
+  const { course } = useCourseContext();
   const outline = useOutline(course.id);
   const update = useUpdateCourse(course.id);
-  const setPrice = useSetCoursePrice(course.id);
   const cover = useFileUpload('cover');
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = controlledOpen ?? uncontrolledOpen;
@@ -104,17 +97,6 @@ export function CourseSettingsSheet({
         completionRule: { requiredItemIds: draft.requiredItemIds, minFinalPercent: minFinal },
       },
     });
-    const nextPrice = draft.priceAmount
-      ? {
-          amountMinor: toMinor(Number(draft.priceAmount), draft.currency),
-          currency: draft.currency,
-        }
-      : null;
-    if (
-      can(PERMISSIONS.coursePublish) &&
-      JSON.stringify(nextPrice) !== JSON.stringify(course.price)
-    )
-      await setPrice.mutateAsync(nextPrice);
     toast({ tone: 'success', title: t('saved') });
     setOpen(false);
   };
@@ -254,33 +236,6 @@ export function CourseSettingsSheet({
               </div>
             ) : null}
           </fieldset>
-          {can(PERMISSIONS.coursePublish) ? (
-            <fieldset className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-md bg-surface-muted p-4">
-              <legend className="px-1 text-sm font-medium">{t('price')}</legend>
-              <Field label={t('priceAmount')} hint={t('priceHint')}>
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  inputMode="decimal"
-                  value={draft.priceAmount}
-                  onChange={(event) => set('priceAmount', event.target.value)}
-                />
-              </Field>
-              <Field label={t('currency')}>
-                <NativeSelect
-                  value={draft.currency}
-                  onChange={(event) => set('currency', event.target.value)}
-                >
-                  {SUPPORTED_CURRENCIES.map((currency) => (
-                    <option key={currency} value={currency}>
-                      {currency}
-                    </option>
-                  ))}
-                </NativeSelect>
-              </Field>
-            </fieldset>
-          ) : null}
           <fieldset className="flex flex-col gap-3 rounded-md bg-surface-muted p-4">
             <legend className="px-1 text-sm font-medium">{t('completion')}</legend>
             <Field label={t('minFinalPercent')} hint={t('minFinalHint')}>
@@ -327,7 +282,7 @@ export function CourseSettingsSheet({
               ))}
             </NativeSelect>
           </Field>
-          <Button type="submit" loading={update.isPending || setPrice.isPending}>
+          <Button type="submit" loading={update.isPending}>
             {tCommon('save')}
           </Button>
         </form>

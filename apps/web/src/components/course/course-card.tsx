@@ -1,7 +1,7 @@
 'use client';
 import { ArrowUpRight, BookOpen, Copy, MoreHorizontal, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import { useLocale, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
 import { StatusChip } from './status-chip';
 import { Button } from '@/components/ui/button';
@@ -14,17 +14,15 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { ROUTES } from '@/features/auth/routes';
 import type { CourseCard as CourseCardData } from '@/lib/api/schemas/courses';
-import { formatMoney } from '@/lib/utils/money';
 
 type Props = { course: CourseCardData; onDuplicate?: () => void; onDelete?: () => void };
 
 const STAFF_ROLES = new Set(['teacher', 'assistant']);
 
-/** Stitch course card: inset rounded cover with status / price chips, headline title, role chip, progress. */
+/** Stitch course card: inset rounded cover with a status chip, headline title, role chip, progress. */
 export function CourseCard({ course, onDuplicate, onDelete }: Props) {
   const t = useTranslations('courses');
   const tRoles = useTranslations('roles');
-  const locale = useLocale();
   const manageable = !!(onDuplicate || onDelete);
   const staff = course.role !== null && STAFF_ROLES.has(course.role);
   const showStatus = staff || course.visibility !== 'published';
@@ -49,18 +47,9 @@ export function CourseCard({ course, onDuplicate, onDelete }: Props) {
             </span>
           </div>
         )}
-        {showStatus || course.price ? (
-          <div className="pointer-events-none absolute inset-x-2 top-2 flex flex-wrap items-start justify-between gap-1.5">
-            {showStatus ? (
-              <StatusChip visibility={course.visibility} className="shadow-sm" />
-            ) : (
-              <span />
-            )}
-            {course.price ? (
-              <Badge className="bg-surface/95 text-text shadow-sm">
-                {formatMoney(course.price, locale)}
-              </Badge>
-            ) : null}
+        {showStatus ? (
+          <div className="pointer-events-none absolute inset-x-2 top-2 flex flex-wrap items-start gap-1.5">
+            <StatusChip visibility={course.visibility} className="shadow-sm" />
           </div>
         ) : null}
       </div>

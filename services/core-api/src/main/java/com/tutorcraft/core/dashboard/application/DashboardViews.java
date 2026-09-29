@@ -1,6 +1,5 @@
 package com.tutorcraft.core.dashboard.application;
 
-import com.tutorcraft.core.shared.domain.Money;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -39,6 +38,6 @@ public final class DashboardViews {
     }
 
     public record CourseCard(UUID id, String title, String shortName, String coverUrl, UUID categoryId, String role,
-                             Integer progressPercent, String visibility, Money price) {
+                             Integer progressPercent, String visibility) {
     }
 }

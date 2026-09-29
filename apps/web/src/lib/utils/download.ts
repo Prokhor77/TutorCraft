@@ -8,13 +8,3 @@ export function saveBlob(blob: Blob, fileName: string): void {
   anchor.remove();
   URL.revokeObjectURL(url);
 }
-
-export async function copyToClipboard(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch (error) {
-    console.warn('[clipboard] write failed', error instanceof Error ? error.name : 'unknown');
-    return false;
-  }
-}

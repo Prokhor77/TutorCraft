@@ -2,11 +2,9 @@ import { ArrowRight, BookOpen, Layers } from 'lucide-react';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { Avatar } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { ROUTES } from '@/features/auth/routes';
 import type { PublicCourse } from '@/lib/api/schemas/courses';
 import { cn } from '@/lib/utils/cn';
-import { formatMoney } from '@/lib/utils/money';
 
 /** Decorative stand-in when a course has no cover: soft violet gradient with a book chip. */
 export function CoverPlaceholder({ className }: { className?: string }) {
@@ -27,15 +25,13 @@ export function CoverPlaceholder({ className }: { className?: string }) {
   );
 }
 
-/** Storefront course card in the landing style: 2rem white card, inset cover, price chip, real counts only. */
+/** Storefront course card in the landing style: 2rem white card, inset cover, real counts only. */
 export async function StorefrontCourseCard({
   course,
   tenantSlug,
-  locale,
 }: {
   course: PublicCourse;
   tenantSlug: string;
-  locale: string;
 }) {
   const t = await getTranslations('storefront');
   const itemCount = course.modules.reduce((sum, module) => sum + module.itemCount, 0);
@@ -51,12 +47,6 @@ export async function StorefrontCourseCard({
         ) : (
           <CoverPlaceholder className="aspect-video w-full" />
         )}
-        <Badge
-          tone={course.price ? 'primary' : 'success'}
-          className="absolute left-3 top-3 px-3 py-1 shadow-sm"
-        >
-          {course.price ? formatMoney(course.price, locale) : t('free')}
-        </Badge>
       </div>
       <div className="flex flex-1 flex-col gap-3 px-3 pb-3">
         <h3 className="text-lg group-hover:text-primary">{course.title}</h3>

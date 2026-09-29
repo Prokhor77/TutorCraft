@@ -48,6 +48,10 @@ func TestFormatNotification(t *testing.T) {
 	if button.Text != "Открыть" || button.URL != "https://app.tutorcraft.ru/courses/1" {
 		t.Fatalf("unexpected button %+v", button)
 	}
+	n.ActionLabel = "Задать пароль"
+	if labeled := FormatNotification(testChatID, n, "https://app.tutorcraft.ru/x"); labeled.ReplyMarkup.InlineKeyboard[0][0].Text != "Задать пароль" {
+		t.Fatalf("action label ignored: %+v", labeled.ReplyMarkup)
+	}
 	if noLink := FormatNotification(testChatID, notification.Requested{Title: "t"}, ""); noLink.ReplyMarkup != nil {
 		t.Fatal("no button expected without link")
 	}

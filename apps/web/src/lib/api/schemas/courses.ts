@@ -5,7 +5,6 @@ import {
   idSchema,
   instantSchema,
   itemTypeSchema,
-  moneySchema,
   nullableInstant,
   progressStatusSchema,
   visibilitySchema,
@@ -20,7 +19,6 @@ export const courseCardSchema = z.object({
   role: courseRoleSchema.nullable(),
   progressPercent: z.number().nullable(),
   visibility: visibilitySchema,
-  price: moneySchema.nullable(),
 });
 export type CourseCard = z.infer<typeof courseCardSchema>;
 
@@ -53,7 +51,6 @@ export const courseSchema = z.object({
   visibility: visibilitySchema,
   publishAt: nullableInstant,
   selfEnrol: selfEnrolSchema,
-  price: moneySchema.nullable(),
   completionRule: courseCompletionRuleSchema,
   groupMode: z.enum(GROUP_MODES),
   myRole: courseRoleSchema.nullable(),
@@ -265,7 +262,6 @@ export const publicCourseSchema = z.object({
   title: z.string(),
   description: blockDocSchema.nullable(),
   coverUrl: z.string().nullable(),
-  price: moneySchema.nullable(),
   teacher: z.object({ name: z.string(), avatarUrl: z.string().nullable() }),
   modules: z.array(z.object({ title: z.string(), itemCount: z.number() })),
   selfEnrolEnabled: z.boolean(),

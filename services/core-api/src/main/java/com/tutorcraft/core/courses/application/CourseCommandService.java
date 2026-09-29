@@ -22,7 +22,6 @@ import com.tutorcraft.core.shared.content.BlockDocs.SanitizedDoc;
 import com.tutorcraft.core.shared.domain.BusinessRuleException;
 import com.tutorcraft.core.shared.domain.ForbiddenException;
 import com.tutorcraft.core.shared.domain.Ids;
-import com.tutorcraft.core.shared.domain.Money;
 import com.tutorcraft.core.shared.domain.ValidationException;
 import com.tutorcraft.core.shared.security.CurrentUser;
 import com.tutorcraft.core.shared.security.CurrentUserProvider;
@@ -110,22 +109,6 @@ public class CourseCommandService {
         return queries.get(courseId);
     }
 
-    /** PUT /courses/{id}/price — гибрид: платный курс (FR-ENROL-09); null — бесплатный. */
-    @Transactional
-    public CourseView setPrice(UUID courseId, Money price) {
-        CurrentUser user = currentUser.require();
-        access.require(Permission.COURSE_PUBLISH, AccessContext.course(courseId));
-        Course current = courses.find(user.tenantId(), courseId).orElseThrow(CoursesErrors::courseNotFound);
-        Course updated = current.toBuilder().price(price).build();
-        writer.save(current, updated, current.version());
-        Map<String, Object> diff = new LinkedHashMap<>();
-        diff.put("amountMinor", price == null ? null : price.amountMinor());
-        diff.put("currency", price == null ? null : price.currency());
-        events.audit(user.tenantId(), user.userId(), CourseChangeEvents.OBJECT_COURSE, courseId, "price_changed", courseId, diff);
-        events.courseChanged(user.tenantId(), courseId, ChangeKind.UPDATED, user.userId());
-        return queries.get(courseId);
-    }
-
     /** В корзину (UX-06: без подтверждения, восстановление — POST /restore). */
     @Transactional
     public void delete(UUID courseId) {
@@ -194,8 +177,7 @@ public class CourseCommandService {
                 .coverFileId(patch.coverFileId().applyTo(current.coverFileId()))
                 .startsAt(patch.startsAt().applyTo(current.startsAt()))
                 .endsAt(patch.endsAt().applyTo(current.endsAt()))
-                .publishAt(patch.publishAt().applyTo(current.publishAt()))
-                .price(patch.price().applyTo(current.price()));
+                .publishAt(patch.publishAt().applyTo(current.publishAt()));
         if (patch.description().isPresent()) {
             builder.description(sanitizedDescription(current.tenantId(), patch.description().value()));
         }

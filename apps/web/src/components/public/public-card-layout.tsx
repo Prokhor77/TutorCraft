@@ -4,8 +4,8 @@ import { SiteHeader } from '@/components/landing/site-header';
 import { MAIN_CONTENT_ID } from '@/components/layout/skip-link';
 import { CenteredCard, PublicBlobs } from '@/components/public/status-card';
 
-/** Checkout and invite pages: public header/footer around a centred 2rem Stitch card on a soft canvas. */
-export default function CheckoutLayout({ children }: { children: ReactNode }) {
+/** Public single-card pages (invites): header/footer around a centred 2rem Stitch card on a soft canvas. */
+export function PublicCardLayout({ children }: { children: ReactNode }) {
   return (
     <div className="relative flex min-h-dvh flex-col overflow-clip bg-background">
       <PublicBlobs />

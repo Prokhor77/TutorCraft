@@ -134,6 +134,29 @@ func TestMessageBodiesAreEscapedAndLinkIsAbsolute(t *testing.T) {
 	}
 }
 
+func TestAccountEmailUsesActionLabelAndServiceFooter(t *testing.T) {
+	n := testRequest().Notification
+	n.Category = categoryAccount
+	n.ActionLabel = "Задать пароль"
+	n.Body = "Вас пригласили на курс.\nСсылка действует 7 дн."
+	text, html, err := render(newContent(n, "http://localhost:3000/accept-invite?token=abc"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(html, ">Задать пароль</a>") || strings.Contains(html, ">Открыть</a>") {
+		t.Fatalf("action label not used: %s", html)
+	}
+	if !strings.Contains(html, labelsFor("ru").AccountFooter) || strings.Contains(html, "включены уведомления") {
+		t.Fatalf("account footer expected: %s", html)
+	}
+	if !strings.Contains(html, `mso-hide:all;">Вас пригласили на курс.</div>`) {
+		t.Fatalf("preheader expected: %s", html)
+	}
+	if !strings.Contains(text, "Задать пароль: http://localhost:3000/accept-invite?token=abc\n") {
+		t.Fatalf("plain-text link expected: %q", text)
+	}
+}
+
 func TestSenderSkipsWithoutAddressOrTransport(t *testing.T) {
 	req := testRequest()
 	if err := NewSender(nil, testFrom(), testLinks()).Send(context.Background(), req); !isSkip(err) {

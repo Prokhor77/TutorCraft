@@ -19,7 +19,6 @@ import com.tutorcraft.core.courses.domain.SelfEnrolSettings;
 import com.tutorcraft.core.shared.api.IfMatch;
 import com.tutorcraft.core.shared.api.PageQuery;
 import com.tutorcraft.core.shared.api.PageResponse;
-import com.tutorcraft.core.shared.domain.Money;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -33,7 +32,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -110,11 +108,6 @@ class CoursesController {
         return duplication.duplicateCourse(id);
     }
 
-    @PutMapping("/courses/{id}/price")
-    CourseView setPrice(@PathVariable UUID id, @RequestBody PriceRequest request) {
-        return commands.setPrice(id, request.price());
-    }
-
     @GetMapping("/courses/{id}/outline")
     OutlineView outline(@PathVariable UUID id) {
         return structure.outline(id);
@@ -128,15 +121,12 @@ class CoursesController {
     private static CoursePatch toPatch(PatchBody body) {
         return new CoursePatch(body.text("title"), body.text("shortName"), body.uuid("categoryId"), body.raw("description"),
                 body.uuid("coverFileId"), body.instant("startsAt"), body.instant("endsAt"), body.text("visibility"),
-                body.instant("publishAt"), body.value("selfEnrol", SelfEnrolSettings.class), body.value("price", Money.class),
+                body.instant("publishAt"), body.value("selfEnrol", SelfEnrolSettings.class),
                 body.value("completionRule", CourseCompletionRule.class), body.text("groupMode"));
     }
 
     record CreateCourseRequest(@NotBlank @Size(max = CourseTexts.MAX_TITLE) String title,
                                @Size(max = CourseTexts.MAX_SHORT_NAME) String shortName, UUID categoryId,
                                Map<String, Object> description, Instant startsAt, Instant endsAt, UUID coverFileId) {
-    }
-
-    record PriceRequest(Money price) {
     }
 }

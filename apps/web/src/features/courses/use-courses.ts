@@ -9,7 +9,6 @@ import {
   type CreateCourseInput,
 } from '@/lib/api/endpoints/courses';
 import { getNextCursor } from '@/lib/api/pagination';
-import type { Money } from '@/lib/api/schemas/common';
 import type { Course } from '@/lib/api/schemas/courses';
 import { queryKeys } from '../query-keys';
 
@@ -53,14 +52,6 @@ export function useUpdateCourse(courseId: string) {
       void queryClient.invalidateQueries({ queryKey: queryKeys.myCourses });
     },
     onError: () => void queryClient.invalidateQueries({ queryKey: queryKeys.course(courseId) }),
-  });
-}
-
-export function useSetCoursePrice(courseId: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (price: Money | null) => coursesApi.setPrice(courseId, price),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.course(courseId) }),
   });
 }
 

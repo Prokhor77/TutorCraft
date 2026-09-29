@@ -87,7 +87,7 @@ class DemoCourse {
         CourseView course = courseQueries.get(courseId);
         courses.update(courseId, new CoursePatch(Patch.absent(), Patch.absent(), Patch.absent(), Patch.absent(),
                 Patch.absent(), Patch.absent(), Patch.absent(), Patch.of(PUBLISHED), Patch.absent(), Patch.absent(),
-                Patch.absent(), Patch.absent(), Patch.absent()), course.version());
+                Patch.absent(), Patch.absent()), course.version());
     }
 
     private void enrolStudents(Accounts accounts, UUID courseId) {

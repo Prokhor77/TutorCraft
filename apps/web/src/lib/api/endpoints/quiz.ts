@@ -12,6 +12,7 @@ import {
   questionVersionSchema,
   quizSlotsResponseSchema,
   saveAnswerResultSchema,
+  toQuizSlotPayload,
   type QuestionInput,
   type QuestionResponse,
   type QuizSlot,
@@ -70,7 +71,11 @@ export const quizApi = {
   slots: (itemId: string) =>
     http.request(`/items/${itemId}/quiz/slots`, { schema: quizSlotsResponseSchema }),
   saveSlots: (itemId: string, slots: QuizSlot[]) =>
-    http.request(`/items/${itemId}/quiz/slots`, { method: 'PUT', body: { slots } }),
+    http.request(`/items/${itemId}/quiz/slots`, {
+      method: 'PUT',
+      body: { slots: slots.map(toQuizSlotPayload) },
+      schema: quizSlotsResponseSchema,
+    }),
   startAttempt: (itemId: string) =>
     http.request(`/items/${itemId}/attempts`, { method: 'POST', schema: attemptSchema }),
   attempt: (id: string) => http.request(`/attempts/${id}`, { schema: attemptSchema }),

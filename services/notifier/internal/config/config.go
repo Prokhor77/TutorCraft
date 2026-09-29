@@ -21,6 +21,7 @@ const (
 	defaultConcurrency     = 4
 	maxConcurrency         = 32
 	defaultSMTPPort        = 1025
+	smtpsPort              = 465 // SMTPS: TLS from the first byte instead of STARTTLS
 	maxPort                = 65535
 	defaultSMTPTimeout     = 15 * time.Second
 	defaultShutdownTimeout = 15 * time.Second
@@ -43,6 +44,8 @@ type SMTP struct {
 	Password string
 	From     *mail.Address
 	Timeout  time.Duration
+	// ImplicitTLS: connect over TLS right away (port 465 — Gmail, Yandex, Mail.ru); otherwise STARTTLS if offered.
+	ImplicitTLS bool
 }
 
 // Telegram settings; BotToken == "" disables the telegram channel and the linking bot.
@@ -112,6 +115,7 @@ func loadSMTP(env *envconfig.Loader) SMTP {
 	if smtp.Host == "" {
 		return smtp
 	}
+	smtp.ImplicitTLS = smtp.Port == smtpsPort
 	from, err := mail.ParseAddress(env.RequiredString("SMTP_FROM"))
 	if err != nil {
 		env.Fail("SMTP_FROM", "must be an email address, e.g. TutorCraft <no-reply@example.com>")

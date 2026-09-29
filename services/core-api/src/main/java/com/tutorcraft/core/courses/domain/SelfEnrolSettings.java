@@ -5,7 +5,7 @@ import java.time.Instant;
 
 /**
  * Самозапись (FR-ENROL-02): вкл/выкл, код доступа, лимит мест, срок записи.
- * Правило гибрида: у платного курса бесплатная самозапись без кода запрещена — код работает как «ваучер».
+ * Курсы для учеников бесплатны: школа платит только подписку на платформу (ADR-012).
  */
 public record SelfEnrolSettings(boolean enabled, String code, Integer maxStudents, Instant until) {
 
@@ -21,11 +21,9 @@ public record SelfEnrolSettings(boolean enabled, String code, Integer maxStudent
         return code != null;
     }
 
-    void validate(Validator validator, boolean paidCourse) {
+    void validate(Validator validator) {
         validator.maxLength(code, MAX_CODE_LENGTH, "selfEnrol.code")
                 .check(maxStudents == null || (maxStudents >= 1 && maxStudents <= MAX_STUDENTS_LIMIT), "selfEnrol.maxStudents",
-                        "out_of_range", "maxStudents must be between 1 and " + MAX_STUDENTS_LIMIT)
-                .check(!paidCourse || !enabled || hasCode(), "selfEnrol.code", "paid_course_requires_code",
-                        "Self-enrolment in a paid course requires an access code");
+                        "out_of_range", "maxStudents must be between 1 and " + MAX_STUDENTS_LIMIT);
     }
 }

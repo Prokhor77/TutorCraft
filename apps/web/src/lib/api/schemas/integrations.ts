@@ -19,7 +19,6 @@ export const WEBHOOK_EVENTS = [
   'submission.submitted',
   'grade.published',
   'course.completed',
-  'order.paid',
 ] as const;
 export const webhookSchema = z.object({
   id: idSchema,

@@ -93,13 +93,13 @@ export const LANDING: LandingContent = {
       t('API-токены, вебхуки и журнал аудита', 'API tokens, webhooks and audit log'),
     ],
     plans: [
-      { id: 'month', name: t('1 месяц', '1 month'), months: 1, price: 40 },
-      { id: 'quarter', name: t('3 месяца', '3 months'), months: 3, price: 120 },
+      { id: 'month', name: t('1 месяц', '1 month'), months: 1, price: 30 },
+      { id: 'quarter', name: t('3 месяца', '3 months'), months: 3, price: 75 },
       {
         id: 'year',
         name: t('1 год', '1 year'),
         months: 12,
-        price: 240,
+        price: 150,
         highlighted: true,
         badge: t('Выгоднее всего', 'Best value'),
       },

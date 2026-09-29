@@ -21,10 +21,10 @@
 |---|---|---|
 | `tc.media.video-uploaded.v1` | core-api → media-worker | `{ fileId, bucket, objectKey, contentType, sizeBytes, ownerUserId }` |
 | `tc.media.video-processed.v1` | media-worker → core-api | `{ fileId, status: "ready" \| "failed", hlsPrefix, masterPlaylistKey, durationSec, renditions: [{ name, height, bandwidth }], error? }` |
-| `tc.notify.requested.v1` | core-api → notifier | `{ notificationId, userId, category, channels: ["email","telegram","web"], title, body, link, locale, email?, telegramChatId? }` |
+| `tc.notify.requested.v1` | core-api → notifier | `{ notificationId, userId, category, channels: ["email","telegram","web"], title, body, link, locale, email?, telegramChatId?, actionLabel? }` |
 | `tc.notify.delivered.v1` | notifier → core-api | `{ notificationId, channel, status: "sent" \| "failed" \| "skipped", error? }` |
 | `tc.telegram.linked.v1` | notifier → core-api | `{ linkCode, chatId, telegramUserId, username }` — пользователь нажал Start в боте по deep-link |
-| `tc.domain.events.v1` | core-api → (вебхуки, аналитика) | `{ name: "submission.submitted" \| "grade.published" \| "enrollment.created" \| "course.completed" \| "order.paid", data }` |
+| `tc.domain.events.v1` | core-api → (вебхуки, аналитика) | `{ name: "submission.submitted" \| "grade.published" \| "enrollment.created" \| "course.completed", data }` |
 
 JSON-схемы — в `schemas/*.json`; Go-структуры и Java-record'ы генерируются вручную и проверяются контрактными тестами на примерах из `examples/`.
 
@@ -74,8 +74,10 @@ notifier пересылает её клиенту как `{"type":"counter","dat
 **`tc.notify.requested.v1`.** Обязательны `notificationId`, `userId` (UUID), `category` (`^[a-z][a-z0-9_]*$`),
 `channels` (непустой, без повторов, из `email|telegram|web`), `title` (≤ 200 символов). Необязательны `body`
 (≤ 4000), `link` (путь приложения `/…` или абсолютный `http(s)://`; относительный дополняется `PUBLIC_BASE_URL`),
-`locale` (`ru`, `en` или `xx-XX`; по умолчанию `ru`), `email`, `telegramChatId` (число). `title`/`body` — простой
-текст: notifier сам экранирует их для HTML-письма и Telegram (parse_mode HTML).
+`locale` (`ru`, `en` или `xx-XX`; по умолчанию `ru`), `email`, `telegramChatId` (число), `actionLabel` (≤ 64, текст
+кнопки ссылки — «Задать пароль»; без него — «Открыть»). `title`/`body` — простой текст (строки через `\n` — абзацы):
+notifier сам экранирует их для HTML-письма и Telegram (parse_mode HTML). Ссылку в `body` не дублируют — письмо
+показывает кнопку и запасную ссылку под ней.
 
 **`tc.notify.delivered.v1`.** Ровно одно событие на каждый канал из `channels`. `skipped` — канал неприменим
 (`error` содержит причину: нет email/чата, канал не настроен, получатель офлайн для `web`, `counter` для не-`web`);

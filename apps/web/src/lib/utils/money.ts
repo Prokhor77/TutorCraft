@@ -13,7 +13,7 @@ function minorDigits(currency: string): number {
   }
 }
 
-/** 500000 RUB → "5 000,00 ₽" (ru). */
+/** Subscription amounts: 3000 USD → "$30.00" (en), 500000 RUB → "5 000,00 ₽" (ru). */
 export function formatMoney(money: Money, locale: string): string {
   const digits = minorDigits(money.currency);
   const major = money.amountMinor / 10 ** digits;
@@ -21,13 +21,3 @@ export function formatMoney(money: Money, locale: string): string {
     major,
   );
 }
-
-export function toMinor(major: number, currency: string): number {
-  return Math.round(major * 10 ** minorDigits(currency));
-}
-
-export function toMajor(money: Money): number {
-  return money.amountMinor / 10 ** minorDigits(money.currency);
-}
-
-export const SUPPORTED_CURRENCIES = ['RUB', 'USD', 'EUR'] as const;

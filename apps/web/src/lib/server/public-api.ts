@@ -4,7 +4,7 @@ import { API_BASE_PATH } from '@/lib/api/client';
 import { publicCourseSchema, type PublicCourse } from '@/lib/api/schemas/courses';
 import { coreApiUrl } from './core-api';
 
-/** Storefront cache (SEO pages): short revalidation keeps prices fresh without hammering core-api. */
+/** Storefront cache (SEO pages): short revalidation keeps course pages fresh without hammering core-api. */
 export const PUBLIC_REVALIDATE_SEC = 60;
 const HTTP_NOT_FOUND = 404;
 

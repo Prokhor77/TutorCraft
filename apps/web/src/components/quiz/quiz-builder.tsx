@@ -7,7 +7,6 @@ import {
   MousePointerClick,
   Plus,
   Repeat,
-  Save,
   Settings2,
   Shuffle,
   Timer,
@@ -15,13 +14,15 @@ import {
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { SaveIndicator } from '@/components/editor/save-indicator';
 import { QuestionForm } from '@/components/qbank/question-editor';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/checkbox';
 import { Input, NativeSelect } from '@/components/ui/input';
 import { Segmented } from '@/components/ui/segmented';
-import { toast } from '@/components/ui/toast';
 import { ROUTES } from '@/features/auth/routes';
+import { useProblemToast } from '@/features/app/use-problem-toast';
+import { useAutosave } from '@/features/editor/use-autosave';
 import { useItemPatcher } from '@/features/items/use-item';
 import { useQCategories } from '@/features/qbank/use-qbank';
 import { quizSummary } from '@/features/quiz/quiz-summary';
@@ -32,11 +33,16 @@ import {
   type ItemDetail,
   type QuizSettings,
 } from '@/lib/api/schemas/courses';
+import type { Question } from '@/lib/api/schemas/quiz';
 import { cn } from '@/lib/utils/cn';
+import { localId } from '@/lib/utils/ids';
 import { SECONDS_PER_MINUTE } from '@/lib/utils/time';
 import { SlotsEditor, toQuestionSummary, type SlotsEditorHandle } from './slots-editor';
 
 const DEFAULT_TIME_LIMIT_MIN = 30;
+const MAX_PASS_PERCENT = 100;
+/** Toggles and selects save almost at once; number fields wait for the user to finish typing. */
+const PARAMS_AUTOSAVE_DEBOUNCE_MS = 600;
 const STICKY_PANE =
   'xl:sticky xl:top-[calc(var(--size-header)+1rem)] xl:max-h-[calc(100dvh-var(--size-header)-2rem)] xl:overflow-y-auto';
 
@@ -69,6 +75,16 @@ function ParamSection({
   );
 }
 
+/** Mirrors the server bounds, so autosave does not send values that are still being typed (e.g. an empty field). */
+function isValidParams(settings: QuizSettings): boolean {
+  const { timeLimitSec, maxAttempts, passPercent } = settings;
+  return (
+    (timeLimitSec === null || timeLimitSec > 0) &&
+    (maxAttempts === null || (Number.isInteger(maxAttempts) && maxAttempts >= 1)) &&
+    (passPercent === null || (passPercent >= 0 && passPercent <= MAX_PASS_PERCENT))
+  );
+}
+
 /** Stitch «Параметры теста»: the quiz settings a tutor changes most, as toggle sections; the rest in «Все настройки». */
 function QuizParams({
   item,
@@ -81,12 +97,19 @@ function QuizParams({
 }) {
   const t = useTranslations('quizBuilder');
   const tSettings = useTranslations('itemSettings');
-  const { patch, isSaving } = useItemPatcher(item);
+  const { patch } = useItemPatcher(item);
+  const showProblem = useProblemToast();
+  // Seeded once: afterwards the server echo of our own saves must not overwrite what is being typed.
   const [draft, setDraft] = useState(settings);
-  useEffect(() => setDraft(settings), [settings]);
+  const autosave = useAutosave({
+    value: draft,
+    save: (value) => patch({ settings: value }),
+    isValid: isValidParams,
+    debounceMs: PARAMS_AUTOSAVE_DEBOUNCE_MS,
+    onError: showProblem,
+  });
   const set = <K extends keyof QuizSettings>(key: K, value: QuizSettings[K]) =>
     setDraft((current) => ({ ...current, [key]: value }));
-  const dirty = JSON.stringify(draft) !== JSON.stringify(settings);
   const minutes = draft.timeLimitSec === null ? null : draft.timeLimitSec / SECONDS_PER_MINUTE;
   return (
     <aside
@@ -104,15 +127,8 @@ function QuizParams({
         <h2 id="quiz-params-title" className="flex-1 text-lg">
           {t('params')}
         </h2>
-        {dirty ? (
-          <span
-            role="status"
-            className="rounded-full bg-warning-soft px-2.5 py-0.5 text-label-md text-warning"
-          >
-            {t('unsaved')}
-          </span>
-        ) : null}
       </div>
+      <SaveIndicator status={autosave.status} lastSavedAt={autosave.lastSavedAt} />
       <ParamSection
         icon={Timer}
         title={t('timeLimit')}
@@ -220,19 +236,6 @@ function QuizParams({
           %
         </label>
       </ParamSection>
-      <Button
-        variant="success"
-        size="lg"
-        disabled={!dirty}
-        loading={isSaving}
-        onClick={() =>
-          void patch({ settings: draft })
-            .then(() => toast({ tone: 'success', title: t('paramsSaved') }))
-            .catch(() => undefined)
-        }
-      >
-        <Save aria-hidden /> {t('saveParams')}
-      </Button>
       <Button asChild variant="secondary">
         <Link href={ROUTES.itemSettings(item.courseId, item.id)}>
           <Settings2 aria-hidden /> {t('allSettings')}
@@ -282,6 +285,7 @@ function SummaryChip({
 }
 
 type Pane = 'editor' | 'structure' | 'params';
+type EditorSession = { key: string; questionId: string | null; number: number };
 
 /**
  * Quiz builder (Stitch «Конструктор тестов и квизов»): summary chips from real slot/settings data, then a three-pane
@@ -294,21 +298,35 @@ export function QuizBuilder({ item }: { item: ItemDetail }) {
   const slots = useQuizSlots(item.id);
   const categories = useQCategories(item.courseId);
   const slotsEditor = useRef<SlotsEditorHandle>(null);
-  const [selected, setSelected] = useState<{ id: string; number: number } | null>(null);
-  // «New question» replaces the editor stage with an empty form; saving puts it into the bank and this quiz.
-  const [creating, setCreating] = useState<{ number: number } | null>(null);
+  // The editor stage. `questionId: null` = a new question; autosave creates it (and puts it into this quiz) as soon
+  // as it is valid, and the session `key` stays the same so the form is not remounted while the tutor types.
+  const [editor, setEditor] = useState<EditorSession | null>(null);
   const [pane, setPane] = useState<Pane>('editor');
   const startCreate = () => {
-    setCreating({ number: slotsEditor.current?.nextNumber() ?? 1 });
+    setEditor({
+      key: localId('question'),
+      questionId: null,
+      number: slotsEditor.current?.nextNumber() ?? 1,
+    });
     setPane('editor');
+  };
+  const onQuestionSaved = (question: Question) => {
+    const summary = toQuestionSummary(question);
+    if (editor?.questionId === null) {
+      slotsEditor.current?.addQuestions([summary], { notify: false });
+      setEditor({ ...editor, questionId: question.id });
+    } else {
+      slotsEditor.current?.refreshQuestion(summary);
+    }
   };
   // Open the first bank question by default so the editor is never an empty stage.
   useEffect(() => {
-    if (selected || creating || !slots.data) return;
+    if (editor || !slots.data) return;
     const index = slots.data.slots.findIndex((slot) => 'questionId' in slot);
     const first = slots.data.slots[index];
-    if (first && 'questionId' in first) setSelected({ id: first.questionId, number: index + 1 });
-  }, [slots.data, selected, creating]);
+    if (first && 'questionId' in first)
+      setEditor({ key: first.questionId, questionId: first.questionId, number: index + 1 });
+  }, [slots.data, editor]);
   if (item.settings.kind !== 'quiz') return null;
   const settings = item.settings;
   const summary = quizSummary(slots.data?.slots ?? []);
@@ -386,43 +404,27 @@ export function QuizBuilder({ item }: { item: ItemDetail }) {
             itemId={item.id}
             compact
             handleRef={slotsEditor}
-            selectedQuestionId={creating ? null : (selected?.id ?? null)}
+            selectedQuestionId={editor?.questionId ?? null}
             onSelectQuestion={(id, number) => {
-              setCreating(null);
-              setSelected({ id, number });
+              setEditor({ key: id, questionId: id, number });
               setPane('editor');
             }}
             onCreateQuestion={startCreate}
           />
         </section>
         <div className={cn('min-w-0 flex-col', paneClass('editor'))}>
-          {creating ? (
+          {editor ? (
             <QuestionForm
-              key={`new-${creating.number}`}
+              key={editor.key}
               variant="card"
-              number={creating.number}
+              autosave
+              number={editor.number}
               courseId={item.courseId}
-              questionId={null}
+              questionId={editor.questionId}
               categories={categories.data ?? []}
               defaultCategoryId={null}
-              onCancel={() => setCreating(null)}
-              onSaved={(question) => {
-                slotsEditor.current?.addQuestions([toQuestionSummary(question)], {
-                  notify: false,
-                });
-                setSelected({ id: question.id, number: creating.number });
-                setCreating(null);
-              }}
-            />
-          ) : selected ? (
-            <QuestionForm
-              key={selected.id}
-              variant="card"
-              number={selected.number}
-              courseId={item.courseId}
-              questionId={selected.id}
-              categories={categories.data ?? []}
-              defaultCategoryId={null}
+              onCancel={editor.questionId === null ? () => setEditor(null) : undefined}
+              onSaved={onQuestionSaved}
             />
           ) : (
             <section className="flex flex-col items-center gap-3 rounded-lg border-2 border-dashed border-accent/25 bg-surface px-6 py-14 text-center">

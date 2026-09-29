@@ -58,7 +58,7 @@ export function PublicBlobs() {
   );
 }
 
-/** Centred Stitch card (2rem radius, violet-tinted L2 shadow) used by checkout, invites and system pages. */
+/** Centred Stitch card (2rem radius, violet-tinted L2 shadow) used by invites and system pages. */
 export function CenteredCard({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <div

@@ -1,7 +1,7 @@
 # Развёртывание TutorCraft на 91.149.179.186 (голый IP, HTTP)
 
-Сценарий: приложение открывается по `http://91.149.179.186`, домена и TLS нет, внешний S3 и
-почта не подключены. Сервер общий с confeek — всё ниже сделано так, чтобы соседа не задеть.
+Сценарий: приложение открывается по `http://91.149.179.186`, домена и TLS нет, внешний S3 не
+подключён, почта — через обычный ящик с паролем приложения (§6.2). Сервер общий с confeek — всё ниже сделано так, чтобы соседа не задеть.
 
 Вариант с доменом, Cloudflare и внешним S3 описан отдельно в [`deployment.md`](deployment.md).
 
@@ -212,6 +212,35 @@ sudo nginx -T 2>/dev/null | grep -c 'location ^~ /storage/'   # 1 — новый
 Файлы, загруженные раньше в SeaweedFS, остаются в volume `tutorcraft_s3-data` и в новом
 хранилище не видны. Бэкап (`infra/deploy/backup.sh`) volume `file-storage` не копирует —
 при необходимости снимайте его отдельно (`docker run --rm -v tutorcraft_file-storage:/d …`).
+
+### 6.2. Почта: письма-приглашения и сброс пароля
+
+Без SMTP notifier пропускает email-канал (`skipped: email is not configured`): приглашение в
+курс создаёт аккаунт, но письмо не уходит — ссылку активации репетитор пересылает сам. Чтобы
+письма приходили, достаточно почтового ящика с паролем приложения (домен не нужен).
+
+| Провайдер | `SMTP_HOST` | `SMTP_PORT` | `SMTP_USERNAME` / `SMTP_PASSWORD` | Лимит |
+|---|---|---|---|---|
+| Gmail | `smtp.gmail.com` | `465` | адрес ящика / [пароль приложения](https://myaccount.google.com/apppasswords) (нужна 2FA) | ~500 писем/сутки |
+| Яндекс | `smtp.yandex.ru` | `465` | адрес ящика / пароль приложения (Яндекс ID → Безопасность → Пароли приложений → «Почта») | ~500 писем/сутки |
+| Mail.ru | `smtp.mail.ru` | `465` | адрес ящика / пароль для внешних приложений | — |
+
+`SMTP_FROM` — тот же адрес, что и `SMTP_USERNAME`, с именем: `TutorCraft <you@gmail.com>`.
+Пароль приложения — это ключ от ящика: храните его только в `/opt/tutorcraft/.env` (и в
+менеджере паролей), не в репозитории и не в GitHub Variables.
+
+```bash
+sudo -u tutorcraft nano /opt/tutorcraft/.env      # заполнить SMTP_HOST/PORT/USERNAME/PASSWORD/FROM
+cd /opt/tutorcraft
+sudo -u tutorcraft docker compose -f docker-compose.prod.yml -f docker-compose.ip.yml up -d notifier
+docker logs tutorcraft_notifier 2>&1 | grep 'notifier started'   # должно быть "email":true
+```
+
+Проверка: пригласите в курс свой второй адрес. Если письма нет — `docker logs tutorcraft_notifier`
+покажет код ответа SMTP (`535` — неверный пароль приложения, `connect: … timeout` — хостер
+закрыл исходящий порт; попробуйте `587`). Ссылки в письме ведут на `http://91.149.179.186`, поэтому
+первое письмо почтовик может положить в «Спам» — отметьте «Не спам». Когда появится домен, лучше
+перейти на транзакционный сервис (Unisender Go, Brevo, Postmark) с SPF/DKIM на домене.
 
 ## 7. Что сделано для защиты
 

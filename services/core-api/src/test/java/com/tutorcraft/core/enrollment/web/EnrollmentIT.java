@@ -8,7 +8,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -69,20 +68,6 @@ class EnrollmentIT extends IntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.myRole").value("student"))
             .andExpect(jsonPath("$.selfEnrol.code").value(nullValue()));
-    }
-
-    @Test
-    void paidCourseRequiresPayment() throws Exception {
-        patchCourse("{\"selfEnrol\":{\"enabled\":true},\"price\":{\"amountMinor\":500000,\"currency\":\"RUB\"}}", 1)
-            .andExpect(status().isBadRequest());
-        perform(put(API + "/courses/" + courseId + "/price").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"price\":{\"amountMinor\":500000,\"currency\":\"RUB\"}}"), teacher)
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.price.amountMinor").value(500000));
-
-        perform(post(API + "/courses/" + courseId + "/self-enrol"), student)
-            .andExpect(status().isUnprocessableEntity())
-            .andExpect(jsonPath("$.code").value("enrollment.payment_required"));
     }
 
     @Test

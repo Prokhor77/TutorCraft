@@ -4,6 +4,8 @@
  * Placeholder syntax (MathLive): `#0` — the current selection or the first slot, `#?` — an empty slot.
  * Labels are content data (not UI chrome), so they live here instead of messages/*.json.
  */
+import { templateToSource } from './formula-slots';
+
 export type LocalizedText = Readonly<{ ru: string; en: string }>;
 
 export type FormulaEntry = Readonly<{ latex: string; label: LocalizedText; keywords?: string }>;
@@ -14,10 +16,6 @@ export type FormulaGroup = Readonly<{
 }>;
 
 type EntryTuple = readonly [latex: string, ru: string, en: string, keywords?: string];
-
-const PLACEHOLDER_PATTERN = /#[0-9?@]/g;
-/** Unicode box renders in both math and text mode (`\square` fails inside `\text`/`\mathrm`). */
-const PREVIEW_PLACEHOLDER = '□';
 
 function group(id: string, ru: string, en: string, tuples: readonly EntryTuple[]): FormulaGroup {
   return {
@@ -35,14 +33,9 @@ export function localize(text: LocalizedText, locale: string): string {
   return locale === 'ru' ? text.ru : text.en;
 }
 
-/** For the LaTeX source mode: templates without MathLive placeholders. */
-export function stripPlaceholders(template: string): string {
-  return template.replace(PLACEHOLDER_PATTERN, '');
-}
-
-/** KaTeX cannot render MathLive placeholders — show an empty box instead. */
+/** KaTeX cannot render MathLive placeholders — show an empty slot box instead. */
 export function toPreviewLatex(template: string): string {
-  return template.replace(PLACEHOLDER_PATTERN, PREVIEW_PLACEHOLDER);
+  return templateToSource(template);
 }
 
 // ─── Palette: building blocks ────────────────────────────────────────────────

@@ -200,7 +200,7 @@ class GradingQueueIT extends IntegrationTest {
 
     private CourseRef course(UUID courseId) {
         return new CourseRef(courseId, tenant, "Курс " + courseId, null, "c-" + courseId, null, Visibility.PUBLISHED, null, null,
-                null, null, List.of(), null, "none", teacher, null);
+                null, List.of(), null, "none", teacher, null);
     }
 
     private UUID itemIdFor(int course) {

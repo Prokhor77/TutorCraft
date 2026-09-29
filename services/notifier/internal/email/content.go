@@ -3,27 +3,46 @@
 package email
 
 import (
+	"embed"
 	htmltemplate "html/template"
 	"strings"
 	texttemplate "text/template"
 
 	"github.com/tutorcraft/notifier/internal/notification"
+	"github.com/tutorcraft/workerkit/textsafe"
+)
+
+const (
+	htmlTemplateFile = "templates/notification.html"
+	textTemplateFile = "templates/notification.txt"
+	// categoryAccount marks service emails (invitation, password reset) that are sent regardless of preferences.
+	categoryAccount = "account"
+	maxPreheader    = 140
 )
 
 // labels are the localized fixed strings of the email.
 type labels struct {
-	Open   string
-	Footer string
+	Brand         string
+	Open          string
+	LinkHint      string
+	Footer        string
+	AccountFooter string
 }
 
 var labelsByLanguage = map[string]labels{
 	"ru": {
-		Open:   "Открыть",
-		Footer: "Вы получили это письмо, потому что у вас включены уведомления TutorCraft. Изменить настройки можно в профиле.",
+		Brand:         "TutorCraft",
+		Open:          "Открыть",
+		LinkHint:      "Если кнопка не открывается, скопируйте ссылку в адресную строку браузера:",
+		Footer:        "Вы получили это письмо, потому что у вас включены уведомления TutorCraft. Изменить настройки можно в профиле.",
+		AccountFooter: "Это служебное письмо TutorCraft. Если вы его не ждали, просто проигнорируйте — без перехода по ссылке ничего не произойдёт.",
 	},
 	"en": {
-		Open:   "Open",
-		Footer: "You received this email because TutorCraft notifications are enabled. You can change this in your profile.",
+		Brand:         "TutorCraft",
+		Open:          "Open",
+		LinkHint:      "If the button does not work, copy this link into your browser's address bar:",
+		Footer:        "You received this email because TutorCraft notifications are enabled. You can change this in your profile.",
+		AccountFooter: "This is a TutorCraft service email. If you were not expecting it, just ignore it — nothing happens unless you follow the link.",
 	},
 }
 
@@ -38,45 +57,58 @@ func labelsFor(language string) labels {
 type content struct {
 	Lang       string
 	Title      string
-	Body       string
+	Preheader  string
 	Paragraphs []string
 	Link       string
+	Action     string
+	Footer     string
 	Labels     labels
 }
 
+//go:embed templates
+var templateFiles embed.FS
+
 // html/template escapes every value and rejects unsafe URLs in href.
-var htmlTemplate = htmltemplate.Must(htmltemplate.New("html").Parse(`<!DOCTYPE html>
-<html lang="{{.Lang}}">
-<head><meta charset="utf-8"><title>{{.Title}}</title></head>
-<body style="margin:0;padding:24px;font-family:Arial,Helvetica,sans-serif;color:#1f2933;background:#ffffff;">
-<h1 style="margin:0 0 16px;font-size:20px;">{{.Title}}</h1>
-{{range .Paragraphs}}<p style="margin:0 0 12px;font-size:15px;line-height:1.5;">{{.}}</p>
-{{end}}{{if .Link}}<p style="margin:24px 0;"><a href="{{.Link}}" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;">{{.Labels.Open}}</a></p>
-{{end}}<hr style="border:none;border-top:1px solid #e4e7eb;margin:24px 0;">
-<p style="margin:0;font-size:12px;color:#7b8794;">{{.Labels.Footer}}</p>
-</body>
-</html>
-`))
-
-var textTemplate = texttemplate.Must(texttemplate.New("text").Parse(`{{.Title}}
-
-{{if .Body}}{{.Body}}
-
-{{end}}{{if .Link}}{{.Labels.Open}}: {{.Link}}
-
-{{end}}--
-{{.Labels.Footer}}
-`))
+var (
+	htmlTemplate = htmltemplate.Must(htmltemplate.ParseFS(templateFiles, htmlTemplateFile))
+	textTemplate = texttemplate.Must(texttemplate.ParseFS(templateFiles, textTemplateFile))
+)
 
 func newContent(n notification.Requested, absoluteLink string) content {
+	l := labelsFor(n.Language())
+	body := paragraphs(n.Body)
 	return content{
 		Lang:       n.Language(),
 		Title:      n.Title,
-		Body:       n.Body,
-		Paragraphs: paragraphs(n.Body),
+		Preheader:  preheader(body),
+		Paragraphs: body,
 		Link:       absoluteLink,
-		Labels:     labelsFor(n.Language()),
+		Action:     actionLabel(n, l),
+		Footer:     footer(n, l),
+		Labels:     l,
 	}
+}
+
+func actionLabel(n notification.Requested, l labels) string {
+	if label := strings.TrimSpace(n.ActionLabel); label != "" {
+		return label
+	}
+	return l.Open
+}
+
+func footer(n notification.Requested, l labels) string {
+	if n.Category == categoryAccount {
+		return l.AccountFooter
+	}
+	return l.Footer
+}
+
+// preheader is the inbox preview line shown next to the subject.
+func preheader(body []string) string {
+	if len(body) == 0 {
+		return ""
+	}
+	return textsafe.Truncate(body[0], maxPreheader)
 }
 
 func paragraphs(body string) []string {
@@ -91,10 +123,10 @@ func paragraphs(body string) []string {
 
 func render(c content) (text string, html string, err error) {
 	var textOut, htmlOut strings.Builder
-	if err := textTemplate.Execute(&textOut, c); err != nil {
+	if err := textTemplate.ExecuteTemplate(&textOut, "notification.txt", c); err != nil {
 		return "", "", err
 	}
-	if err := htmlTemplate.Execute(&htmlOut, c); err != nil {
+	if err := htmlTemplate.ExecuteTemplate(&htmlOut, "notification.html", c); err != nil {
 		return "", "", err
 	}
 	return textOut.String(), htmlOut.String(), nil

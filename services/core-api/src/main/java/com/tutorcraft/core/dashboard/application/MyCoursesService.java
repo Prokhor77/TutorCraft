@@ -99,6 +99,6 @@ public class MyCoursesService {
 
     private static CourseCard card(CourseRef course, CourseRole role, Integer progressPercent, String coverUrl) {
         return new CourseCard(course.id(), course.title(), course.shortName(), coverUrl, course.categoryId(), role.key(),
-                progressPercent, course.visibility().key(), course.price());
+                progressPercent, course.visibility().key());
     }
 }

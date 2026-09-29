@@ -23,7 +23,7 @@ public interface EnrollmentApi {
     /** Участники групп курса (для фильтров «группа» в журнале/проверке). */
     Set<UUID> membersOfGroups(UUID tenantId, UUID courseId, Collection<UUID> groupIds);
 
-    /** Идемпотентная запись (повторная — реактивирует). Используется биллингом и импортом. */
+    /** Идемпотентная запись (повторная — реактивирует). Используется импортом, приглашениями и демо-данными. */
     void enrol(EnrolCommand command);
 
     record Member(UUID userId, CourseRole role, String status, Set<UUID> groupIds) {
@@ -34,7 +34,6 @@ public interface EnrollmentApi {
         public static final String METHOD_MANUAL = "manual";
         public static final String METHOD_SELF = "self";
         public static final String METHOD_INVITE_LINK = "invite_link";
-        public static final String METHOD_PAYMENT = "payment";
         public static final String METHOD_IMPORT = "import";
     }
 }

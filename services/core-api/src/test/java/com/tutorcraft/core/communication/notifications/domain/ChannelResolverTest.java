@@ -22,8 +22,6 @@ class ChannelResolverTest {
         assertThat(resolve(NotificationCategory.NEW_ITEM, FULL))
                 .containsExactlyInAnyOrder(NotificationChannel.WEB, NotificationChannel.TELEGRAM);
         assertThat(resolve(NotificationCategory.FORUM_REPLY, FULL)).containsExactly(NotificationChannel.WEB);
-        assertThat(resolve(NotificationCategory.SALE, FULL)).containsExactlyInAnyOrder(
-                NotificationChannel.WEB, NotificationChannel.EMAIL, NotificationChannel.TELEGRAM);
         assertThat(resolve(NotificationCategory.VIDEO_READY, FULL))
                 .containsExactlyInAnyOrder(NotificationChannel.WEB, NotificationChannel.TELEGRAM);
     }

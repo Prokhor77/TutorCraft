@@ -50,7 +50,7 @@ com.tutorcraft.core.<module>/
 | V8 | assessment.assignment | submissions, submission_members, submission_files, submission_feedback, item_overrides |
 | V9 | gradebook | grade_categories, grade_items, grades, grade_history, scales, gradebook_settings |
 | V10 | communication.notifications | notifications, notification_deliveries, notification_preferences, calendar_personal_events, ical_tokens |
-| V11 | billing | orders, payment_events |
+| V11 | billing | orders, payment_events (не используются с ADR-012; удаляются contract-миграцией) |
 | V12 | assessment.quiz | quiz_attempts, attempt_answers, quiz_overrides, quiz_grade_releases |
 | V13 | progress | completion_states, course_completions, item_views |
 | V14 | communication.forum | forum_discussions, forum_posts, forum_subscriptions, forum_reads |

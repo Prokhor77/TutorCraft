@@ -21,14 +21,14 @@ class CourseViews {
     CourseView course(Course course, Set<Permission> permissions, CourseRole role) {
         return new CourseView(course.id(), course.title(), course.shortName(), course.slug(), course.categoryId(),
                 course.description(), course.coverFileId(), coverUrl(course), course.startsAt(), course.endsAt(),
-                course.visibility().key(), course.publishAt(), selfEnrolFor(course, permissions), course.price(),
+                course.visibility().key(), course.publishAt(), selfEnrolFor(course, permissions),
                 course.completionRule(), course.groupMode().key(), role == null ? null : role.key(),
                 permissionKeys(permissions), course.version());
     }
 
     CourseCardView card(Course course, CourseRole role, Integer progressPercent) {
         return new CourseCardView(course.id(), course.title(), course.shortName(), coverUrl(course), course.categoryId(),
-                role == null ? null : role.key(), progressPercent, course.visibility().key(), course.price());
+                role == null ? null : role.key(), progressPercent, course.visibility().key());
     }
 
     String coverUrl(Course course) {

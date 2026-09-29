@@ -4,8 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-TutorCraft — an LMS/online-course platform for tutors (course authoring and sales, quizzes, grading, Telegram
-notifications). Docs, commit messages and the default UI locale are Russian; code identifiers are English.
+TutorCraft — an LMS/online-course platform for tutors (course authoring, quizzes, grading, Telegram notifications).
+Monetization is a school subscription only (1/3/12 months, ADR-012): no course sales, courses are free for students. Docs, commit messages and the default UI locale are Russian; code identifiers are English.
 
 Requirements live in [`docs/SPEC.md`](docs/SPEC.md); many docs reference requirement IDs (`FR-ACL-02`, `NFR-SEC-08`,
 `AC-1`, …) — when changing behaviour, check the ID cited in the surrounding code/doc. Implementation status per
@@ -115,7 +115,7 @@ Full conventions (mandatory reading before touching core-api):
   `IfMatch.resolve(header, body.version())` and the client sends `If-Match`.
 - **Pagination** is keyset/cursor: `PageQuery.of(cursor, limit)` → `page.toPage(rows, sortKeyFn, idFn)`.
 - **Idempotency** — `idempotency.execute(new IdempotencyScope(...), key, request, View.class, () -> …)` inside a
-  `@Transactional` method; the web client sends `Idempotency-Key` for submit/finish/orders.
+  `@Transactional` method; the web client sends `Idempotency-Key` for submit/finish/subscription purchases.
 
 ### Web specifics
 
@@ -146,7 +146,8 @@ Two documented targets, both driven by `.github/workflows/deploy-production.yml`
 build 4 images to GHCR → scp compose files → `pull` + `up -d` → wait for healthchecks):
 
 - [`docs/deployment-ip.md`](docs/deployment-ip.md) — **current**: bare IP `91.149.179.186` over HTTP, files on the
-  server's disk (`STORAGE_DRIVER=local`, volume `file-storage`), no SMTP. `COOKIE_SECURE=false` is mandatory here, since browsers drop
+  server's disk (`STORAGE_DRIVER=local`, volume `file-storage`), email via a mailbox app password (§6.2: Gmail/Yandex on
+  port 465 = implicit TLS). `COOKIE_SECURE=false` is mandatory here, since browsers drop
   `Secure` cookies over HTTP.
 - [`docs/deployment.md`](docs/deployment.md) — domain + Cloudflare + external S3/SMTP.
 

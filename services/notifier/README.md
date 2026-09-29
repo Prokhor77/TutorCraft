@@ -29,9 +29,11 @@ GET /ws?token=<accessJWT> ─► WebSocket hub keyed by userId
   handling (at-least-once). Invalid envelope/payload → `tc.notify.requested.v1.dlq` with `x-error`. Validation rules
   are listed in docs/events/README.md.
 - **Channels** (each retried 3× with exponential backoff; a final outcome is always published):
-  - `email` — `multipart/alternative` (plain + HTML, quoted-printable, RFC 2047 subject), `From: SMTP_FROM`, button
-    «Открыть»/«Open» with the absolute link (`PUBLIC_BASE_URL` + relative link). STARTTLS whenever the server offers it
-    (Mailpit on 1025 does not); `SMTP_USERNAME` enables AUTH PLAIN (refused over plain text by `net/smtp` except on
+  - `email` — `multipart/alternative` (plain + HTML, quoted-printable, RFC 2047 subject), `From: SMTP_FROM`, templates in
+    `internal/email/templates/` (table layout, inline styles, preheader), button labelled `actionLabel` or
+    «Открыть»/«Open» with the absolute link (`PUBLIC_BASE_URL` + relative link) plus the same link as text under it;
+    category `account` gets a service footer instead of the «notifications are enabled» one. `SMTP_PORT=465` = implicit
+    TLS (SMTPS), otherwise STARTTLS whenever the server offers it (Mailpit on 1025 does not); `SMTP_USERNAME` enables AUTH PLAIN (refused over plain text by `net/smtp` except on
     localhost). 5xx replies are permanent, 4xx/network errors retried. `skipped` without `email` or without `SMTP_HOST`.
   - `telegram` — `sendMessage`, `parse_mode=HTML` (`& < > "` escaped, text truncated before escaping), inline button
     «Открыть» with the absolute link, previews disabled. `429` waits `retry_after` (up to 30 s), `5xx`/network retried,
@@ -74,7 +76,7 @@ GET /ws?token=<accessJWT> ─► WebSocket hub keyed by userId
 | `WEB_ORIGIN` | — (required) | allowed WebSocket `Origin` |
 | `PUBLIC_BASE_URL` | — (required) | base for absolute links in email/Telegram |
 | `SMTP_HOST` | empty = email disabled | |
-| `SMTP_PORT` | `1025` | |
+| `SMTP_PORT` | `1025` | `465` → implicit TLS (SMTPS) |
 | `SMTP_USERNAME`, `SMTP_PASSWORD` | empty | AUTH only when set |
 | `SMTP_FROM` | required if `SMTP_HOST` set | `TutorCraft <no-reply@example.com>` |
 | `SMTP_TIMEOUT` | `15s` | per message |

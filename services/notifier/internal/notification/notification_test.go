@@ -20,7 +20,7 @@ func validRequest() map[string]any {
 		"notificationId": testNotificationID, "userId": testUserID, "category": "grade_published",
 		"channels": []string{"email", "telegram", "web"}, "title": "Оценка опубликована",
 		"body": "Ваша работа проверена", "link": "/courses/1", "locale": "ru",
-		"email": "student@example.com", "telegramChatId": 123456789, "futureField": 1,
+		"email": "student@example.com", "telegramChatId": 123456789, "actionLabel": "Открыть курс", "futureField": 1,
 	}
 }
 
@@ -38,14 +38,14 @@ func TestDecodeValid(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if r.TelegramChatID != 123456789 || len(r.Channels) != 3 || r.Language() != "ru" {
+	if r.TelegramChatID != 123456789 || len(r.Channels) != 3 || r.Language() != "ru" || r.ActionLabel != "Открыть курс" {
 		t.Fatalf("unexpected request %+v", r)
 	}
 }
 
 func TestDecodeOptionalFieldsMayBeAbsent(t *testing.T) {
 	m := validRequest()
-	for _, key := range []string{"email", "telegramChatId", "link", "locale", "body"} {
+	for _, key := range []string{"email", "telegramChatId", "link", "locale", "body", "actionLabel"} {
 		delete(m, key)
 	}
 	if _, err := decodeMap(t, m); err != nil {
@@ -69,6 +69,7 @@ func TestDecodeRejectsInvalid(t *testing.T) {
 		"bad locale":         func(m map[string]any) { m["locale"] = "russian" },
 		"chat id as string":  func(m map[string]any) { m["telegramChatId"] = "123" },
 		"counter bad body":   func(m map[string]any) { m["category"] = "counter"; m["body"] = "15" },
+		"long action label":  func(m map[string]any) { m["actionLabel"] = strings.Repeat("я", MaxActionRunes+1) },
 	}
 	for name, mutate := range cases {
 		m := validRequest()

@@ -28,7 +28,7 @@ export function useSaveSlots(itemId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (slots: QuizSlot[]) => quizApi.saveSlots(itemId, slots),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.quizSlots(itemId) }),
+    onSuccess: (layout) => queryClient.setQueryData(queryKeys.quizSlots(itemId), layout),
   });
 }
 

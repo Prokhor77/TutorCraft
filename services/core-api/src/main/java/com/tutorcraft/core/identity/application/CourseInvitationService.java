@@ -6,6 +6,7 @@ import com.tutorcraft.core.access.domain.CourseRole;
 import com.tutorcraft.core.access.domain.Permission;
 import com.tutorcraft.core.audit.AuditLog;
 import com.tutorcraft.core.audit.AuditRecord;
+import com.tutorcraft.core.courses.CourseRef;
 import com.tutorcraft.core.courses.CoursesApi;
 import com.tutorcraft.core.enrollment.EnrollmentApi;
 import com.tutorcraft.core.enrollment.EnrollmentApi.EnrolCommand;
@@ -74,14 +75,16 @@ public class CourseInvitationService {
         access.require(Permission.ENROLLMENT_MANAGE, AccessContext.course(courseId));
         validate(command);
         CourseRole role = CourseRole.fromKey(command.role());
-        courses.findCourse(actor.tenantId(), courseId)
+        CourseRef course = courses.findCourse(actor.tenantId(), courseId)
                 .orElseThrow(() -> new NotFoundException(COURSE_NOT_FOUND, "Course not found"));
         String email = EmailAddress.normalize(command.email());
         Optional<UserAccount> existing = users.findByEmail(actor.tenantId(), email);
         existing.ifPresent(CourseInvitationService::requireNotBlocked);
         UserAccount user = existing.orElseGet(() -> invitedUsers.create(actor.tenantId(), email,
                 command.firstName().trim(), command.lastName().trim(), actor.userId(), AccountOrigin.TUTOR_INVITE));
-        String activationUrl = user.isInvited() ? invitations.sendInvitation(user, actor.userId()) : null;
+        String activationUrl = user.isInvited()
+                ? invitations.sendCourseInvitation(user, actor.userId(), course.title())
+                : null;
         enrollment.enrol(new EnrolCommand(actor.tenantId(), courseId, user.id(), role, EnrolCommand.METHOD_MANUAL,
                 actor.userId()));
         audit.record(AuditRecord.of(actor.tenantId(), actor.userId(), "user.course_invited", "user", user.id().toString())

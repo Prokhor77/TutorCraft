@@ -2,7 +2,6 @@ package com.tutorcraft.core.courses.domain;
 
 import com.tutorcraft.core.courses.CourseRef;
 import com.tutorcraft.core.courses.Visibility;
-import com.tutorcraft.core.shared.domain.Money;
 import com.tutorcraft.core.shared.domain.Validator;
 import java.time.Instant;
 import java.util.Map;
@@ -11,7 +10,7 @@ import java.util.UUID;
 /** Курс (PostgreSQL, таблица courses). description — санитизированный BlockDoc. */
 public record Course(UUID id, UUID tenantId, UUID categoryId, String title, String shortName, String slug,
                      Map<String, Object> description, UUID coverFileId, Instant startsAt, Instant endsAt,
-                     Visibility visibility, Instant publishAt, SelfEnrolSettings selfEnrol, Money price,
+                     Visibility visibility, Instant publishAt, SelfEnrolSettings selfEnrol,
                      CourseCompletionRule completionRule, GroupMode groupMode, UUID createdBy, long version,
                      Instant createdAt, Instant updatedAt, Instant deletedAt) {
 
@@ -21,18 +20,14 @@ public record Course(UUID id, UUID tenantId, UUID categoryId, String title, Stri
         groupMode = groupMode == null ? GroupMode.NONE : groupMode;
     }
 
-    /** Новый курс: скрыт до публикации (черновик), без цены и самозаписи. Поля задаются через {@link #toBuilder()}. */
+    /** Новый курс: скрыт до публикации (черновик), без самозаписи. Поля задаются через {@link #toBuilder()}. */
     public static Course blank(UUID id, UUID tenantId, UUID createdBy, Instant now) {
-        return new Course(id, tenantId, null, null, null, null, null, null, null, null, Visibility.HIDDEN, null, null, null,
+        return new Course(id, tenantId, null, null, null, null, null, null, null, null, Visibility.HIDDEN, null, null,
                 null, null, createdBy, 0, now, now, null);
     }
 
     public boolean isDeleted() {
         return deletedAt != null;
-    }
-
-    public boolean isPaid() {
-        return price != null;
     }
 
     public boolean visibleToLearnersAt(Instant now) {
@@ -48,13 +43,13 @@ public record Course(UUID id, UUID tenantId, UUID categoryId, String title, Stri
                         "End date must be after start date")
                 .check(visibility != Visibility.SCHEDULED || publishAt != null, "publishAt", "required",
                         "Publish date is required for scheduled visibility");
-        selfEnrol.validate(validator, isPaid());
+        selfEnrol.validate(validator);
         completionRule.validate(validator);
         validator.throwIfInvalid();
     }
 
     public CourseRef toRef() {
-        return new CourseRef(id, tenantId, title, shortName, slug, categoryId, visibility, publishAt, startsAt, endsAt, price,
+        return new CourseRef(id, tenantId, title, shortName, slug, categoryId, visibility, publishAt, startsAt, endsAt,
                 completionRule.requiredItemIds(), completionRule.minFinalPercent(), groupMode.key(), createdBy,
                 coverFileId);
     }
@@ -78,7 +73,6 @@ public record Course(UUID id, UUID tenantId, UUID categoryId, String title, Stri
         private Visibility visibility;
         private Instant publishAt;
         private SelfEnrolSettings selfEnrol;
-        private Money price;
         private CourseCompletionRule completionRule;
         private GroupMode groupMode;
 
@@ -95,7 +89,6 @@ public record Course(UUID id, UUID tenantId, UUID categoryId, String title, Stri
             this.visibility = base.visibility;
             this.publishAt = base.publishAt;
             this.selfEnrol = base.selfEnrol;
-            this.price = base.price;
             this.completionRule = base.completionRule;
             this.groupMode = base.groupMode;
         }
@@ -111,14 +104,13 @@ public record Course(UUID id, UUID tenantId, UUID categoryId, String title, Stri
         public Builder visibility(Visibility value) { this.visibility = value; return this; }
         public Builder publishAt(Instant value) { this.publishAt = value; return this; }
         public Builder selfEnrol(SelfEnrolSettings value) { this.selfEnrol = value; return this; }
-        public Builder price(Money value) { this.price = value; return this; }
         public Builder completionRule(CourseCompletionRule value) { this.completionRule = value; return this; }
         public Builder groupMode(GroupMode value) { this.groupMode = value; return this; }
 
         public Course build() {
             Instant effectivePublishAt = visibility == Visibility.SCHEDULED ? publishAt : null;
             return new Course(base.id, base.tenantId, categoryId, title == null ? null : title.trim(), normalize(shortName), slug,
-                    description, coverFileId, startsAt, endsAt, visibility, effectivePublishAt, selfEnrol, price,
+                    description, coverFileId, startsAt, endsAt, visibility, effectivePublishAt, selfEnrol,
                     completionRule, groupMode, base.createdBy, base.version, base.createdAt, base.updatedAt, base.deletedAt);
         }
 

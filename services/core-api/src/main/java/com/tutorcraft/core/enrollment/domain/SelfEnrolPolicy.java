@@ -6,31 +6,26 @@ import java.security.MessageDigest;
 import java.time.Instant;
 
 /**
- * Правила самозаписи (FR-ENROL-02 + гибрид FR-ENROL-09), по порядку:
- * платный курс без включённой самозаписи по коду → payment_required (путь — покупка; бесплатно в платный курс —
- * только по коду, выданному преподавателем); выключена → self_enrol_disabled; срок истёк → self_enrol_closed;
+ * Правила самозаписи (FR-ENROL-02), по порядку: выключена → self_enrol_disabled; срок истёк → self_enrol_closed;
  * неверный код → invalid_code; мест нет → course_full. Код сравнивается за постоянное время.
+ * Курсы для учеников бесплатны — школа платит только подписку на платформу (ADR-012).
  */
 public final class SelfEnrolPolicy {
 
     public static final String DISABLED = "enrollment.self_enrol_disabled";
     public static final String CLOSED = "enrollment.self_enrol_closed";
-    public static final String PAYMENT_REQUIRED = "enrollment.payment_required";
     public static final String INVALID_CODE = "enrollment.invalid_code";
     public static final String COURSE_FULL = "enrollment.course_full";
 
     private SelfEnrolPolicy() {
     }
 
-    /** Снимок условий: настройки курса, платность, введённый код, число активных студентов, текущее время. */
-    public record Request(boolean enabled, String requiredCode, Integer maxStudents, Instant until, boolean paid,
+    /** Снимок условий: настройки курса, введённый код, число активных студентов, текущее время. */
+    public record Request(boolean enabled, String requiredCode, Integer maxStudents, Instant until,
                           String providedCode, int activeStudents, Instant now) {
     }
 
     public static void check(Request request) {
-        if (request.paid() && (!request.enabled() || request.requiredCode() == null)) {
-            throw new BusinessRuleException(PAYMENT_REQUIRED, "This course must be purchased");
-        }
         if (!request.enabled()) {
             throw new BusinessRuleException(DISABLED, "Self-enrolment is disabled");
         }

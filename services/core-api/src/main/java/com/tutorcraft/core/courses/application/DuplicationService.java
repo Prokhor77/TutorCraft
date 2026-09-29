@@ -87,7 +87,7 @@ public class DuplicationService {
         Course course = Course.blank(newId, user.tenantId(), user.userId(), clock.instant()).toBuilder()
                 .title(title).slug(writer.uniqueSlug(user.tenantId(), title)).categoryId(source.categoryId())
                 .description(StructuredValues.copyMap(source.description())).coverFileId(source.coverFileId())
-                .startsAt(source.startsAt()).endsAt(source.endsAt()).visibility(Visibility.HIDDEN).price(source.price())
+                .startsAt(source.startsAt()).endsAt(source.endsAt()).visibility(Visibility.HIDDEN)
                 .completionRule(remapRule(source.completionRule(), copy.mapping())).groupMode(source.groupMode())
                 .build();
         writer.insertNew(course, user.userId());

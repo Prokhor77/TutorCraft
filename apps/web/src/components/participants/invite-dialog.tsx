@@ -10,7 +10,7 @@ import { Input, NativeSelect } from '@/components/ui/input';
 import { toast } from '@/components/ui/toast';
 import { useEnrollmentMutations, useInviteLinks } from '@/features/enrollment/use-enrollment';
 import { COURSE_ROLES, type CourseRole } from '@/lib/api/schemas/common';
-import { copyToClipboard } from '@/lib/utils/download';
+import { copyToClipboard } from '@/lib/utils/clipboard';
 import { formatDateTime } from '@/lib/utils/format';
 import { addDays } from '@/lib/utils/time';
 

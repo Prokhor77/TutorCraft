@@ -100,7 +100,7 @@ public class PublicCatalogService {
 
     private PublicCourseView toView(TenantInfo tenant, Course course, Instant now) {
         return new PublicCourseView(course.id(), course.slug(), course.title(), course.description(), views.coverUrl(course),
-                course.price(), teacher(tenant.id(), course.id()), moduleSummaries(course, now), course.selfEnrol().enabled(),
+                teacher(tenant.id(), course.id()), moduleSummaries(course, now), course.selfEnrol().enabled(),
                 tenant.slug(), tenant.name());
     }
 

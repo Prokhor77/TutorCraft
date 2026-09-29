@@ -1,7 +1,6 @@
 package com.tutorcraft.core.integrations.application;
 
 import com.tutorcraft.core.assessment.AssessmentEvents.SubmissionSubmitted;
-import com.tutorcraft.core.billing.BillingEvents.OrderPaid;
 import com.tutorcraft.core.enrollment.EnrollmentEvents.EnrollmentChanged;
 import com.tutorcraft.core.gradebook.GradebookEvents.GradeChanged;
 import com.tutorcraft.core.integrations.domain.WebhookEvent;
@@ -58,13 +57,6 @@ public class DomainEventWebhookListener {
     public void onCourseCompleted(CourseCompleted event) {
         enqueuer.enqueue(event.tenantId(), WebhookEvent.COURSE_COMPLETED, new Data()
                 .with(COURSE_ID, event.courseId()).with(USER_ID, event.userId()).map());
-    }
-
-    @EventListener
-    public void onOrderPaid(OrderPaid event) {
-        enqueuer.enqueue(event.tenantId(), WebhookEvent.ORDER_PAID, new Data()
-                .with("orderId", event.orderId()).with(COURSE_ID, event.courseId()).with("buyerId", event.buyerId())
-                .with("amountMinor", event.amountMinor()).with("currency", event.currency()).map());
     }
 
     /** Данные события в стабильном порядке полей; null-значения допустимы. */

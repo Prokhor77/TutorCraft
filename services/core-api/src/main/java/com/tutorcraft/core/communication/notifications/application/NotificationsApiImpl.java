@@ -42,9 +42,11 @@ class NotificationsApiImpl implements NotificationsApi {
     private static final String UNDELIVERABLE_EMAIL_SUFFIX = "@telegram.invalid";
     private static final String TITLE_SUFFIX = ".title";
     private static final String BODY_SUFFIX = ".body";
+    private static final String ACTION_SUFFIX = ".action";
     private static final String RELATIVE_LINK_PREFIX = "/";
     private static final int MAX_TITLE = 200;
     private static final int MAX_BODY = 2000;
+    private static final int MAX_ACTION = 64;
     private static final String COUNTER_CATEGORY = "counter";
     private static final Pattern COUNTER_NAME = Pattern.compile("^[a-z][a-z0-9_]{0,63}$");
 
@@ -91,7 +93,7 @@ class NotificationsApiImpl implements NotificationsApi {
         }
         String body = json.write(new CounterBody(name, value));
         outbox.publish(Topics.NOTIFY_REQUESTED, tenantId, EVENT_TYPE, new NotifyRequested(Ids.newId(), userId, COUNTER_CATEGORY,
-                List.of(NotificationChannel.WEB.key()), name, body, null, null, null, null));
+                List.of(NotificationChannel.WEB.key()), name, body, null, null, null, null, null));
     }
 
     private void deliver(NotificationCommand command, UserRef user, Map<NotificationChannel, Boolean> userPrefs) {
@@ -104,6 +106,7 @@ class NotificationsApiImpl implements NotificationsApi {
         Locale locale = Locale.forLanguageTag(user.locale());
         String title = truncate(messages.get(locale, command.messageCode() + TITLE_SUFFIX, command.args().toArray()), MAX_TITLE);
         String body = truncate(messages.get(locale, command.messageCode() + BODY_SUFFIX, command.args().toArray()), MAX_BODY);
+        String actionLabel = optionalMessage(locale, command.messageCode() + ACTION_SUFFIX, command.args());
         UUID notificationId = Ids.newId();
         Set<NotificationChannel> fresh = reserve(command, user, channels, notificationId, title, body);
         if (fresh.isEmpty()) {
@@ -114,7 +117,7 @@ class NotificationsApiImpl implements NotificationsApi {
                 command.category().key(), fresh.stream().map(NotificationChannel::key).sorted().toList(), title, body,
                 absolute(command.link()), locale.getLanguage(),
                 fresh.contains(NotificationChannel.EMAIL) ? email : null,
-                fresh.contains(NotificationChannel.TELEGRAM) ? user.telegramChatId() : null));
+                fresh.contains(NotificationChannel.TELEGRAM) ? user.telegramChatId() : null, actionLabel));
         log.debug("Notification {} ({}) queued for user {} via {}", notificationId, command.category().key(), user.id(), fresh);
     }
 
@@ -134,6 +137,12 @@ class NotificationsApiImpl implements NotificationsApi {
                         command.dedupeKey(), channel, now))
                 .forEach(fresh::add);
         return fresh;
+    }
+
+    /** Текст кнопки ссылки ({@code <code>.action}) необязателен: без ключа в i18n канал подставит «Открыть». */
+    private String optionalMessage(Locale locale, String code, List<Object> args) {
+        String text = messages.get(locale, code, args.toArray());
+        return code.equals(text) ? null : truncate(text, MAX_ACTION);
     }
 
     private static Recipient recipient(UserRef user) {
@@ -169,6 +178,7 @@ class NotificationsApiImpl implements NotificationsApi {
 
     /** Полезная нагрузка tc.notify.requested.v1 (docs/events/README.md). */
     record NotifyRequested(UUID notificationId, UUID userId, String category, List<String> channels, String title,
-                           String body, String link, String locale, String email, Long telegramChatId) {
+                           String body, String link, String locale, String email, Long telegramChatId,
+                           String actionLabel) {
     }
 }

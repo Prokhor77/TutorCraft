@@ -81,7 +81,6 @@ export const NOTIFICATION_CATEGORIES = [
   'forum_reply',
   'announcement',
   'submission_received',
-  'sale',
   'video_ready',
 ] as const;
 export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];

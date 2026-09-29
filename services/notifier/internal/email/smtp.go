@@ -21,24 +21,26 @@ const (
 // ErrAuthUnsupported means credentials are configured but the server offers no AUTH.
 var ErrAuthUnsupported = errors.New("smtp server does not support AUTH")
 
-// SMTPTransport sends raw messages with net/smtp. STARTTLS is used whenever the
-// server offers it (Mailpit on 1025 does not, so it stays plain locally).
+// SMTPTransport sends raw messages with net/smtp. With ImplicitTLS the
+// connection is TLS from the start (SMTPS, port 465); otherwise STARTTLS is
+// used whenever the server offers it (Mailpit on 1025 does not, so it stays
+// plain locally).
 type SMTPTransport struct {
-	Host     string
-	Port     int
-	Username string
-	Password string
-	Timeout  time.Duration
+	Host        string
+	Port        int
+	Username    string
+	Password    string
+	Timeout     time.Duration
+	ImplicitTLS bool
 }
 
 // Send delivers msg from → to within Timeout (or ctx, whichever ends first).
 func (t SMTPTransport) Send(ctx context.Context, from string, to []string, msg []byte) error {
 	ctx, cancel := context.WithTimeout(ctx, t.Timeout)
 	defer cancel()
-	var dialer net.Dialer
-	conn, err := dialer.DialContext(ctx, "tcp", net.JoinHostPort(t.Host, strconv.Itoa(t.Port)))
+	conn, err := t.dial(ctx)
 	if err != nil {
-		return fmt.Errorf("smtp connect: %w", err)
+		return err
 	}
 	stop := context.AfterFunc(ctx, func() { _ = conn.Close() }) // unblock I/O on cancel
 	defer stop()
@@ -54,6 +56,30 @@ func (t SMTPTransport) Send(ctx context.Context, from string, to []string, msg [
 	// After QUIT the server has closed the connection; Close only frees resources.
 	defer func() { _ = client.Close() }()
 	return t.session(client, from, to, msg)
+}
+
+// dial opens the TCP connection, wrapped in TLS for SMTPS. net/smtp detects a
+// *tls.Conn, so AUTH PLAIN is allowed and STARTTLS is not offered again.
+func (t SMTPTransport) dial(ctx context.Context) (net.Conn, error) {
+	address := net.JoinHostPort(t.Host, strconv.Itoa(t.Port))
+	if t.ImplicitTLS {
+		dialer := tls.Dialer{Config: t.tlsConfig()}
+		conn, err := dialer.DialContext(ctx, "tcp", address)
+		if err != nil {
+			return nil, fmt.Errorf("smtps connect: %w", err)
+		}
+		return conn, nil
+	}
+	var dialer net.Dialer
+	conn, err := dialer.DialContext(ctx, "tcp", address)
+	if err != nil {
+		return nil, fmt.Errorf("smtp connect: %w", err)
+	}
+	return conn, nil
+}
+
+func (t SMTPTransport) tlsConfig() *tls.Config {
+	return &tls.Config{ServerName: t.Host, MinVersion: tls.VersionTLS12}
 }
 
 func (t SMTPTransport) session(client *smtp.Client, from string, to []string, msg []byte) error {
@@ -83,7 +109,7 @@ func (t SMTPTransport) session(client *smtp.Client, from string, to []string, ms
 
 func (t SMTPTransport) secure(client *smtp.Client) error {
 	if ok, _ := client.Extension(extensionStartTLS); ok {
-		if err := client.StartTLS(&tls.Config{ServerName: t.Host, MinVersion: tls.VersionTLS12}); err != nil {
+		if err := client.StartTLS(t.tlsConfig()); err != nil {
 			return fmt.Errorf("smtp STARTTLS: %w", err)
 		}
 	}

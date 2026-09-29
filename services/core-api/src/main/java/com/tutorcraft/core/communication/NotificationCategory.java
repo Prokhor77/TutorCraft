@@ -6,7 +6,7 @@ import java.util.Optional;
 /** Категории уведомлений (FR-NOTIF-01/02 + гибрид). */
 public enum NotificationCategory {
     NEW_ITEM("new_item"), DEADLINE("deadline"), GRADE_PUBLISHED("grade_published"), FORUM_REPLY("forum_reply"),
-    ANNOUNCEMENT("announcement"), SUBMISSION_RECEIVED("submission_received"), SALE("sale"), VIDEO_READY("video_ready"),
+    ANNOUNCEMENT("announcement"), SUBMISSION_RECEIVED("submission_received"), VIDEO_READY("video_ready"),
     ACCOUNT("account");
 
     private final String key;

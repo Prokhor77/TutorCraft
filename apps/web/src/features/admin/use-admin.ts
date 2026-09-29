@@ -1,6 +1,5 @@
 'use client';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { billingApi } from '@/lib/api/endpoints/billing';
 import { integrationsApi } from '@/lib/api/endpoints/integrations';
 import { platformApi } from '@/lib/api/endpoints/platform';
 import {
@@ -105,15 +104,6 @@ export function useAuditLog(params: Omit<AuditQuery, 'cursor'>) {
   return useInfiniteQuery({
     queryKey: queryKeys.auditLog(params),
     queryFn: ({ pageParam }) => orgApi.auditLog({ ...params, cursor: pageParam }),
-    initialPageParam: null as string | null,
-    getNextPageParam: getNextCursor,
-  });
-}
-
-export function useOrders(courseId?: string) {
-  return useInfiniteQuery({
-    queryKey: queryKeys.orders({ courseId }),
-    queryFn: ({ pageParam }) => billingApi.orders({ courseId, cursor: pageParam }),
     initialPageParam: null as string | null,
     getNextPageParam: getNextCursor,
   });
