@@ -2,13 +2,15 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
 import { useEffect } from 'react';
-import { useForm, type UseFormReturn } from 'react-hook-form';
+import { Controller, useForm, type UseFormReturn } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/checkbox';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import { Input, Textarea } from '@/components/ui/input';
 import { Segmented } from '@/components/ui/segmented';
+import { TimePicker } from '@/components/ui/time-picker';
 import { toast } from '@/components/ui/toast';
 import {
   useCreateLesson,
@@ -172,7 +174,7 @@ export function EventFormDialog({
   );
 }
 
-/** Date, «all day» (notes only) and start/end time. */
+/** Date, «all day» (notes only) and start/end time — popover pickers instead of native inputs. */
 function TimeFields({ form }: { form: UseFormReturn<EventFormValues> }) {
   const t = useTranslations('calendar');
   const { errors } = form.formState;
@@ -181,9 +183,21 @@ function TimeFields({ form }: { form: UseFormReturn<EventFormValues> }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
-        <Field label={t('date')} error={errors.date?.message} required>
-          <Input type="date" {...form.register('date')} />
-        </Field>
+        <Controller
+          control={form.control}
+          name="date"
+          render={({ field }) => (
+            <Field label={t('date')} error={errors.date?.message} required>
+              <DatePicker
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                placeholder={t('datePlaceholder')}
+                todayLabel={t('today')}
+              />
+            </Field>
+          )}
+        />
         {kind === 'note' ? (
           <label className="flex h-11 items-center gap-2 text-sm">
             <Switch
@@ -198,12 +212,35 @@ function TimeFields({ form }: { form: UseFormReturn<EventFormValues> }) {
       </div>
       {timed ? (
         <div className="grid grid-cols-2 gap-4">
-          <Field label={t('startTime')} error={errors.startTime?.message} required>
-            <Input type="time" {...form.register('startTime')} />
-          </Field>
-          <Field label={t('endTime')} error={errors.endTime?.message}>
-            <Input type="time" {...form.register('endTime')} />
-          </Field>
+          <Controller
+            control={form.control}
+            name="startTime"
+            render={({ field }) => (
+              <Field label={t('startTime')} error={errors.startTime?.message} required>
+                <TimePicker
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  placeholder={t('timePlaceholder')}
+                />
+              </Field>
+            )}
+          />
+          <Controller
+            control={form.control}
+            name="endTime"
+            render={({ field }) => (
+              <Field label={t('endTime')} error={errors.endTime?.message}>
+                <TimePicker
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  placeholder={t('noEndTime')}
+                  clearLabel={t('noEndTime')}
+                />
+              </Field>
+            )}
+          />
         </div>
       ) : null}
     </div>

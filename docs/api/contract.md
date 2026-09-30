@@ -63,7 +63,7 @@ type RichText = { text: string; marks?: ('bold'|'italic'|'code'|'strike'|'underl
 
 | Метод | Путь | Тело → Ответ |
 |---|---|---|
-| POST | `/auth/register` | `{ email, password, firstName, lastName, schoolName? }` → `AuthResponse` · создаёт tenant (владелец = tenant_admin) — регистрация репетитора |
+| POST | `/auth/register` | `{ email, password, firstName, lastName, schoolName?, acceptTerms: true }` → `AuthResponse` · создаёт tenant (владелец = tenant_admin) — регистрация репетитора |
 | POST | `/auth/login` | `{ email, password, tenantSlug? }` → `AuthResponse` + cookie `tc_refresh` |
 | POST | `/auth/oauth/google` | `{ idToken, tenantSlug? }` → `AuthResponse` |
 | POST | `/auth/oauth/telegram` | `{ id, first_name, last_name?, username?, photo_url?, auth_date, hash, tenantSlug? }` → `AuthResponse` |
@@ -72,7 +72,7 @@ type RichText = { text: string; marks?: ('bold'|'italic'|'code'|'strike'|'underl
 | POST | `/auth/logout-all` | → 204 (отзыв всех сессий) |
 | POST | `/auth/password/forgot` | `{ email, tenantSlug? }` → 202 (всегда, без раскрытия существования) |
 | POST | `/auth/password/reset` | `{ token, newPassword }` → 204 |
-| POST | `/auth/invitations/accept` | `{ token, password, firstName, lastName }` → `AuthResponse` |
+| POST | `/auth/invitations/accept` | `{ token, password, firstName, lastName, acceptTerms: true }` → `AuthResponse` |
 | GET | `/auth/providers` | → `{ google: { clientId } \| null, telegram: { botUsername } \| null }` (публичный) |
 
 ```ts
@@ -91,6 +91,7 @@ type Branding = { logoUrl: string | null; primaryColor: string | null }
 - Повторное использование уже ротированного refresh-токена отзывает все сессии этого входа → 401 `auth.refresh_invalid`.
 - `/auth/oauth/*` для выключенного провайдера → 404 `auth.provider_disabled`; неверные данные → 401 `auth.oauth_invalid` / `auth.oauth_email_unverified`; неизвестный `tenantSlug` → 404 `auth.tenant_not_found`. Без `tenantSlug` новый пользователь становится владельцем новой школы (репетитор); с `tenantSlug` — участником этой школы без ролей. Пользователь Telegram получает служебный email `tg-<id>@telegram.invalid`.
 - `/auth/password/reset` и `/auth/invitations/accept` с неверным/истёкшим/использованным токеном → 422 `auth.token_invalid`. Ошибки политики пароля — 400 `validation.failed` с `errors[].code` из `password_too_short | password_too_long | password_digit_required | password_letter_required`.
+- `acceptTerms` — согласие с публичной офертой (`/offer`) и политикой обработки персональных данных (`/privacy`), обязательно для `/auth/register` и `/auth/invitations/accept`: отсутствует или `false` → 400 `validation.failed`, `errors[] = { field: "acceptTerms", code: "consent_required" }`. Согласие (в т. ч. при первом входе через Google/Telegram, создающем аккаунт) пишется в аудит как `legal.consent_accepted` с `diff = { offerVersion, privacyVersion, method }` (Закон РБ № 99-З, ст. 5).
 
 ## 2. Профиль и «я» (`/me`)
 

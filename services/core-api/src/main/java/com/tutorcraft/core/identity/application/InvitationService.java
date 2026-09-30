@@ -122,6 +122,7 @@ public class InvitationService {
         tokens.consume(Kind.INVITATION, token);
         users.activate(user.tenantId(), user.id(), hash, command.firstName().trim(), command.lastName().trim());
         audit.record(AuditRecord.of(user.tenantId(), user.id(), "user.invitation_accepted", "user", user.id().toString()));
+        auth.recordLegalConsent(user, LegalConsent.Method.INVITATION);
         UserAccount active = users.findById(user.tenantId(), user.id()).orElseThrow(() -> new IllegalStateException("User disappeared"));
         return auth.toResult(sessions.open(active, LoginMethod.INVITATION));
     }
@@ -133,10 +134,11 @@ public class InvitationService {
             .maxLength(command.firstName(), MAX_NAME_LENGTH, "firstName")
             .notBlank(command.lastName(), "lastName")
             .maxLength(command.lastName(), MAX_NAME_LENGTH, "lastName")
+            .check(command.acceptTerms(), LegalConsent.FIELD, LegalConsent.REQUIRED_CODE, LegalConsent.REQUIRED_MESSAGE)
             .throwIfInvalid();
     }
 
-    public record AcceptCommand(String token, String password, String firstName, String lastName) {
+    public record AcceptCommand(String token, String password, String firstName, String lastName, boolean acceptTerms) {
 
         @Override
         public String toString() {

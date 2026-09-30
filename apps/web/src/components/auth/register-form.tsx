@@ -16,6 +16,7 @@ import { ROUTES } from '@/features/auth/routes';
 import { useRegister } from '@/features/auth/use-auth';
 import { applyServerFieldErrors } from '@/features/forms/server-errors';
 import { AuthHeading } from './auth-heading';
+import { LEGAL_CONSENT_DEFAULTS, LegalConsentFields, legalConsentSchema } from './legal-consent';
 
 const REGISTER_FIELDS = ['email', 'password', 'firstName', 'lastName', 'schoolName'] as const;
 export const PASSWORD_MIN_LENGTH_HINT = 8;
@@ -41,6 +42,7 @@ export function RegisterForm() {
         t('validation.passwordMin', { min: PASSWORD_MIN_LENGTH_HINT }),
       ),
     schoolName: z.string().trim().optional(),
+    ...legalConsentSchema(t('validation.consentRequired')),
   });
   type Values = z.infer<typeof schema>;
   const form = useForm<Values>({
@@ -51,23 +53,26 @@ export function RegisterForm() {
       email: prefilledEmail,
       password: '',
       schoolName: '',
+      ...LEGAL_CONSENT_DEFAULTS,
     },
   });
   const errors = form.formState.errors;
 
-  const onSubmit = form.handleSubmit((values) => {
-    setError(null);
-    register.mutate(
-      { ...values, schoolName: values.schoolName || undefined },
-      {
-        onSuccess: () => router.replace(ROUTES.courses),
-        onError: (failure) => {
-          if (!applyServerFieldErrors(failure, form.setError, REGISTER_FIELDS))
-            setError(describeProblem(failure, tErrors).title);
+  const onSubmit = form.handleSubmit(
+    ({ acceptOffer: _offer, acceptPrivacy: _privacy, ...values }) => {
+      setError(null);
+      register.mutate(
+        { ...values, schoolName: values.schoolName || undefined, acceptTerms: true },
+        {
+          onSuccess: () => router.replace(ROUTES.courses),
+          onError: (failure) => {
+            if (!applyServerFieldErrors(failure, form.setError, REGISTER_FIELDS))
+              setError(describeProblem(failure, tErrors).title);
+          },
         },
-      },
-    );
-  });
+      );
+    },
+  );
 
   return (
     <div>
@@ -125,6 +130,7 @@ export function RegisterForm() {
         >
           <Input autoComplete="organization" {...form.register('schoolName')} />
         </Field>
+        <LegalConsentFields control={form.control} errors={errors} />
         <Button
           type="submit"
           size="lg"

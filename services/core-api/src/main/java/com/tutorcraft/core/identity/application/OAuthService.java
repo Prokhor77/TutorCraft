@@ -108,6 +108,12 @@ public class OAuthService {
         return inTenant.apply(tenantId);
     }
 
+    /** Первый вход через OAuth создаёт учётную запись: согласие дано по уведомлению под кнопками входа. */
+    private UserAccount consented(UserAccount created, LegalConsent.Method method) {
+        auth.recordLegalConsent(created, method);
+        return created;
+    }
+
     private AuthResult signIn(UserAccount user, LoginMethod method) {
         signInGuard.ensureCanSignIn(user);
         return auth.toResult(sessions.open(user, method));
@@ -120,7 +126,7 @@ public class OAuthService {
         }
         return users.findByEmail(tenantId, EmailAddress.normalize(identity.email()))
                 .map(user -> linkGoogle(user, identity.subject()))
-                .orElseGet(() -> provisioner.createMember(tenantId, googleSignup(identity)));
+                .orElseGet(() -> consented(provisioner.createMember(tenantId, googleSignup(identity)), LegalConsent.Method.OAUTH_GOOGLE));
     }
 
     private UserAccount googleUserAnyTenant(GoogleIdentity identity) {
@@ -132,7 +138,7 @@ public class OAuthService {
         if (!byEmail.isEmpty()) {
             return linkGoogle(tenantChoice.single(byEmail), identity.subject());
         }
-        return provisioner.createTenantOwner(googleSignup(identity));
+        return consented(provisioner.createTenantOwner(googleSignup(identity)), LegalConsent.Method.OAUTH_GOOGLE);
     }
 
     /** Email подтверждён Google — приглашённый пользователь может войти и активируется. */
@@ -148,12 +154,14 @@ public class OAuthService {
 
     private UserAccount telegramUserInTenant(UUID tenantId, TelegramProfile profile) {
         return users.findByTelegramUserId(tenantId, profile.id())
-                .orElseGet(() -> provisioner.createMember(tenantId, telegramSignup(profile)));
+                .orElseGet(() -> consented(provisioner.createMember(tenantId, telegramSignup(profile)), LegalConsent.Method.OAUTH_TELEGRAM));
     }
 
     private UserAccount telegramUserAnyTenant(TelegramProfile profile) {
         List<UserAccount> existing = users.findAllByTelegramUserId(profile.id());
-        return existing.isEmpty() ? provisioner.createTenantOwner(telegramSignup(profile)) : tenantChoice.single(existing);
+        return existing.isEmpty()
+                ? consented(provisioner.createTenantOwner(telegramSignup(profile)), LegalConsent.Method.OAUTH_TELEGRAM)
+                : tenantChoice.single(existing);
     }
 
     private static Signup googleSignup(GoogleIdentity identity) {

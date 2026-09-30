@@ -9,12 +9,15 @@ export type RegisterInput = {
   firstName: string;
   lastName: string;
   schoolName?: string;
+  /** Offer + personal data policy accepted (core-api rejects sign-up without it). */
+  acceptTerms: true;
 };
 export type AcceptInvitationInput = {
   token: string;
   password: string;
   firstName: string;
   lastName: string;
+  acceptTerms: true;
 };
 
 const PUBLIC = { auth: false } as const;

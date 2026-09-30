@@ -44,6 +44,7 @@ test('teacher builds the course', async ({ page }) => {
     await page.getByLabel(t.auth.lastName).fill('Смирнова');
     await page.getByLabel(t.auth.email, { exact: true }).fill(teacherEmail);
     await page.getByLabel(t.auth.password, { exact: true }).fill(PASSWORD);
+    for (const checkbox of await page.getByRole('checkbox').all()) await checkbox.check();
     await page.getByRole('button', { name: t.auth.register }).click();
     await expect(page).toHaveURL(/\/courses/);
   });
@@ -158,6 +159,7 @@ test('student joins, submits the assignment and takes the quiz', async ({ browse
     await page.getByLabel(t.auth.firstName).fill('Иван');
     await page.getByLabel(t.auth.lastName).fill('Петров');
     await page.getByLabel(t.auth.password, { exact: true }).fill(PASSWORD);
+    for (const checkbox of await page.getByRole('checkbox').all()) await checkbox.check();
     await page.getByRole('button', { name: t.auth.acceptInvite }).click();
     await expect(page).toHaveURL(/\/home/);
   });

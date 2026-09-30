@@ -27,6 +27,7 @@ import {
 } from '@/lib/api/schemas/auth';
 import { AuthHeading } from './auth-heading';
 import { GoogleButton } from './google-button';
+import { OAuthConsentNotice } from './legal-consent';
 import { TelegramButton } from './telegram-button';
 
 type PendingLogin =
@@ -186,6 +187,7 @@ export function LoginForm() {
               onAuth={(payload) => run({ kind: 'telegram', payload })}
             />
           ) : null}
+          <OAuthConsentNotice />
         </div>
       ) : null}
       <Link

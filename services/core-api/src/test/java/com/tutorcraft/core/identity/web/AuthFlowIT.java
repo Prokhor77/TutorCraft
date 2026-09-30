@@ -33,7 +33,7 @@ class AuthFlowIT extends IntegrationTest {
 
         mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(
                         Map.of("email", email, "password", PASSWORD, "firstName", "Анна", "lastName", "Петрова",
-                                "schoolName", "Школа Анны"))))
+                                "schoolName", "Школа Анны", "acceptTerms", true))))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.accessToken").isNotEmpty())
             .andExpect(jsonPath("$.user.tenantRoles[0]").value("tenant_admin"))
@@ -89,15 +89,25 @@ class AuthFlowIT extends IntegrationTest {
     void weakPasswordIsRejectedByTenantPolicy() throws Exception {
         mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(
                         Map.of("email", "weak-" + UUID.randomUUID() + "@example.com", "password", "short",
-                                "firstName", "A", "lastName", "B"))))
+                                "firstName", "A", "lastName", "B", "acceptTerms", true))))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.errors[0].field").value("password"));
+    }
+
+    @Test
+    void registrationWithoutAcceptedTermsIsRejected() throws Exception {
+        mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(
+                        Map.of("email", "no-consent-" + UUID.randomUUID() + "@example.com", "password", PASSWORD,
+                                "firstName", "A", "lastName", "B"))))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.errors[0].field").value("acceptTerms"));
     }
 
     private String register() throws Exception {
         String email = "tutor-" + UUID.randomUUID() + "@example.com";
         mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(
-                        Map.of("email", email, "password", PASSWORD, "firstName", "Иван", "lastName", "Иванов"))))
+                        Map.of("email", email, "password", PASSWORD, "firstName", "Иван", "lastName", "Иванов",
+                                "acceptTerms", true))))
             .andExpect(status().isOk());
         return email;
     }

@@ -324,7 +324,11 @@
       "calendar": "Calendar",
       "email": "Contact us",
       "telegram": "Telegram",
-      "rights": "© {year} TutorCraft Studio"
+      "rights": "© {year} TutorCraft Studio",
+      "documents": "Legal",
+      "offer": "Public offer",
+      "privacy": "Personal data policy",
+      "requisites": "{name}, taxpayer ID {taxId}, {address}"
     }
   },
   "auth": {
@@ -368,7 +372,8 @@
     "validation": {
       "email": "Enter a valid email",
       "required": "Required",
-      "passwordMin": "At least {min} characters"
+      "passwordMin": "At least {min} characters",
+      "consentRequired": "You cannot register without this consent"
     },
     "heroSubtitle": "The studio for tutors and course authors",
     "authTabs": "Sign in or register",
@@ -1642,7 +1647,10 @@
       "endBeforeStart": "End is before start",
       "courseRequired": "Choose a course",
       "studentsRequired": "Choose at least one student"
-    }
+    },
+    "datePlaceholder": "Choose a date",
+    "timePlaceholder": "Time",
+    "noEndTime": "No end time"
   },
   "subscription": {
     "title": "Subscription",
@@ -2242,5 +2250,16 @@
     "eraseWarning": "Enrollments, submissions, quiz attempts, grades, progress, notifications and tokens are deleted, forum post text is wiped. The account is anonymized; grades the user gave to others stay without personal data.",
     "eraseConfirm": "To confirm, type the email: {email}",
     "erasedToast": "{email} deleted from the platform"
+  },
+  "legal": {
+    "offer": "Public offer",
+    "privacy": "Personal data policy",
+    "toc": "Contents",
+    "edition": "Edition of {date}",
+    "bindingNote": "The document is published in Russian; the Russian text is legally binding.",
+    "consentLegend": "Consent to the documents",
+    "acceptOffer": "I accept the terms of the <link>public offer</link>",
+    "acceptPrivacy": "I consent to the processing of my personal data under the <link>personal data policy</link>",
+    "oauthNotice": "By signing in with Google or Telegram for the first time you accept the <offer>public offer</offer> and consent to personal data processing under the <privacy>policy</privacy>."
   }
 }

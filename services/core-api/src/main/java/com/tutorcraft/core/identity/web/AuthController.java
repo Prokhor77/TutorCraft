@@ -72,7 +72,7 @@ class AuthController {
     @PostMapping("/register")
     ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
         return withCookie(auth.register(new RegisterCommand(request.email(), request.password(), request.firstName(),
-                request.lastName(), request.schoolName())));
+                request.lastName(), request.schoolName(), Boolean.TRUE.equals(request.acceptTerms()))));
     }
 
     @PostMapping("/login")
@@ -127,7 +127,7 @@ class AuthController {
     @PostMapping("/invitations/accept")
     ResponseEntity<AuthResponse> acceptInvitation(@Valid @RequestBody AcceptInvitationRequest request) {
         return withCookie(invitations.accept(new AcceptCommand(request.token(), request.password(), request.firstName(),
-                request.lastName())));
+                request.lastName(), Boolean.TRUE.equals(request.acceptTerms()))));
     }
 
     @GetMapping("/providers")
@@ -152,7 +152,7 @@ class AuthController {
 
     record RegisterRequest(@NotBlank @Size(max = MAX_TEXT) String email, @NotBlank @Size(max = MAX_PASSWORD) String password,
                            @NotBlank @Size(max = MAX_NAME) String firstName, @NotBlank @Size(max = MAX_NAME) String lastName,
-                           @Size(max = MAX_SCHOOL) String schoolName) {
+                           @Size(max = MAX_SCHOOL) String schoolName, Boolean acceptTerms) {
 
         @Override
         public String toString() {
@@ -214,7 +214,8 @@ class AuthController {
     }
 
     record AcceptInvitationRequest(@NotBlank String token, @NotBlank @Size(max = MAX_PASSWORD) String password,
-                                   @NotBlank @Size(max = MAX_NAME) String firstName, @NotBlank @Size(max = MAX_NAME) String lastName) {
+                                   @NotBlank @Size(max = MAX_NAME) String firstName, @NotBlank @Size(max = MAX_NAME) String lastName,
+                                   Boolean acceptTerms) {
 
         @Override
         public String toString() {

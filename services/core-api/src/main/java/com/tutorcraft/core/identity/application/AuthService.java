@@ -59,6 +59,7 @@ public class AuthService {
         String email = EmailAddress.normalize(command.email());
         UserAccount owner = provisioner.createTenantOwner(new Signup(email, command.password(), command.firstName().trim(),
                 command.lastName().trim(), command.schoolName(), null, null));
+        recordLegalConsent(owner, LegalConsent.Method.REGISTER);
         return toResult(sessions.open(owner, LoginMethod.REGISTER));
     }
 
@@ -94,6 +95,11 @@ public class AuthService {
         audit.record(AuditRecord.of(user.tenantId(), user.userId(), "auth.sessions_revoked", "user", user.userId().toString()));
     }
 
+    /** Фиксирует согласие с офертой и политикой ПД в журнале аудита (в транзакции создания учётной записи). */
+    public void recordLegalConsent(UserAccount user, LegalConsent.Method method) {
+        audit.record(LegalConsent.record(user.tenantId(), user.id(), method));
+    }
+
     public AuthResult toResult(IssuedSession session) {
         return new AuthResult(session, meAssembler.assemble(session.user()));
     }
@@ -127,10 +133,12 @@ public class AuthService {
             .maxLength(command.lastName(), MAX_NAME_LENGTH, "lastName")
             .maxLength(command.schoolName(), MAX_SCHOOL_LENGTH, "schoolName")
             .notBlank(command.password(), "password")
+            .check(command.acceptTerms(), LegalConsent.FIELD, LegalConsent.REQUIRED_CODE, LegalConsent.REQUIRED_MESSAGE)
             .throwIfInvalid();
     }
 
-    public record RegisterCommand(String email, String password, String firstName, String lastName, String schoolName) {
+    public record RegisterCommand(String email, String password, String firstName, String lastName, String schoolName,
+                                  boolean acceptTerms) {
 
         @Override
         public String toString() {

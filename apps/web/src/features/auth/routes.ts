@@ -5,6 +5,8 @@ export const ROUTES = {
   forgotPassword: '/forgot-password',
   resetPassword: '/reset-password',
   acceptInvite: '/accept-invite',
+  offer: '/offer',
+  privacy: '/privacy',
   home: '/home',
   courses: '/courses',
   course: (id: string) => `/courses/${id}`,

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { Brand } from '@/components/layout/brand';
 import { LANDING } from '@/content/landing';
+import { ORGANIZATION } from '@/content/legal/organization';
 import { ROUTES } from '@/features/auth/routes';
 import { LANDING_ANCHORS } from './site-header';
 
@@ -36,7 +37,8 @@ function FooterColumn({ title, links }: { title: string; links: FooterLink[] }) 
 
 /**
  * Public site footer: brand + description and link columns. Only real destinations are listed; the «Компания»
- * column appears when contacts are configured in `src/content/landing.ts`.
+ * column appears when contacts are configured in `src/content/landing.ts`. Legal documents and the
+ * operator's requisites are always shown (required for a public offer).
  */
 export async function SiteFooter() {
   const t = await getTranslations('landing.footer');
@@ -51,7 +53,7 @@ export async function SiteFooter() {
       <div className="mx-auto flex max-w-content flex-col gap-10 px-page-x py-12">
         <nav
           aria-label={t('label')}
-          className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))]"
+          className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_repeat(5,minmax(0,1fr))]"
         >
           <div className="flex flex-col gap-3 sm:col-span-2 lg:col-span-1">
             <Brand name={tLanding('product')} />
@@ -81,11 +83,25 @@ export async function SiteFooter() {
               { href: ROUTES.calendar, label: t('calendar') },
             ]}
           />
+          <FooterColumn
+            title={t('documents')}
+            links={[
+              { href: ROUTES.offer, label: t('offer') },
+              { href: ROUTES.privacy, label: t('privacy') },
+            ]}
+          />
           {company.length > 0 ? <FooterColumn title={t('company')} links={company} /> : null}
         </nav>
-        <p className="border-t border-border pt-6 text-xs text-text-muted">
-          {t('rights', { year: new Date().getFullYear() })}
-        </p>
+        <div className="flex flex-col gap-1 border-t border-border pt-6 text-xs text-text-muted">
+          <p>{t('rights', { year: new Date().getFullYear() })}</p>
+          <p>
+            {t('requisites', {
+              name: ORGANIZATION.shortName,
+              taxId: ORGANIZATION.taxId,
+              address: ORGANIZATION.legalAddress,
+            })}
+          </p>
+        </div>
       </div>
     </footer>
   );

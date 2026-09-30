@@ -20,6 +20,7 @@ import { applyServerFieldErrors } from '@/features/forms/server-errors';
 import { authApi } from '@/lib/api/endpoints/auth';
 import { hasProblemCode, PROBLEM_CODES } from '@/lib/api/problem';
 import { AuthHeading } from './auth-heading';
+import { LEGAL_CONSENT_DEFAULTS, LegalConsentFields, legalConsentSchema } from './legal-consent';
 import { PASSWORD_MIN_LENGTH_HINT } from './register-form';
 
 const TOKEN_PARAM = 'token';
@@ -195,11 +196,12 @@ export function AcceptInvitationForm() {
     firstName: z.string().trim().min(1, t('validation.required')),
     lastName: z.string().trim().min(1, t('validation.required')),
     password: usePasswordSchema(),
+    ...legalConsentSchema(t('validation.consentRequired')),
   });
   type Values = z.infer<typeof schema>;
   const form = useForm<Values>({
     resolver: zodResolver(schema),
-    defaultValues: { firstName: '', lastName: '', password: '' },
+    defaultValues: { firstName: '', lastName: '', password: '', ...LEGAL_CONSENT_DEFAULTS },
   });
 
   if (!token) return <TokenMissing />;
@@ -209,9 +211,9 @@ export function AcceptInvitationForm() {
       {error ? <Alert tone="danger" className="mb-4" title={error} /> : null}
       <form
         noValidate
-        onSubmit={form.handleSubmit((values) =>
+        onSubmit={form.handleSubmit(({ acceptOffer: _offer, acceptPrivacy: _privacy, ...values }) =>
           accept.mutate(
-            { token, ...values },
+            { token, ...values, acceptTerms: true },
             {
               onSuccess: () => router.replace(ROUTES.home),
               onError: (failure) => {
@@ -263,6 +265,7 @@ export function AcceptInvitationForm() {
             {...form.register('password')}
           />
         </Field>
+        <LegalConsentFields control={form.control} errors={form.formState.errors} />
         <Button type="submit" size="lg" loading={accept.isPending} className="mt-2 h-14 text-base">
           {t('acceptInvite')}
         </Button>
