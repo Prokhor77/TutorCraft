@@ -21,9 +21,12 @@ const ROW_TINT: Partial<Record<BadgeTone, string>> = {
 export function ActivityTable({
   entries,
   onOpen,
+  showSchool = false,
 }: {
   entries: ActivityEntry[];
   onOpen: (entryId: string) => void;
+  /** Adds the school column (the log shows every school). */
+  showSchool?: boolean;
 }) {
   const t = useTranslations('adminActivity');
   const locale = useLocale();
@@ -33,6 +36,7 @@ export function ActivityTable({
         <tr>
           <TH className="hidden md:table-cell">{t('columns.at')}</TH>
           <TH>{t('columns.actor')}</TH>
+          {showSchool ? <TH className="hidden md:table-cell">{t('columns.school')}</TH> : null}
           <TH>{t('columns.action')}</TH>
           <TH className="hidden lg:table-cell">{t('columns.page')}</TH>
           <TH>{t('columns.outcome')}</TH>
@@ -50,6 +54,15 @@ export function ActivityTable({
             <TD className="min-w-48">
               <ActorCell entry={entry} at={formatDateTimePrecise(entry.at, locale)} />
             </TD>
+            {showSchool ? (
+              <TD className="hidden max-w-48 truncate text-sm md:table-cell">
+                {entry.tenantName ?? (
+                  <span className="text-text-muted">
+                    {entry.tenantId ? t('deletedSchool') : t('noSchool')}
+                  </span>
+                )}
+              </TD>
+            ) : null}
             <TD className="min-w-64">
               <ActionCell entry={entry} />
             </TD>

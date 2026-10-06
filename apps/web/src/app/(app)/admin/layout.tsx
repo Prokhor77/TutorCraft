@@ -1,13 +1,15 @@
 'use client';
-import { useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Activity,
+  BookOpen,
   Building2,
   FolderTree,
   HardDrive,
   Lock,
   Palette,
   PlugZap,
+  School,
   ScrollText,
   ShieldCheck,
   UserCog,
@@ -18,43 +20,72 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useEffect, type ReactNode } from 'react';
+import { FilterChips } from '@/components/admin/admin-panel';
 import { TenantPicker } from '@/components/admin/tenant-picker';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Breadcrumbs, PageHeader } from '@/components/ui/page-header';
+import { resetSchoolQueries, switchAdminTenant } from '@/features/admin/tenant-switch';
 import { usePlatformTenants } from '@/features/admin/use-admin';
+import { isActivePath } from '@/features/app/navigation';
 import { ROUTES } from '@/features/auth/routes';
 import { isPlatformAdminHint } from '@/lib/access/permissions';
 import { cn } from '@/lib/utils/cn';
-import { useAdminTenantStore } from '@/stores/admin-tenant-store';
+import { useAdminTenantStore, type AdminLogScope } from '@/stores/admin-tenant-store';
 import { selectMe, useAuthStore } from '@/stores/auth-store';
 
-const SECTIONS: readonly { href: string; key: string; icon: LucideIcon }[] = [
-  { href: ROUTES.adminUsers, key: 'users', icon: Users },
-  { href: ROUTES.adminAccounts, key: 'accounts', icon: UserCog },
-  { href: ROUTES.adminCategories, key: 'categories', icon: FolderTree },
-  { href: ROUTES.adminBranding, key: 'branding', icon: Palette },
-  { href: ROUTES.adminAudit, key: 'audit', icon: ScrollText },
-  { href: ROUTES.adminActivity, key: 'activity', icon: Activity },
-  { href: ROUTES.adminStorage, key: 'storage', icon: HardDrive },
-  { href: ROUTES.adminIntegrations, key: 'integrations', icon: PlugZap },
+type Section = { href: string; key: string; icon: LucideIcon };
+
+/**
+ * Admin tabs. `scope` says what a group works on: the whole platform, the school picked in the header, or — for the
+ * logs — either of them (the «Все школы / Выбранная школа» switch).
+ */
+type Group = Section & { scope: 'platform' | 'school' | 'logs'; sections?: readonly Section[] };
+
+const GROUPS: readonly Group[] = [
+  { href: ROUTES.adminSchools, key: 'schools', icon: Building2, scope: 'platform' },
+  { href: ROUTES.adminCourses, key: 'courses', icon: BookOpen, scope: 'platform' },
+  { href: ROUTES.adminAccounts, key: 'accounts', icon: UserCog, scope: 'platform' },
+  {
+    href: ROUTES.adminAudit,
+    key: 'logs',
+    icon: ScrollText,
+    scope: 'logs',
+    sections: [
+      { href: ROUTES.adminAudit, key: 'audit', icon: ScrollText },
+      { href: ROUTES.adminActivity, key: 'activity', icon: Activity },
+    ],
+  },
+  {
+    href: ROUTES.adminUsers,
+    key: 'school',
+    icon: School,
+    scope: 'school',
+    sections: [
+      { href: ROUTES.adminUsers, key: 'users', icon: Users },
+      { href: ROUTES.adminCategories, key: 'categories', icon: FolderTree },
+      { href: ROUTES.adminBranding, key: 'branding', icon: Palette },
+      { href: ROUTES.adminIntegrations, key: 'integrations', icon: PlugZap },
+    ],
+  },
+  { href: ROUTES.adminStorage, key: 'storage', icon: HardDrive, scope: 'platform' },
 ];
 
-/** Session-wide queries survive a school switch; everything else was fetched for the previous school. */
-const KEEP_ON_TENANT_SWITCH = new Set(['me', 'auth', 'notifications', 'platform']);
-
-function resetSchoolQueries(queryClient: QueryClient) {
-  void queryClient.resetQueries({
-    predicate: (query) => !KEEP_ON_TENANT_SWITCH.has(String(query.queryKey[0])),
-  });
+function groupOf(pathname: string): { group?: Group; section?: Section } {
+  for (const group of GROUPS) {
+    const section = group.sections?.find((entry) => isActivePath(pathname, entry.href));
+    if (section || isActivePath(pathname, group.href)) return { group, section };
+  }
+  return {};
 }
 
 /**
- * Admin area (SPEC §10) of the single platform administrator (ADMIN_EMAIL on the server). Every section works inside
- * the school picked in the header; requests carry it as `X-Tenant-Id`. Everyone else gets a no-access state — the
- * API refuses them anyway.
+ * Admin area (SPEC §10) of the single platform administrator (ADMIN_EMAIL on the server). Platform tabs (schools,
+ * courses, accounts, storage) span every school; «Управление школой» works inside the school picked in the header (sent as
+ * `X-Tenant-Id`); logs show every school or the picked one. Everyone else gets a no-access state — the API refuses
+ * them anyway.
  */
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const t = useTranslations('admin');
@@ -81,11 +112,15 @@ function PlatformAdminLayout({ children }: { children: ReactNode }) {
   const tenants = usePlatformTenants();
   const tenantId = useAdminTenantStore((state) => state.tenantId);
   const setTenantId = useAdminTenantStore((state) => state.setTenantId);
+  const logScope = useAdminTenantStore((state) => state.logScope);
+  const setLogScope = useAdminTenantStore((state) => state.setLogScope);
   const list = tenants.data ?? [];
   const selected = list.find((tenant) => tenant.id === tenantId);
-  const current = SECTIONS.find((section) => pathname.startsWith(section.href));
+  const { group, section } = groupOf(pathname);
+  const needsTenant =
+    group?.scope === 'school' || (group?.scope === 'logs' && logScope === 'school');
 
-  // Stored school vanished (or first visit): fall back to the newest one.
+  // Stored school vanished (deleted, or first visit): fall back to the newest one.
   useEffect(() => {
     if (tenants.data && !selected) setTenantId(tenants.data[0]?.id ?? null);
   }, [tenants.data, selected, setTenantId]);
@@ -93,13 +128,9 @@ function PlatformAdminLayout({ children }: { children: ReactNode }) {
   // Leaving /admin: drop data fetched for the managed school so the rest of the app refetches its own.
   useEffect(() => () => resetSchoolQueries(queryClient), [queryClient]);
 
-  const switchTenant = (next: string) => {
-    if (next === tenantId) return;
-    setTenantId(next);
-    resetSchoolQueries(queryClient);
-  };
+  const switchTenant = (next: string) => switchAdminTenant(queryClient, next);
 
-  const body = tenants.isError ? (
+  const schoolBody = tenants.isError ? (
     <ErrorState
       title={t('tenant.loadError')}
       retryLabel={tCommon('retry')}
@@ -123,12 +154,13 @@ function PlatformAdminLayout({ children }: { children: ReactNode }) {
             label={tShell('breadcrumbs')}
             items={[
               { label: tNav('home'), href: ROUTES.home },
-              { label: t('title'), href: current ? ROUTES.admin : undefined },
-              ...(current ? [{ label: t(`nav.${current.key}`) }] : []),
+              { label: t('title'), href: group ? ROUTES.admin : undefined },
+              ...(group ? [{ label: t(`nav.${group.key}`) }] : []),
+              ...(section ? [{ label: t(`nav.${section.key}`) }] : []),
             ]}
           />
         }
-        eyebrow={selected?.name}
+        eyebrow={needsTenant ? selected?.name : undefined}
         title={t('title')}
         meta={
           <Badge tone="primary">
@@ -137,7 +169,7 @@ function PlatformAdminLayout({ children }: { children: ReactNode }) {
         }
         description={t('description')}
         actions={
-          tenants.data?.length ? (
+          needsTenant && tenants.data?.length ? (
             <TenantPicker
               tenants={tenants.data}
               value={selected?.id ?? null}
@@ -146,36 +178,98 @@ function PlatformAdminLayout({ children }: { children: ReactNode }) {
           ) : null
         }
       >
-        <nav
-          aria-label={t('sections')}
-          className="scrollbar-none -mx-1 max-w-full overflow-x-auto px-1"
-        >
-          <ul className="inline-flex gap-1 rounded-full bg-surface-muted p-1 shadow-inner">
-            {SECTIONS.map((section) => {
-              const active = section === current;
-              const Icon = section.icon;
-              return (
-                <li key={section.href}>
-                  <Link
-                    href={section.href}
-                    aria-current={active ? 'page' : undefined}
-                    className={cn(
-                      'flex h-9 items-center gap-2 whitespace-nowrap rounded-full px-4 text-label-lg transition-colors duration-fast focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus-ring/20',
-                      active
-                        ? 'bg-primary text-primary-foreground shadow-sm'
-                        : 'text-text-muted hover:bg-surface-container hover:text-text',
-                    )}
-                  >
-                    <Icon className="size-4 shrink-0" aria-hidden />
-                    {t(`nav.${section.key}`)}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
+        <div className="flex w-full min-w-0 flex-col gap-3">
+          <nav
+            aria-label={t('sections')}
+            className="scrollbar-none -mx-1 max-w-full overflow-x-auto px-1"
+          >
+            <ul className="inline-flex gap-1 rounded-full bg-surface-muted p-1 shadow-inner">
+              {GROUPS.map((entry) => {
+                const active = entry === group;
+                const Icon = entry.icon;
+                return (
+                  <li key={entry.key}>
+                    <Link
+                      href={entry.href}
+                      aria-current={active ? 'page' : undefined}
+                      className={cn(
+                        'flex h-9 items-center gap-2 whitespace-nowrap rounded-full px-4 text-label-lg transition-colors duration-fast focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus-ring/20',
+                        active
+                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          : 'text-text-muted hover:bg-surface-container hover:text-text',
+                      )}
+                    >
+                      <Icon className="size-4 shrink-0" aria-hidden />
+                      {t(`nav.${entry.key}`)}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+          {group?.sections ? (
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+              <SubNav
+                label={t('subsections', { group: t(`nav.${group.key}`) })}
+                sections={group.sections}
+                active={section}
+              />
+              {group.scope === 'logs' ? (
+                <FilterChips<AdminLogScope>
+                  label={t('logScope.label')}
+                  value={logScope}
+                  onChange={setLogScope}
+                  options={[
+                    { value: 'all', label: t('logScope.all') },
+                    { value: 'school', label: t('logScope.school') },
+                  ]}
+                />
+              ) : null}
+            </div>
+          ) : null}
+        </div>
       </PageHeader>
-      {body}
+      {needsTenant ? schoolBody : children}
     </>
+  );
+}
+
+/** Second row of tabs inside a group (e.g. users / categories / branding / integrations of the school). */
+function SubNav({
+  label,
+  sections,
+  active,
+}: {
+  label: string;
+  sections: readonly Section[];
+  active: Section | undefined;
+}) {
+  const t = useTranslations('admin');
+  return (
+    <nav aria-label={label} className="scrollbar-none -mx-1 max-w-full overflow-x-auto px-1">
+      <ul className="flex gap-1.5">
+        {sections.map((entry) => {
+          const current = entry === active;
+          const Icon = entry.icon;
+          return (
+            <li key={entry.href}>
+              <Link
+                href={entry.href}
+                aria-current={current ? 'page' : undefined}
+                className={cn(
+                  'flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 text-label-md transition-colors duration-fast focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus-ring/20',
+                  current
+                    ? 'bg-primary-soft text-primary'
+                    : 'text-text-muted hover:bg-surface-muted hover:text-primary',
+                )}
+              >
+                <Icon className="size-4 shrink-0" aria-hidden />
+                {t(`nav.${entry.key}`)}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
   );
 }

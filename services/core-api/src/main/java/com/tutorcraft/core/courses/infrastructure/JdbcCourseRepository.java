@@ -199,6 +199,36 @@ class JdbcCourseRepository implements CourseRepository {
     }
 
     @Override
+    public List<PublishedCourseRef> publishedEverywhere(Instant now, int limit) {
+        return jdbc.sql("SELECT tenant_id, slug, updated_at FROM courses WHERE deleted_at IS NULL AND " + VISIBLE_NOW
+                        + " ORDER BY updated_at DESC, id DESC LIMIT :limit")
+            .param("now", Timestamps.of(now)).param("limit", limit)
+            .query((rs, n) -> new PublishedCourseRef(rs.getObject("tenant_id", UUID.class), rs.getString("slug"),
+                    Timestamps.read(rs, "updated_at")))
+            .list();
+    }
+
+    @Override
+    public List<Course> listAcrossTenants(UUID tenantId, String q, PageQuery page) {
+        Optional<Position> after = page.after();
+        String pattern = q == null ? null : "%" + escapeLike(q) + "%";
+        return jdbc.sql(SELECT + """
+                 WHERE deleted_at IS NULL
+                   AND (CAST(:tenantId AS uuid) IS NULL OR tenant_id = :tenantId)
+                   AND (CAST(:pattern AS text) IS NULL OR title ILIKE :pattern OR short_name ILIKE :pattern)
+                   AND (CAST(:afterAt AS timestamptz) IS NULL
+                        OR (created_at, id) < (CAST(:afterAt AS timestamptz), CAST(:afterId AS uuid)))
+                 ORDER BY created_at DESC, id DESC
+                 LIMIT :fetchSize
+                """)
+            .param("tenantId", tenantId).param("pattern", pattern)
+            .param("afterAt", after.map(position -> Timestamps.of(position.sortKey())).orElse(null))
+            .param("afterId", after.map(Position::id).orElse(null))
+            .param("fetchSize", page.fetchSize())
+            .query(rows).list();
+    }
+
+    @Override
     public void softDelete(UUID tenantId, UUID id, Instant now) {
         jdbc.sql("""
                 UPDATE courses SET deleted_at = :now, updated_at = :now, version = version + 1

@@ -205,6 +205,19 @@ class CoursesIT extends IntegrationTest {
             .andExpect(jsonPath("$.teacher.name").value("Test User"));
     }
 
+    @Test
+    void publishedCourseAppearsInPublicSitemap() throws Exception {
+        String courseId = createCourse(tenantA, teacherA, "Sitemap course");
+        publishCourse(courseId);
+        createCourse(tenantA, teacherA, "Draft course");
+        String tenantSlug = jdbc.sql("SELECT slug FROM tenants WHERE id = :id").param("id", tenantA).query(String.class).single();
+
+        mvc.perform(get(API + "/public/sitemap"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[?(@.tenantSlug == '" + tenantSlug + "')].courses[*].slug", hasItem("sitemap-course")))
+            .andExpect(jsonPath("$[*].courses[*].slug", not(hasItem("draft-course"))));
+    }
+
     private ResultActions perform(MockHttpServletRequestBuilder request,
                                   UUID tenantId, UUID userId) throws Exception {
         return mvc.perform(request.header(HttpHeaders.AUTHORIZATION, bearer(tenantId, userId)));

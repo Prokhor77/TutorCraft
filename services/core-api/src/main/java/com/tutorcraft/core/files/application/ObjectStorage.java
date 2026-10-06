@@ -26,6 +26,12 @@ public interface ObjectStorage {
 
     void delete(String key);
 
+    /**
+     * Удаляет все объекты, ключ которых начинается с {@code prefix} (каталог: {@code "t/{tenantId}/"}). Как и
+     * {@link #delete}, «по возможности»: ошибки только логируются. @return число удалённых объектов
+     */
+    int deletePrefix(String prefix);
+
     /** Публичный URL объекта (только для префиксов с анонимным чтением, см. ADR-008). */
     String publicUrl(String key);
 

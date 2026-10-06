@@ -1,7 +1,7 @@
 'use client';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { integrationsApi } from '@/lib/api/endpoints/integrations';
-import { platformApi } from '@/lib/api/endpoints/platform';
+import { platformApi, type PlatformCoursesQuery } from '@/lib/api/endpoints/platform';
 import {
   orgApi,
   type AuditQuery,
@@ -11,6 +11,7 @@ import {
   type UsersQuery,
 } from '@/lib/api/endpoints/org';
 import { getNextCursor } from '@/lib/api/pagination';
+import { useAdminTenantStore } from '@/stores/admin-tenant-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { queryKeys } from '../query-keys';
 
@@ -151,6 +152,35 @@ export function useDeliveries(webhookId: string | null) {
 /** Schools the platform administrator can manage (tenant picker in /admin). */
 export function usePlatformTenants(enabled = true) {
   return useQuery({ queryKey: queryKeys.platformTenants, queryFn: platformApi.tenants, enabled });
+}
+
+/**
+ * Irreversible deletion of a school with all its accounts (the owner included), courses and files. The school picked
+ * in the header is dropped when it is the deleted one; the layout then falls back to the newest remaining school.
+ */
+export function useDeleteTenant() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ tenantId, confirmSlug }: { tenantId: string; confirmSlug: string }) =>
+      platformApi.deleteTenant(tenantId, confirmSlug),
+    onSuccess: (_, { tenantId }) => {
+      const store = useAdminTenantStore.getState();
+      if (store.tenantId === tenantId) store.setTenantId(null);
+      void queryClient.invalidateQueries({ queryKey: ['platform'] });
+      void queryClient.invalidateQueries({ queryKey: ['audit-log'] });
+      void queryClient.invalidateQueries({ queryKey: ['activity-log'] });
+    },
+  });
+}
+
+/** Courses of every school (or of one), newest first — the admin «Курсы» tab. */
+export function usePlatformCourses(params: Omit<PlatformCoursesQuery, 'cursor'>) {
+  return useInfiniteQuery({
+    queryKey: queryKeys.platformCourses(params),
+    queryFn: ({ pageParam }) => platformApi.courses({ ...params, cursor: pageParam }),
+    initialPageParam: null as string | null,
+    getNextPageParam: getNextCursor,
+  });
 }
 
 /** Space taken by every school (all uploads, as counted against the quota). */

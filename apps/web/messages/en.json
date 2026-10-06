@@ -66,7 +66,8 @@
     },
     "languages": {
       "ru": "Русский",
-      "en": "English"
+      "en": "English",
+      "uz": "Oʻzbekcha"
     }
   },
   "nav": {
@@ -136,8 +137,6 @@
     "due": "Due {when}"
   },
   "landing": {
-    "metaTitle": "TutorCraft Studio — courses, assignments and quizzes for tutors",
-    "metaDescription": "The tutor's studio: course builder with access conditions, 8 question types, a unified grading queue, HLS video and Telegram notifications.",
     "product": "TutorCraft Studio",
     "nav": {
       "label": "Page sections",
@@ -1704,7 +1703,7 @@
   "admin": {
     "adminChip": "Main administrator",
     "title": "Administration",
-    "description": "Users, categories, branding, audit, activity and integrations of the selected school",
+    "description": "Platform schools and accounts, logs of every school, storage and management of a single school",
     "sections": "Administration sections",
     "nav": {
       "users": "Users",
@@ -1713,8 +1712,12 @@
       "audit": "Audit log",
       "activity": "Activity",
       "integrations": "Integrations",
-      "accounts": "All accounts",
-      "storage": "Storage"
+      "accounts": "Accounts",
+      "storage": "Storage",
+      "schools": "Schools",
+      "logs": "Logs",
+      "school": "School management",
+      "courses": "Courses"
     },
     "tenant": {
       "label": "School",
@@ -1764,6 +1767,138 @@
       },
       "emptySchoolsText": "Schools appear once tutors sign up",
       "emptyCoursesText": "Files and videos uploaded to courses will show up here"
+    },
+    "subsections": "Subsections: {group}",
+    "logScope": {
+      "label": "Whose records to show",
+      "all": "All schools",
+      "school": "Selected school"
+    },
+    "schools": {
+      "title": "Schools",
+      "hint": "Every school on the platform: who it is registered to, how many people, courses and space it has. Open a school’s management or logs from here, or delete it",
+      "shownCount": "Shown: {count}",
+      "search": "Search by name, address or owner",
+      "statSchools": "Schools",
+      "statUsers": "Users in all schools",
+      "statCourses": "Courses in all schools",
+      "school": "School",
+      "owner": "Owner",
+      "noOwner": "No owner",
+      "users": "Users",
+      "courses": "Courses",
+      "storage": "Storage",
+      "created": "Created",
+      "suspended": "Suspended",
+      "actions": "Actions",
+      "actionsFor": "Actions: {name}",
+      "manage": "Manage school",
+      "logs": "School logs",
+      "delete": "Delete school",
+      "loadError": "Could not load the schools",
+      "emptyTitle": "No schools yet",
+      "emptyText": "Schools appear when tutors sign up",
+      "nothingFound": "Nothing found",
+      "nothingFoundText": "Try a different query.",
+      "coursesAction": "School courses"
+    },
+    "deleteSchool": {
+      "title": "Delete “{name}” forever?",
+      "warningTitle": "This cannot be undone",
+      "warning": "Every account of the school — including the owner it is registered to — and all courses, materials, enrollments, submissions, grades, files and videos, the subscription and integrations will be deleted. The school’s audit log is kept.",
+      "owner": "The owner account {email} is deleted together with the school.",
+      "confirm": "To confirm, type the school address: {slug}",
+      "submit": "Delete school",
+      "deletedToast": "“{name}” has been deleted"
+    },
+    "courses": {
+      "title": "School courses",
+      "hint": "Every course created by tutors, except those in the trash. Click a course to see its description, materials and participants",
+      "search": "Search by title or short name",
+      "school": "School",
+      "allSchools": "All schools",
+      "statCourses": "Courses on the platform",
+      "statCoursesOf": "Courses in “{name}”",
+      "statSchools": "Schools with courses",
+      "shownCount": "{count, plural, one {# course} other {# courses}}",
+      "loadError": "Could not load courses",
+      "emptyTitle": "No courses yet",
+      "emptyText": "Courses will appear here once tutors create them",
+      "nothingFound": "Nothing found",
+      "nothingFoundText": "Try another query or pick another school",
+      "course": "Course",
+      "author": "Author",
+      "students": "Students",
+      "status": "Status",
+      "created": "Created",
+      "noAuthor": "Account deleted",
+      "studentsCount": "{count, plural, one {# student} other {# students}}",
+      "staffCount": "{count, plural, one {# teacher} other {# teachers}}",
+      "ownerLine": "Owner: {name} · {email}"
+    },
+    "course": {
+      "back": "Back to courses",
+      "notFound": "Course not found — it may have been deleted",
+      "loadError": "Could not load the course",
+      "statModules": "Modules",
+      "statItems": "Materials",
+      "statSchool": "School",
+      "tabs": "Course sections",
+      "tab": {
+        "overview": "Overview",
+        "materials": "Materials",
+        "participants": "Participants"
+      },
+      "inSchool": "School “{name}” · {slug}",
+      "openLanding": "Open course page",
+      "descriptionTitle": "Description",
+      "noDescription": "The tutor has not added a description",
+      "factsTitle": "Course details",
+      "notSet": "not set",
+      "facts": {
+        "school": "School",
+        "owner": "School owner",
+        "slug": "Address (slug)",
+        "visibility": "Status",
+        "publishAt": "Publication",
+        "startsAt": "Starts",
+        "endsAt": "Ends",
+        "selfEnrol": "Self-enrolment",
+        "groupMode": "Group mode"
+      },
+      "selfEnrolOn": "on",
+      "selfEnrolOff": "off",
+      "selfEnrolCode": "code word “{code}”",
+      "selfEnrolMax": "up to {count} students",
+      "selfEnrolUntil": "until {date}",
+      "groupModes": {
+        "none": "no groups",
+        "visible": "visible groups",
+        "separate": "separate groups"
+      },
+      "materials": {
+        "loadError": "Could not load materials",
+        "emptyTitle": "No materials yet",
+        "emptyText": "The tutor has not added modules or materials yet",
+        "moduleCount": "{count, plural, =0 {no materials} one {# material} other {# materials}}",
+        "moduleEmpty": "No materials in this module",
+        "open": "Open “{title}”",
+        "previewTitle": "Material",
+        "previewError": "Could not load the material",
+        "noContent": "This material has no content yet"
+      },
+      "participants": {
+        "title": "Participants",
+        "hint": "Students, teachers and assistants of the course, their progress and last visit. View only",
+        "shownCount": "{count, plural, one {# participant} other {# participants}}",
+        "loadError": "Could not load participants",
+        "emptyTitle": "No participants yet",
+        "emptyText": "The tutor has not enrolled anyone yet",
+        "nothingFound": "Nobody found",
+        "nothingFoundText": "Change the query or role",
+        "progress": "Progress",
+        "progressOf": "Progress: {name}"
+      }
     }
   },
   "adminUsers": {
@@ -1891,7 +2026,10 @@
     "system": "System",
     "loadError": "Could not load the audit log",
     "emptyTitle": "No entries",
-    "emptyText": "Try changing the filters."
+    "emptyText": "Try changing the filters.",
+    "panelHintAll": "Who changed what, when and from where in every school on the platform, deleted ones included",
+    "school": "School",
+    "deletedSchool": "Deleted school"
   },
   "adminActivity": {
     "shownCount": "Shown: {count}",
@@ -1928,7 +2066,8 @@
       "action": "What",
       "page": "Where (page)",
       "outcome": "Outcome",
-      "trail": "Trail"
+      "trail": "Trail",
+      "school": "School"
     },
     "summary": {
       "requests": "Actions in 24 h",
@@ -1968,7 +2107,10 @@
       "copy": "Copy",
       "copied": "Copied",
       "copyFailed": "Could not copy"
-    }
+    },
+    "panelHintAll": "Every action in every school: who, what, on which page and how it ended. Open the trail to see what the person did before and after",
+    "deletedSchool": "Deleted school",
+    "noSchool": "No school"
   },
   "adminIntegrations": {
     "tokensHint": "Tokens for accessing the school API",
@@ -2281,12 +2423,12 @@
     "blockReason": "Reason",
     "blockReasonHint": "Optional; visible to the administrator only",
     "erase": "Delete from platform",
-    "eraseOwnerDisabled": "Cannot delete a school owner",
     "eraseTitle": "Delete {name} permanently?",
     "eraseWarningTitle": "This cannot be undone",
     "eraseWarning": "Enrollments, submissions, quiz attempts, grades, progress, notifications and tokens are deleted, forum post text is wiped. The account is anonymized; grades the user gave to others stay without personal data.",
     "eraseConfirm": "To confirm, type the email: {email}",
-    "erasedToast": "{email} deleted from the platform"
+    "erasedToast": "{email} deleted from the platform",
+    "eraseWithSchool": "Delete with the school"
   },
   "legal": {
     "offer": "Public offer",
@@ -2300,5 +2442,20 @@
     "acceptPrivacy": "I consent to the processing of my personal data under the <link>personal data policy</link>",
     "acceptCrossBorder": "I give my <link>consent to cross-border transfer of personal data</link> — storage on servers in the Republic of Belarus and transfer to the email service, Google and Telegram",
     "oauthNotice": "By signing in with Google or Telegram for the first time you accept the <offer>public offer</offer>, consent to personal data processing under the <privacy>policy</privacy> and to its <crossBorder>cross-border transfer</crossBorder>."
+  },
+  "seo": {
+    "home": "Home",
+    "landingTitle": "TutorCraft — a platform for tutors: courses and quizzes",
+    "landingDescription": "A platform for tutors and online schools: course builder, assignments and quizzes with 8 question types, one grading queue, video and Telegram notifications.",
+    "landingOgEyebrow": "A platform for tutors",
+    "landingOgTitle": "Courses, assignments and quizzes for your students",
+    "landingOgSubtitle": "Course builder · grading · Telegram notifications",
+    "catalogTitle": "{school} — online courses · TutorCraft",
+    "catalogDescription": "{school}: {count, plural, one {# online course} other {# online courses}} with assignments and quizzes. Free for students.",
+    "catalogOgSubtitle": "{count, plural, one {# course} other {# courses}} · assignments and quizzes online",
+    "courseTitle": "{course} — online course · {school}",
+    "courseDescriptionFallback": "Online course “{course}” ({school}): programme, assignments and quizzes. Free for students.",
+    "courseOgEyebrow": "Online course · {school}",
+    "courseOgTeacher": "Teacher: {name}"
   }
 }

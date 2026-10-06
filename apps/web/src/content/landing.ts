@@ -6,10 +6,10 @@
  * - `socialProof: null`      → the hero social-proof strip is not rendered;
  * - `testimonials: []`       → the «Отзывы» section and its header link are not rendered;
  * - `contacts.email: null`   → the footer «Компания» column is not rendered.
- * Localised strings use `{ ru, en }` pairs (next-intl locales).
+ * Localised strings use `{ ru, en, uz }` triples (next-intl locales).
  */
 
-export type LocalizedText = { ru: string; en: string };
+export type LocalizedText = { ru: string; en: string; uz: string };
 
 export type SocialProof = {
   /** Number of tutors actually using the product, e.g. 4800 (rendered as «4 800+»). */
@@ -72,7 +72,7 @@ export type LandingContent = {
   contacts: { email: string | null; telegram: string | null };
 };
 
-const t = (ru: string, en: string): LocalizedText => ({ ru, en });
+const t = (ru: string, en: string, uz: string): LocalizedText => ({ ru, en, uz });
 
 export const LANDING: LandingContent = {
   // Fill only with real numbers — see README «Landing content».
@@ -81,27 +81,63 @@ export const LANDING: LandingContent = {
   pricing: {
     currency: 'USD',
     features: [
-      t('Конструктор курсов и блочный редактор', 'Course builder and block editor'),
-      t('Задания и тесты: 8 типов вопросов', 'Assignments and quizzes: 8 question types'),
-      t('Единая очередь проверки и журнал оценок', 'Unified grading queue and gradebook'),
-      t('Уведомления в Telegram и на почту', 'Telegram and email notifications'),
-      t('Видео и медиатека курса', 'Video and course media library'),
-      t('Условия доступа и отчёт о прогрессе', 'Access conditions and progress report'),
-      t('Брендинг школы: логотип и цвет', 'School branding: logo and colour'),
-      t('Несколько преподавателей и ассистентов', 'Multiple teachers and assistants'),
-      t('Группы, импорт пользователей из CSV', 'Groups and CSV user import'),
-      t('API-токены, вебхуки и журнал аудита', 'API tokens, webhooks and audit log'),
+      t(
+        'Конструктор курсов и блочный редактор',
+        'Course builder and block editor',
+        'Kurs konstruktori va blokli muharrir',
+      ),
+      t(
+        'Задания и тесты: 8 типов вопросов',
+        'Assignments and quizzes: 8 question types',
+        'Topshiriqlar va testlar: 8 turdagi savol',
+      ),
+      t(
+        'Единая очередь проверки и журнал оценок',
+        'Unified grading queue and gradebook',
+        'Yagona tekshiruv navbati va baholar jurnali',
+      ),
+      t(
+        'Уведомления в Telegram и на почту',
+        'Telegram and email notifications',
+        'Telegram va elektron pochta orqali bildirishnomalar',
+      ),
+      t('Видео и медиатека курса', 'Video and course media library', 'Video va kurs mediatekasi'),
+      t(
+        'Условия доступа и отчёт о прогрессе',
+        'Access conditions and progress report',
+        'Kirish shartlari va oʻzlashtirish hisoboti',
+      ),
+      t(
+        'Брендинг школы: логотип и цвет',
+        'School branding: logo and colour',
+        'Maktab brendingi: logotip va rang',
+      ),
+      t(
+        'Несколько преподавателей и ассистентов',
+        'Multiple teachers and assistants',
+        'Bir nechta oʻqituvchi va assistentlar',
+      ),
+      t(
+        'Группы, импорт пользователей из CSV',
+        'Groups and CSV user import',
+        'Guruhlar, foydalanuvchilarni CSV dan import qilish',
+      ),
+      t(
+        'API-токены, вебхуки и журнал аудита',
+        'API tokens, webhooks and audit log',
+        'API tokenlar, vebxuklar va audit jurnali',
+      ),
     ],
     plans: [
-      { id: 'month', name: t('1 месяц', '1 month'), months: 1, price: 30 },
-      { id: 'quarter', name: t('3 месяца', '3 months'), months: 3, price: 75 },
+      { id: 'month', name: t('1 месяц', '1 month', '1 oy'), months: 1, price: 30 },
+      { id: 'quarter', name: t('3 месяца', '3 months', '3 oy'), months: 3, price: 75 },
       {
         id: 'year',
-        name: t('1 год', '1 year'),
+        name: t('1 год', '1 year', '1 yil'),
         months: 12,
         price: 150,
         highlighted: true,
-        badge: t('Выгоднее всего', 'Best value'),
+        badge: t('Выгоднее всего', 'Best value', 'Eng foydali'),
       },
     ],
   },

@@ -5,25 +5,86 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { SiteFooter } from '@/components/landing/site-footer';
 import { SiteHeader } from '@/components/landing/site-header';
 import { MAIN_CONTENT_ID } from '@/components/layout/skip-link';
+import { JsonLd } from '@/components/seo/json-ld';
 import { StorefrontCourseCard } from '@/components/public/storefront-course-card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ROUTES } from '@/features/auth/routes';
+import type { PublicCourse } from '@/lib/api/schemas/courses';
 import { fetchCatalog } from '@/lib/server/public-api';
+import { pageMetadata } from '@/lib/seo/metadata';
+import { absoluteUrl, siteUrl } from '@/lib/seo/site';
+import {
+  breadcrumbNode,
+  courseListNode,
+  graph,
+  ids,
+  schoolNode,
+  webPageNode,
+} from '@/lib/seo/structured-data';
 import { initials } from '@/lib/utils/format';
 
 type Params = { params: Promise<{ tenantSlug: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { tenantSlug } = await params;
-  const [t, locale] = [await getTranslations('storefront'), await getLocale()];
+  const t = await getTranslations('seo');
+  const locale = await getLocale();
   const courses = await fetchCatalog(tenantSlug, locale).catch(() => null);
-  const tenantName = courses?.[0]?.tenantName ?? tenantSlug;
-  const title = t('catalogTitle', { school: tenantName });
-  return {
-    title,
-    description: t('catalogDescription', { school: tenantName }),
-    openGraph: { title, type: 'website' },
-  };
+  if (!courses) return {};
+  const school = courses[0]?.tenantName ?? tenantSlug;
+  return pageMetadata({
+    path: ROUTES.catalog(tenantSlug),
+    title: t('catalogTitle', { school }),
+    description: t('catalogDescription', { school, count: courses.length }),
+    locale,
+    siteName: school,
+    imagePath: `${ROUTES.catalog(tenantSlug)}/opengraph-image`,
+    // An empty storefront is a thin page: keep it out of the index until the first course is published.
+    robots: courses.length > 0 ? 'public' : 'unlisted',
+  });
+}
+
+/** EducationalOrganization (the school) + the list of its courses + breadcrumbs. */
+async function CatalogStructuredData({
+  tenantSlug,
+  school,
+  courses,
+}: {
+  tenantSlug: string;
+  school: string;
+  courses: PublicCourse[];
+}) {
+  const t = await getTranslations('seo');
+  const locale = await getLocale();
+  const origin = siteUrl();
+  const url = absoluteUrl(ROUTES.catalog(tenantSlug));
+  return (
+    <JsonLd
+      data={graph(
+        schoolNode(origin, tenantSlug, school),
+        webPageNode(origin, {
+          url,
+          type: 'CollectionPage',
+          name: t('catalogTitle', { school }),
+          description: t('catalogDescription', { school, count: courses.length }),
+          locale,
+          about: ids.school(origin, tenantSlug),
+          hasBreadcrumb: true,
+        }),
+        breadcrumbNode(url, [
+          { name: t('home'), url: `${origin}/` },
+          { name: school, url },
+        ]),
+        courseListNode(
+          url,
+          courses.map((course) => ({
+            name: course.title,
+            url: absoluteUrl(ROUTES.courseLanding(tenantSlug, course.slug)),
+          })),
+        ),
+      )}
+    />
+  );
 }
 
 /** SSR public catalog (FR-COURSE-HYB-01): school hero card + course cards in the landing card style. */
@@ -38,6 +99,7 @@ export default async function CatalogPage({ params }: Params) {
 
   return (
     <div className="flex min-h-dvh flex-col bg-background">
+      <CatalogStructuredData tenantSlug={tenantSlug} school={tenantName} courses={courses} />
       <SiteHeader brandName={tenantName} brandHref={ROUTES.catalog(tenantSlug)} />
       <main id={MAIN_CONTENT_ID} className="flex-1">
         <section className="mx-auto max-w-content px-page-x pt-6 md:pt-10">

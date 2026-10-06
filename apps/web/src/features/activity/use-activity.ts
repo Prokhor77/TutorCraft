@@ -13,17 +13,21 @@ export function useActivityLog(params: Omit<ActivityQuery, 'cursor'>) {
   });
 }
 
-export function useActivityTrail(entryId: string | null) {
+export function useActivityTrail(entryId: string | null, allTenants = false) {
   return useQuery({
-    queryKey: queryKeys.activityTrail(entryId ?? ''),
-    queryFn: () => activityApi.trail(entryId ?? ''),
+    queryKey: queryKeys.activityTrail(entryId ?? '', allTenants),
+    queryFn: () => activityApi.trail(entryId ?? '', { allTenants: allTenants || undefined }),
     enabled: entryId !== null,
   });
 }
 
-export function useActivitySummary(includeAnonymous: boolean) {
+export function useActivitySummary(includeAnonymous: boolean, allTenants = false) {
   return useQuery({
-    queryKey: queryKeys.activitySummary({ includeAnonymous }),
-    queryFn: () => activityApi.summary({ includeAnonymous }),
+    queryKey: queryKeys.activitySummary({ includeAnonymous, allTenants }),
+    queryFn: () =>
+      activityApi.summary({
+        includeAnonymous: includeAnonymous || undefined,
+        allTenants: allTenants || undefined,
+      }),
   });
 }

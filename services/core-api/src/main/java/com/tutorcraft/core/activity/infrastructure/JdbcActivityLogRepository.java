@@ -31,15 +31,17 @@ class JdbcActivityLogRepository implements ActivityLogRepository {
 
     private static final TypeReference<Map<String, String>> STRING_MAP = new TypeReference<>() { };
 
-    /** Видимость: своя школа и (для главного администратора по запросу) анонимные записи. */
-    private static final String SCOPE = "(a.tenant_id = :tenantId OR (:anonymous AND a.tenant_id IS NULL))";
+    /** Видимость: выбранная школа или все школы и (для главного администратора по запросу) анонимные записи. */
+    private static final String SCOPE = """
+            (a.tenant_id = :tenantId OR (:allTenants AND a.tenant_id IS NOT NULL) OR (:anonymous AND a.tenant_id IS NULL))""";
 
     private static final String SELECT_LIST = """
-            SELECT a.id, a.at, a.kind, a.tenant_id, a.user_id, u.first_name || ' ' || u.last_name AS actor_name,
+            SELECT a.id, a.at, a.kind, a.tenant_id, t.name AS tenant_name, a.user_id,
+                   u.first_name || ' ' || u.last_name AS actor_name,
                    u.email AS actor_email, a.ip, a.user_agent, a.request_id, a.session_id, a.page, a.method, a.route,
                    a.path, a.path_params::text AS path_params, a.handler, a.status, a.duration_ms, a.error_code,
                    a.error_type, a.error_message, %s AS error_stack
-            FROM activity_log a LEFT JOIN users u ON u.id = a.user_id
+            FROM activity_log a LEFT JOIN users u ON u.id = a.user_id LEFT JOIN tenants t ON t.id = a.tenant_id
             """;
 
     private static final String INSERT = """
@@ -197,7 +199,8 @@ class JdbcActivityLogRepository implements ActivityLogRepository {
     }
 
     private static Map<String, Object> scopeParams(ActivityScope scope) {
-        return Map.of("tenantId", scope.tenantId(), "anonymous", scope.includeAnonymous());
+        return Map.of("tenantId", scope.tenantId(), "anonymous", scope.includeAnonymous(), "allTenants",
+                scope.allTenants());
     }
 
     private SqlParameterSource insertParams(ActivityEntry entry) {
@@ -239,7 +242,7 @@ class JdbcActivityLogRepository implements ActivityLogRepository {
 
     private EntryView mapEntry(ResultSet rs, int rowNum) throws SQLException {
         return new EntryView(rs.getObject("id", UUID.class), Timestamps.read(rs, "at"), rs.getString("kind"),
-                rs.getObject("tenant_id", UUID.class), rs.getObject("user_id", UUID.class),
+                rs.getObject("tenant_id", UUID.class), rs.getString("tenant_name"), rs.getObject("user_id", UUID.class),
                 rs.getString("actor_name"), rs.getString("actor_email"), rs.getString("ip"),
                 rs.getString("user_agent"), rs.getString("request_id"), rs.getString("session_id"),
                 rs.getString("page"), rs.getString("method"), rs.getString("route"), rs.getString("path"),

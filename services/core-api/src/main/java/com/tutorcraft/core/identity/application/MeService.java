@@ -24,7 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class MeService {
 
     public static final String AVATAR_OWNER_TYPE = "user";
-    private static final Set<String> LOCALES = Set.of("ru", "en");
+    private static final Set<String> LOCALES = Set.of("ru", "en", "uz");
     private static final String IMAGE_MIME_PREFIX = "image/";
     private static final String AVATAR_FIELD = "avatarFileId";
     private static final int MAX_NAME_LENGTH = 100;
@@ -87,7 +87,7 @@ public class MeService {
             .check(patch.lastName() == null || !patch.lastName().isBlank(), "lastName", "required", "Field is required")
             .maxLength(patch.lastName(), MAX_NAME_LENGTH, "lastName")
             .check(patch.timezone() == null || isZone(patch.timezone()), "timezone", "invalid", "Unknown time zone")
-            .check(patch.locale() == null || LOCALES.contains(patch.locale()), "locale", "invalid", "Supported: ru, en")
+            .check(patch.locale() == null || LOCALES.contains(patch.locale()), "locale", "invalid", "Supported: ru, en, uz")
             .throwIfInvalid();
     }
 

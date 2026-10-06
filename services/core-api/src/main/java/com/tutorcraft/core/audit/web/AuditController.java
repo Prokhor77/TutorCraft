@@ -27,8 +27,9 @@ class AuditController {
                                         @RequestParam(required = false) String objectType,
                                         @RequestParam(required = false) Instant from,
                                         @RequestParam(required = false) Instant to,
+                                        @RequestParam(defaultValue = "false") boolean allTenants,
                                         @RequestParam(required = false) String cursor,
                                         @RequestParam(required = false) Integer limit) {
-        return service.search(new AuditFilter(actorId, objectType, from, to), PageQuery.of(cursor, limit));
+        return service.search(new AuditFilter(actorId, objectType, from, to, allTenants), PageQuery.of(cursor, limit));
     }
 }

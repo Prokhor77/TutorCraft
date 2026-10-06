@@ -4,6 +4,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useDeferredValue, useState } from 'react';
 import { AccountOriginCell } from '@/components/admin/account-origin';
 import { AdminTablePanel, FilterChips, PersonCell } from '@/components/admin/admin-panel';
+import { DeleteSchoolDialog } from '@/components/admin/delete-school-dialog';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -35,11 +36,12 @@ import { formatDateTime, formatRelative } from '@/lib/utils/format';
 const STATUS_TONE = { active: 'success', suspended: 'warning', invited: 'info' } as const;
 const MAX_REASON_LENGTH = 500;
 
-type PendingAction = { kind: 'block' | 'erase'; user: PlatformUser } | null;
+type PendingAction = { kind: 'block' | 'erase' | 'eraseSchool'; user: PlatformUser } | null;
 
 /**
  * Every account on the platform: school, who created it and how, school status and platform block.
- * The platform administrator blocks / unblocks (tutors cannot lift it) or deletes an account completely.
+ * The platform administrator blocks / unblocks (tutors cannot lift it) or deletes an account completely; the owner a
+ * school is registered to goes only together with the whole school.
  */
 export default function AdminAccountsPage() {
   const t = useTranslations('members');
@@ -265,10 +267,12 @@ export default function AdminAccountsPage() {
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuItem
-                              disabled={owner}
-                              onSelect={() => setPending({ kind: 'erase', user })}
+                              className="text-danger focus:text-danger"
+                              onSelect={() =>
+                                setPending({ kind: owner ? 'eraseSchool' : 'erase', user })
+                              }
                             >
-                              <Trash2 aria-hidden /> {t(owner ? 'eraseOwnerDisabled' : 'erase')}
+                              <Trash2 aria-hidden /> {t(owner ? 'eraseWithSchool' : 'erase')}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -287,6 +291,14 @@ export default function AdminAccountsPage() {
       />
       <EraseDialog
         user={pending?.kind === 'erase' ? pending.user : null}
+        onClose={() => setPending(null)}
+      />
+      <DeleteSchoolDialog
+        school={
+          pending?.kind === 'eraseSchool'
+            ? { ...pending.user.school, ownerEmail: pending.user.email }
+            : null
+        }
         onClose={() => setPending(null)}
       />
     </>

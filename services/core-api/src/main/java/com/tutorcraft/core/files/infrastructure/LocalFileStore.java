@@ -11,9 +11,11 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.Comparator;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -30,6 +32,7 @@ class LocalFileStore {
     private static final Logger log = LoggerFactory.getLogger(LocalFileStore.class);
     private static final Pattern SAFE_KEY = Pattern.compile("[A-Za-z0-9][A-Za-z0-9._-]*(/[A-Za-z0-9][A-Za-z0-9._-]*)*");
     private static final String PARENT_SEGMENT = "..";
+    private static final String DIRECTORY_SEPARATOR = "/";
     private static final String PARTIAL_SUFFIX = ".part-";
     private static final int COPY_BUFFER_BYTES = 64 * 1024;
 
@@ -79,6 +82,37 @@ class LocalFileStore {
         } catch (IOException e) {
             log.warn("Cannot delete object from local storage: {}", e.getClass().getSimpleName());
         }
+    }
+
+    /**
+     * Удаляет каталог {@code prefix} («t/{tenantId}/», «hls/{fileId}/») со всем содержимым; «по возможности», как
+     * {@link #delete}. Префикс обязан быть целым каталогом: частичное имя файла сюда не передаётся.
+     *
+     * @return число удалённых файлов
+     */
+    int deleteTree(String prefix) {
+        String directory = prefix.endsWith(DIRECTORY_SEPARATOR) ? prefix.substring(0, prefix.length() - 1) : prefix;
+        Path start = resolve(directory);
+        if (!Files.isDirectory(start)) {
+            return 0;
+        }
+        int[] deleted = {0};
+        try (Stream<Path> paths = Files.walk(start)) {
+            paths.sorted(Comparator.reverseOrder()).forEach(path -> {
+                try {
+                    boolean file = Files.isRegularFile(path);
+                    Files.deleteIfExists(path);
+                    if (file) {
+                        deleted[0]++;
+                    }
+                } catch (IOException e) {
+                    log.warn("Cannot delete object from local storage: {}", e.getClass().getSimpleName());
+                }
+            });
+        } catch (IOException | UncheckedIOException e) {
+            log.warn("Cannot delete directory from local storage: {}", e.getClass().getSimpleName());
+        }
+        return deleted[0];
     }
 
     /**

@@ -5,6 +5,7 @@ import com.tutorcraft.core.shared.config.AppProperties;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,9 +15,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.Delete;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
@@ -98,6 +104,29 @@ class S3ObjectStorage implements ObjectStorage {
         } catch (SdkException e) {
             log.warn("Cannot delete object from storage: {}", e.getClass().getSimpleName());
         }
+    }
+
+    /** Страница ListObjectsV2 — не более 1000 ключей, ровно столько принимает один DeleteObjects. */
+    @Override
+    public int deletePrefix(String prefix) {
+        int deleted = 0;
+        try {
+            ListObjectsV2Request request = ListObjectsV2Request.builder().bucket(bucket).prefix(prefix).build();
+            for (ListObjectsV2Response page : s3.listObjectsV2Paginator(request)) {
+                List<ObjectIdentifier> keys = page.contents().stream()
+                        .map(object -> ObjectIdentifier.builder().key(object.key()).build())
+                        .toList();
+                if (keys.isEmpty()) {
+                    continue;
+                }
+                s3.deleteObjects(DeleteObjectsRequest.builder().bucket(bucket)
+                        .delete(Delete.builder().objects(keys).quiet(true).build()).build());
+                deleted += keys.size();
+            }
+        } catch (SdkException e) {
+            log.warn("Cannot delete objects by prefix from storage: {}", e.getClass().getSimpleName());
+        }
+        return deleted;
     }
 
     @Override

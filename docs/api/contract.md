@@ -78,7 +78,7 @@ type RichText = { text: string; marks?: ('bold'|'italic'|'code'|'strike'|'underl
 ```ts
 type AuthResponse = { accessToken: string; expiresIn: number; user: Me }
 type Me = { id: Id; email: string; firstName: string; lastName: string; avatarUrl: string | null;
-            timezone: string; locale: 'ru' | 'en';
+            timezone: string; locale: 'ru' | 'en' | 'uz';
             tenant: { id: Id; slug: string; name: string; branding: Branding };
             tenantRoles: TenantRole[]; telegramLinked: boolean }
 type Branding = { logoUrl: string | null; primaryColor: string | null }
@@ -165,7 +165,7 @@ type MyGradesOverview = { courses: { courseId: Id; courseTitle: string; finalPer
 | DELETE | `/categories/{id}` | 204 (только пустая) |
 
 ```ts
-type TenantSettings = { id: Id; slug: string; name: string; branding: Branding; logoFileId: Id | null; defaultLocale: 'ru'|'en';
+type TenantSettings = { id: Id; slug: string; name: string; branding: Branding; logoFileId: Id | null; defaultLocale: 'ru'|'en'|'uz';
                         defaultTimezone: string; passwordPolicy: { minLength: number; requireDigit: boolean; requireLetter: boolean };
                         embedWhitelist: string[]; version: number }
 type Category = { id: Id; parentId: Id | null; name: string; position: number; courseCount: number }
@@ -235,7 +235,7 @@ type PlatformUser = { id: Id; email: string; firstName: string; lastName: string
 Детали: блокировка платформой не зависит от блокировки школой, отзывает все сессии; вход → 403
 `auth.account_blocked`, API-токены перестают действовать, в других модулях пользователь виден как `suspended`.
 Нельзя действовать над собой (422 `user.cannot_manage_self`) и над главным администратором (422 `user.protected`).
-Удаление: владельца школы — 422 `user.cannot_erase_school_owner` (только блокировка). Каждый модуль стирает данные
+Удаление: владельца школы — 422 `user.cannot_erase_school_owner` (только вместе со школой, §4.4, или блокировка). Каждый модуль стирает данные
 пользователя (SPI `identity.spi.UserDataEraser`): записи и группы, индивидуальные сдачи с файлами и отзывами, попытки
 тестов, оценки с историей, прогресс, уведомления и календарь, API-токены, журнал активности; текст постов форума
 стирается, посты скрываются. Учётная запись обезличивается (`deleted-<id>@deleted.invalid`, «Удалённый пользователь»)
@@ -262,6 +262,53 @@ type CourseStorage = { courseId: Id; title: string; inTrash: boolean; bytes: num
 По курсу: файлы, привязанные к курсу (обложка, описание) и к его элементам, включая удалённые в корзину; файл
 считается в курсе один раз, а скопированный в несколько курсов — в каждом. Сдачи студентов и вопросы тестов не входят.
 Квота школы — `storageQuotaMb: number | null` в `GET /platform/tenants`.
+
+### 4.4. Школы платформы (`org`, главный администратор)
+
+Право `platform.manage`, заголовок `X-Tenant-Id` не нужен.
+
+| GET | `/platform/tenants?q` | `PlatformTenant[]` — школы, новые первыми (без служебной школы администратора) |
+|---|---|---|
+| DELETE | `/platform/tenants/{id}` | `{ confirmSlug: string }` → 204 — полное удаление школы |
+
+```ts
+type PlatformTenant = { id: Id; slug: string; name: string; status: 'active'|'suspended'; createdAt: Instant;
+                        usersCount: number; coursesCount: number; storageQuotaMb: number | null;
+                        owner: { id: Id; email: string; firstName: string; lastName: string } | null }
+```
+
+Детали: `owner` — владелец (`tenant_admin`), на которого школа зарегистрирована; `usersCount` и `coursesCount` не
+учитывают удалённых пользователей и курсы в корзине. Удаление необратимо: `confirmSlug` должен совпасть с адресом
+школы (иначе 400, поле `confirmSlug`, код `confirmation_mismatch`); служебную школу администратора удалить нельзя
+(422 `tenant.protected`). В одной транзакции PostgreSQL удаляются все строки с `tenant_id` школы — пользователи,
+включая владельца, курсы, записи, сдачи, оценки (с историей), файлы, подписка, интеграции, журнал активности — и сама
+школа; ссылки строк других школ на удалённых пользователей обнуляются. После фиксации удаляются документы школы во всех
+коллекциях MongoDB и объекты хранилища (`t/{tenantId}/`, `hls/{fileId}/`). Журнал аудита школы сохраняется, а
+удаление записывается в журнал служебной школы администратора (`tenant.deleted`, в `diff` — адрес, название и число
+удалённых строк). Отдельно удалить владельца через `DELETE /platform/users/{id}` нельзя (422
+`user.cannot_erase_school_owner`) — только вместе со школой.
+
+### 4.5. Курсы всех школ (`courses`, главный администратор)
+
+Право `platform.manage`, заголовок `X-Tenant-Id` не нужен.
+
+| GET | `/platform/courses?tenantId&q&cursor&limit` | `Page<PlatformCourse>` — курсы всех школ (или школы `tenantId`), новые первыми |
+|---|---|---|
+
+```ts
+type PlatformCourse = { id: Id; tenantId: Id; title: string; shortName: string | null; slug: string;
+                        coverUrl: string | null; visibility: Visibility; publishAt: Instant | null;
+                        startsAt: Instant | null; endsAt: Instant | null; createdAt: Instant; updatedAt: Instant;
+                        author: { id: Id; email: string; firstName: string; lastName: string } | null;
+                        studentsCount: number; staffCount: number }
+```
+
+Детали: курсы в корзине не входят; `q` — подстрока названия или краткого имени. `author` — репетитор, создавший курс
+(`null`, если учётная запись удалена); `studentsCount` и `staffCount` (преподаватели и ассистенты) считают записи,
+дающие доступ сейчас (`active` и окно дат). Описание, материалы и участников конкретного курса админка читает обычными
+эндпоинтами курса (`GET /courses/{id}`, `/courses/{id}/outline`, `/items/{id}`, `/courses/{id}/enrollments`,
+`/courses/{id}/reports/progress`) с заголовком `X-Tenant-Id` школы курса — в чужой школе у `platform_admin` есть все
+права курса, кроме `course.create`; интерфейс админки при этом только показывает данные и ничего не меняет.
 
 ## 5. Курсы и структура (`courses`)
 
@@ -291,6 +338,7 @@ type CourseStorage = { courseId: Id; title: string; inTrash: boolean; bytes: num
 | GET | `/trash?courseId` | → `TrashEntry[]` |
 | GET | `/public/{tenantSlug}/courses` | публичный каталог (SSR) → `PublicCourse[]` |
 | GET | `/public/{tenantSlug}/courses/{courseSlug}` | → `PublicCourse` (лендинг) |
+| GET | `/public/sitemap` | `PublicSitemapSchool[]` — активные школы с опубликованными курсами для `sitemap.xml` веб-клиента (без авторизации, ≤ 45 000 курсов, свежие первыми) |
 
 ```ts
 type ItemType = 'page' | 'file' | 'url' | 'folder' | 'video' | 'assignment' | 'quiz' | 'forum'
@@ -637,7 +685,7 @@ type Post = { id: Id; parentId: Id | null; authorId: Id; authorName: string; bod
 | GET | `/courses/{id}/completion/me` | `{ percent: number; completedAt: Instant | null; items: Record<Id, 'complete' | 'incomplete'> }` |
 |---|---|---|
 | GET | `/courses/{id}/reports/progress?groupId&format` | `{ items: { id: Id; title: string }[]; rows: { userId: Id; userName: string; completed: Id[]; percent: number; completedAt: Instant | null }[] }` или CSV |
-| GET | `/audit-log?actorId&objectType&from&to&cursor` | `Page<AuditEntry>` |
+| GET | `/audit-log?actorId&objectType&from&to&allTenants&cursor` | `Page<AuditEntry>` (`allTenants=true` — все школы, только `platform.manage`, иначе 403) |
 
 Детали (прогресс, `progress`):
 - `percent` — доля выполненных элементов с отслеживанием выполнения (`completionRule.mode ≠ 'none'`, не скрытых), с округлением вниз; без таких элементов — 0 (в `CourseCard.progressPercent` — null). Отчёт — `completion.viewAll`, строки — активные студенты (фильтр `groupId`), `format=csv` — `text/csv` UTF-8 с BOM: «Студент; Выполнено, %; Курс завершён; <по столбцу 1/0 на элемент>».
@@ -649,20 +697,22 @@ type Post = { id: Id; parentId: Id | null; authorId: Id; authorName: string; bod
 
 | Метод | Путь | Ответ |
 |---|---|---|
-| GET | `/activity-log?actor&kind&outcome&status&route&requestId&sessionId&from&to&includeAnonymous&cursor&limit` | `Page<ActivityEntry>` |
-| GET | `/activity-log/summary?from&to&includeAnonymous` | `ActivitySummary` (по умолчанию последние 24 ч, окно ≤ 31 дня) |
-| GET | `/activity-log/{id}/trail` | `ActivityTrail` |
+| GET | `/activity-log?actor&kind&outcome&status&route&requestId&sessionId&from&to&includeAnonymous&allTenants&cursor&limit` | `Page<ActivityEntry>` |
+| GET | `/activity-log/summary?from&to&includeAnonymous&allTenants` | `ActivitySummary` (по умолчанию последние 24 ч, окно ≤ 31 дня) |
+| GET | `/activity-log/{id}/trail?allTenants` | `ActivityTrail` |
 | POST | `/activity/events` `{ events: ClientEvent[] }` (1–20) | 204 |
 
 - `kind`: `request` (запрос к API) · `page_view` · `client_error`; `outcome`: `all` · `failed` (≥ 400 и ошибки браузера) · `errors` (≥ 500 и ошибки браузера).
 - `actor` — подстрока e-mail/имени или точный IP; `route` — подстрока шаблона маршрута, пути или страницы.
 - `includeAnonymous=true` добавляет записи без школы (вход, регистрация, публичные страницы) — только `platform.manage`, иначе 403 `activity.anonymous_forbidden`.
+- `allTenants=true` — записи всех школ вместо школы из `X-Tenant-Id` (в том числе удалённых, пока не истёк срок хранения) — только `platform.manage`, иначе 403 `activity.all_tenants_forbidden`.
 - Трассировка: запись ± окно (`trail-before` 30 мин / `trail-after` 5 мин) по тому же пользователю или вкладке; для анонимных — вкладка, иначе IP. Чужая школа → 404 `activity.not_found`.
 - Не хранятся тела запросов, query-строки, пароли и токены; секретные переменные пути (`token`, `code`, `key`…) и e-mail/токены в текстах ошибок маскируются.
 - `ClientEvent.kind` — только `page_view` или `client_error` (иначе 400); `occurredAt` старше часа или из будущего заменяется временем приёма.
 
 ```ts
-type ActivityEntry = { id: Id; at: Instant; kind: 'request' | 'page_view' | 'client_error'; tenantId: Id | null; userId: Id | null;
+type ActivityEntry = { id: Id; at: Instant; kind: 'request' | 'page_view' | 'client_error'; tenantId: Id | null;
+  tenantName: string | null /* null — анонимная запись или школа удалена */; userId: Id | null;
   actorName: string | null; actorEmail: string | null; ip: string | null; userAgent: string | null; requestId: string | null;
   sessionId: string | null; page: string | null; method: string | null; route: string | null; path: string | null;
   pathParams: Record<string, string> | null; handler: string | null; status: number | null; durationMs: number | null;
@@ -674,7 +724,7 @@ type ClientEvent = { kind: 'page_view' | 'client_error'; page?: string; name?: s
 ```
 
 ```ts
-type AuditEntry = { id: Id; at: Instant; actorId: Id | null; actorName: string | null; action: string; objectType: string; objectId: string; ip: string | null; diff: object | null }
+type AuditEntry = { id: Id; at: Instant; tenantId: Id; tenantName: string | null /* null — школа удалена */; actorId: Id | null; actorName: string | null; action: string; objectType: string; objectId: string; ip: string | null; diff: object | null }
 ```
 
 ## 13. Биллинг (`billing`) — только подписка школы (ADR-012)
@@ -687,6 +737,9 @@ type AuditEntry = { id: Id; at: Instant; actorId: Id | null; actorName: string |
 type PublicCourse = { id: Id; slug: string; title: string; description: BlockDoc | null; coverUrl: string | null;
                       teacher: { name: string; avatarUrl: string | null }; modules: { title: string; itemCount: number }[];
                       selfEnrolEnabled: boolean; tenantSlug: string; tenantName: string }
+// lastModified — max(courses.updated_at) школы / updated_at курса; служебная школа администратора не попадает.
+type PublicSitemapSchool = { tenantSlug: string; lastModified: Instant | null;
+                             courses: { slug: string; lastModified: Instant | null }[] }
 ```
 
 ### 13.2. Подписка школы на платформу

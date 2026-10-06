@@ -77,6 +77,9 @@ export type ImportCommitResult = z.infer<typeof importCommitResultSchema>;
 export const auditEntrySchema = z.object({
   id: idSchema,
   at: instantSchema,
+  tenantId: idSchema,
+  /** null — the school has been deleted (its audit trail is kept). */
+  tenantName: z.string().nullable(),
   actorId: idSchema.nullable(),
   actorName: z.string().nullable(),
   action: z.string(),

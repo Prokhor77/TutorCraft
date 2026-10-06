@@ -8,14 +8,17 @@ import { useActivitySummary } from '@/features/activity/use-activity';
 /** Last 24 hours at a glance: volume, server and browser errors, active people, top failing places. */
 export function ActivitySummaryCards({
   includeAnonymous,
+  allTenants = false,
   onRouteClick,
 }: {
   includeAnonymous: boolean;
+  /** Every school instead of the one picked in the admin header. */
+  allTenants?: boolean;
   onRouteClick: (route: string) => void;
 }) {
   const t = useTranslations('adminActivity.summary');
   const locale = useLocale();
-  const summary = useActivitySummary(includeAnonymous);
+  const summary = useActivitySummary(includeAnonymous, allTenants);
   if (summary.isError) return null;
   if (!summary.data) return <Skeleton className="h-32 w-full" />;
   const data = summary.data;

@@ -29,7 +29,7 @@ public class TenantSettingsService {
 
     private static final Pattern HEX_COLOR = Pattern.compile("^#[0-9a-fA-F]{6}$");
     private static final Pattern DOMAIN = Pattern.compile("^[a-z0-9.-]+\\.[a-z]{2,}$");
-    private static final Set<String> LOCALES = Set.of("ru", "en");
+    private static final Set<String> LOCALES = Set.of("ru", "en", "uz");
     private static final int MAX_NAME = 200;
     private static final int MAX_WHITELIST = 100;
 
@@ -77,7 +77,7 @@ public class TenantSettingsService {
             .notBlank(update.name(), "name")
             .maxLength(update.name(), MAX_NAME, "name")
             .check(update.primaryColor() == null || HEX_COLOR.matcher(update.primaryColor()).matches(), "primaryColor", "invalid", "Use #RRGGBB")
-            .check(LOCALES.contains(update.defaultLocale()), "defaultLocale", "invalid", "Supported: ru, en")
+            .check(LOCALES.contains(update.defaultLocale()), "defaultLocale", "invalid", "Supported: ru, en, uz")
             .check(isZone(update.defaultTimezone()), "defaultTimezone", "invalid", "Unknown time zone")
             .check(policy != null && policy.minLength() >= PasswordPolicy.ABSOLUTE_MIN_LENGTH && policy.minLength() <= PasswordPolicy.MAX_LENGTH,
                     "passwordPolicy.minLength", "out_of_range", "Between 8 and 128")

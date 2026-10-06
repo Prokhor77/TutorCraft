@@ -10,6 +10,8 @@ import com.tutorcraft.core.shared.domain.Ids;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Collection;
+import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -52,6 +54,16 @@ class EnrollmentApiImpl implements EnrollmentApi {
                 .map(enrollment -> new Member(enrollment.userId(), enrollment.role(), enrollment.status().key(),
                         Set.copyOf(groupIds.getOrDefault(enrollment.userId(), List.of()))))
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<UUID, Map<CourseRole, Integer>> activeCountsByRole(UUID tenantId, Collection<UUID> courseIds) {
+        Map<UUID, Map<CourseRole, Integer>> result = new HashMap<>();
+        enrollments.countActiveByCourseAndRole(tenantId, courseIds, clock.instant())
+                .forEach(row -> result.computeIfAbsent(row.courseId(), id -> new EnumMap<>(CourseRole.class))
+                        .merge(row.role(), row.count(), Integer::sum));
+        return result;
     }
 
     /** Запись в любом статусе (status в Member); доступ даёт только active в окне дат (см. CourseMembershipResolver). */

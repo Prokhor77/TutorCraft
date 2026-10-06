@@ -73,6 +73,7 @@ export function isSchoolOwnerHint(tenantRoles: readonly TenantRole[] | undefined
   return !!tenantRoles?.includes('tenant_admin');
 }
 
+/** The platform administrator's account is for the admin console only: it never creates courses. */
 export function canCreateCoursesHint(tenantRoles: readonly TenantRole[] | undefined): boolean {
-  return !!tenantRoles?.length;
+  return !!tenantRoles?.length && !isPlatformAdminHint(tenantRoles);
 }

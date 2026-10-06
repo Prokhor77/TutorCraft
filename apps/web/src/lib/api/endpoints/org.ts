@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { http } from '../http';
+import type { Locale } from '../schemas/auth';
 import { pageSchema, type TenantRole } from '../schemas/common';
 import {
   auditEntrySchema,
@@ -15,7 +16,7 @@ export type TenantPatch = Partial<{
   name: string;
   logoFileId: string | null;
   primaryColor: string | null;
-  defaultLocale: 'ru' | 'en';
+  defaultLocale: Locale;
   defaultTimezone: string;
   passwordPolicy: TenantSettings['passwordPolicy'];
   embedWhitelist: string[];
@@ -38,6 +39,8 @@ export type UserPatch = {
 export type AuditQuery = {
   actorId?: string;
   objectType?: string;
+  /** Every school instead of the one in `X-Tenant-Id` (platform administrator only). */
+  allTenants?: boolean;
   from?: string;
   to?: string;
   cursor?: string | null;

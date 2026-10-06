@@ -14,7 +14,7 @@ const (
 	maxBodyRunes  = 3800
 )
 
-var openButtonLabels = map[string]string{"ru": "Открыть", "en": "Open"}
+var openButtonLabels = map[string]string{"ru": "Открыть", "en": "Open", "uz": "Ochish"}
 
 // htmlEscaper escapes exactly what Telegram's HTML parse mode requires.
 var htmlEscaper = strings.NewReplacer("&", "&amp;", "<", "&lt;", ">", "&gt;", `"`, "&quot;")

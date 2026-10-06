@@ -7,7 +7,7 @@ export const brandingSchema = z.object({
 });
 export type Branding = z.infer<typeof brandingSchema>;
 
-export const LOCALES = ['ru', 'en'] as const;
+export const LOCALES = ['ru', 'en', 'uz'] as const;
 export const localeSchema = z.enum(LOCALES);
 export type Locale = z.infer<typeof localeSchema>;
 

@@ -19,6 +19,8 @@ export type ActivityQuery = {
   from?: string;
   to?: string;
   includeAnonymous?: boolean;
+  /** Every school instead of the one in `X-Tenant-Id` (platform administrator only). */
+  allTenants?: boolean;
   cursor?: string | null;
 };
 
@@ -36,11 +38,12 @@ export type ClientActivityEvent = {
 export const activityApi = {
   log: (query: ActivityQuery) =>
     http.request('/activity-log', { query, schema: pageSchema(activityEntrySchema) }),
-  trail: (entryId: string) =>
+  trail: (entryId: string, query: { allTenants?: boolean } = {}) =>
     http.request(`/activity-log/${encodeURIComponent(entryId)}/trail`, {
+      query,
       schema: activityTrailSchema,
     }),
-  summary: (query: { includeAnonymous?: boolean }) =>
+  summary: (query: { includeAnonymous?: boolean; allTenants?: boolean }) =>
     http.request('/activity-log/summary', { query, schema: activitySummarySchema }),
   sendEvents: (events: ClientActivityEvent[]) =>
     http.request('/activity/events', { method: 'POST', body: { events } }),

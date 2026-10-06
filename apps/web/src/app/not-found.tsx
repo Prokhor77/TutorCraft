@@ -1,10 +1,17 @@
 import { Compass } from 'lucide-react';
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { Brand } from '@/components/layout/brand';
 import { CenteredCard, PublicBlobs, StatusMessage } from '@/components/public/status-card';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/features/auth/routes';
+import { robots } from '@/lib/seo/metadata';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('errors');
+  return { title: t('notFoundTitle'), robots: robots('private') };
+}
 
 /** Friendly 404: soft canvas, logo, centred 2rem card with an illustration icon and pill actions. */
 export default async function NotFound() {

@@ -3,14 +3,15 @@ import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useLocale } from 'next-intl';
 import { forwardRef, useState, type ButtonHTMLAttributes } from 'react';
 import { DayPicker, type ChevronProps } from 'react-day-picker';
-import { enUS, ru } from 'react-day-picker/locale';
+import { enUS, ru, uz } from 'react-day-picker/locale';
+import { DEFAULT_LOCALE, isAppLocale } from '@/i18n/config';
 import { cn } from '@/lib/utils/cn';
 import { Button } from './button';
 import { fieldControlClass } from './input';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
 
 const MONDAY = 1;
-const DAY_PICKER_LOCALES = { ru, en: enUS } as const;
+const DAY_PICKER_LOCALES = { ru, en: enUS, uz } as const;
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 /** 'YYYY-MM-DD' → local Date (no timezone shift, unlike `new Date('YYYY-MM-DD')`). */
@@ -123,7 +124,7 @@ export const DatePicker = forwardRef<HTMLButtonElement, DatePickerProps>(functio
           month={month}
           onMonthChange={setMonth}
           weekStartsOn={MONDAY}
-          locale={DAY_PICKER_LOCALES[locale === 'en' ? 'en' : 'ru']}
+          locale={DAY_PICKER_LOCALES[isAppLocale(locale) ? locale : DEFAULT_LOCALE]}
           showOutsideDays
           autoFocus
           classNames={CALENDAR_CLASSES}

@@ -14,6 +14,8 @@ export const activityEntrySchema = z.object({
   at: instantSchema,
   kind: activityKindSchema,
   tenantId: z.string().nullable(),
+  /** null — anonymous record or a deleted school. */
+  tenantName: z.string().nullable(),
   userId: z.string().nullable(),
   actorName: z.string().nullable(),
   actorEmail: z.string().nullable(),

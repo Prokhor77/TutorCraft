@@ -21,9 +21,11 @@ import { useDebouncedValue } from '@/features/app/use-debounced-value';
 import type { ActivityQuery } from '@/lib/api/endpoints/activity';
 import { flattenPages } from '@/lib/api/pagination';
 import { fromDateTimeLocalValue } from '@/lib/utils/time';
+import { useAdminTenantStore } from '@/stores/admin-tenant-store';
 
-function toQuery(filters: ActivityFilterState): Omit<ActivityQuery, 'cursor'> {
+function toQuery(filters: ActivityFilterState, allTenants: boolean): Omit<ActivityQuery, 'cursor'> {
   return {
+    allTenants: allTenants || undefined,
     outcome: filters.outcome === 'all' ? undefined : filters.outcome,
     kind: filters.kind === 'all' ? undefined : filters.kind,
     actor: filters.actor.trim() || undefined,
@@ -36,8 +38,9 @@ function toQuery(filters: ActivityFilterState): Omit<ActivityQuery, 'cursor'> {
 }
 
 /**
- * Activity log (FR-REPORT-02): every action in the selected school — who, what, on which page, how it ended — and,
- * for any failure, the trail of what the person did before it. Complements the audit log (business changes only).
+ * Activity log (FR-REPORT-02): every action on the platform or in the selected school — who, what, on which page, how
+ * it ended — and, for any failure, the trail of what the person did before it. Complements the audit log (business
+ * changes only).
  */
 export default function AdminActivityPage() {
   const t = useTranslations('adminActivity');
@@ -45,12 +48,14 @@ export default function AdminActivityPage() {
   const tCommon = useTranslations('common');
   const [filters, setFilters] = useState(DEFAULT_ACTIVITY_FILTERS);
   const [selected, setSelected] = useState<string | null>(null);
-  const log = useActivityLog(toQuery(useDebouncedValue(filters)));
+  const allTenants = useAdminTenantStore((state) => state.logScope === 'all');
+  const log = useActivityLog(toQuery(useDebouncedValue(filters), allTenants));
   const rows = flattenPages(log.data?.pages);
   return (
     <div className="flex flex-col gap-4 md:gap-gutter">
       <ActivitySummaryCards
         includeAnonymous={filters.includeAnonymous}
+        allTenants={allTenants}
         onRouteClick={(route) => setFilters({ ...filters, route, outcome: 'errors' })}
       />
       <AdminTablePanel
@@ -60,7 +65,7 @@ export default function AdminActivityPage() {
             <Badge tone="primary">{t('shownCount', { count: rows.length })}</Badge>
           ) : null
         }
-        description={t('panelHint')}
+        description={t(allTenants ? 'panelHintAll' : 'panelHint')}
         toolbar={<ActivityFilters value={filters} onChange={setFilters} />}
         footer={
           <LoadMore
@@ -90,9 +95,16 @@ export default function AdminActivityPage() {
             <EmptyState icon={Activity} title={t('emptyTitle')} description={t('emptyText')} />
           </div>
         ) : null}
-        {rows.length > 0 ? <ActivityTable entries={rows} onOpen={setSelected} /> : null}
+        {rows.length > 0 ? (
+          <ActivityTable entries={rows} onOpen={setSelected} showSchool={allTenants} />
+        ) : null}
       </AdminTablePanel>
-      <TrailSheet entryId={selected} onSelect={setSelected} onClose={() => setSelected(null)} />
+      <TrailSheet
+        entryId={selected}
+        allTenants={allTenants}
+        onSelect={setSelected}
+        onClose={() => setSelected(null)}
+      />
     </div>
   );
 }

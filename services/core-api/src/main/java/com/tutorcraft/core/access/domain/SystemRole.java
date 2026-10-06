@@ -9,11 +9,12 @@ import java.util.Set;
 
 /**
  * Системные неизменяемые роли (ТЗ 3.2, docs/permissions.md). Администрирование — только у {@code platform_admin}
- * (единственный главный администратор из env, см. PlatformAdminBootstrapper); {@code tenant_admin} — владелец школы
- * (репетитор): ведёт свои курсы и учеников своей школы ({@code member.view/manage}), но админ-разделы ему недоступны.
+ * (единственный главный администратор из env, см. PlatformAdminBootstrapper): учётная запись только для админки,
+ * курсы она не создаёт ({@code course.create}). {@code tenant_admin} — владелец школы (репетитор): ведёт свои курсы
+ * и учеников своей школы ({@code member.view/manage}), но админ-разделы ему недоступны.
  */
 public enum SystemRole {
-    PLATFORM_ADMIN("platform_admin", RoleScope.PLATFORM, EnumSet.allOf(Permission.class)),
+    PLATFORM_ADMIN("platform_admin", RoleScope.PLATFORM, allExcept(EnumSet.of(COURSE_CREATE))),
     TENANT_ADMIN("tenant_admin", RoleScope.TENANT, allExcept(adminOnly())),
     CATEGORY_MANAGER("category_manager", RoleScope.CATEGORY, EnumSet.of(
             COURSE_CREATE, COURSE_VIEW, COURSE_VIEW_HIDDEN, COURSE_EDIT, COURSE_DELETE, COURSE_PUBLISH,

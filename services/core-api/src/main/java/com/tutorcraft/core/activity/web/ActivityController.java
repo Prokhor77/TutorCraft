@@ -58,24 +58,26 @@ class ActivityController {
                                    @RequestParam(required = false) Instant from,
                                    @RequestParam(required = false) Instant to,
                                    @RequestParam(defaultValue = "false") boolean includeAnonymous,
+                                   @RequestParam(defaultValue = "false") boolean allTenants,
                                    @RequestParam(required = false) String cursor,
                                    @RequestParam(required = false) Integer limit) {
         ActivityFilter filter = new ActivityFilter(userId, actor, parse("kind", kind, ActivityKind::fromKey),
                 parse("outcome", outcome, ActivityOutcome::fromKey), status, route, requestId, sessionId, from, to,
-                includeAnonymous);
+                includeAnonymous, allTenants);
         return queries.search(filter, PageQuery.of(cursor, limit));
     }
 
     @GetMapping("/api/v1/activity-log/summary")
     SummaryView summary(@RequestParam(required = false) Instant from,
                         @RequestParam(required = false) Instant to,
-                        @RequestParam(defaultValue = "false") boolean includeAnonymous) {
-        return queries.summary(from, to, includeAnonymous);
+                        @RequestParam(defaultValue = "false") boolean includeAnonymous,
+                        @RequestParam(defaultValue = "false") boolean allTenants) {
+        return queries.summary(from, to, includeAnonymous, allTenants);
     }
 
     @GetMapping("/api/v1/activity-log/{entryId}/trail")
-    TrailView trail(@PathVariable UUID entryId) {
-        return queries.trail(entryId);
+    TrailView trail(@PathVariable UUID entryId, @RequestParam(defaultValue = "false") boolean allTenants) {
+        return queries.trail(entryId, allTenants);
     }
 
     /** События браузера (переходы и ошибки); пачкой, чтобы не делать запрос на каждый переход. */

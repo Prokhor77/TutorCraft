@@ -38,6 +38,7 @@ export const ROUTES = {
   subscriptionSettings: '/settings/subscription',
   schoolStudents: '/school/students',
   admin: '/admin',
+  adminSchools: '/admin/schools',
   adminAccounts: '/admin/accounts',
   adminUsers: '/admin/users',
   adminCategories: '/admin/categories',
@@ -46,6 +47,10 @@ export const ROUTES = {
   adminActivity: '/admin/activity',
   adminIntegrations: '/admin/integrations',
   adminStorage: '/admin/storage',
+  adminCourses: '/admin/courses',
+  /** Read-only view of a course of any school; `school` makes the admin console act in that school. */
+  adminCourse: (tenantId: string, courseId: string) =>
+    `/admin/courses/${courseId}?school=${encodeURIComponent(tenantId)}`,
   catalog: (tenantSlug: string) => `/c/${tenantSlug}`,
   courseLanding: (tenantSlug: string, courseSlug: string) => `/c/${tenantSlug}/${courseSlug}`,
 } as const;

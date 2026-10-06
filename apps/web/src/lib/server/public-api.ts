@@ -1,21 +1,29 @@
 import 'server-only';
 import { z } from 'zod';
 import { API_BASE_PATH } from '@/lib/api/client';
-import { publicCourseSchema, type PublicCourse } from '@/lib/api/schemas/courses';
+import {
+  publicCourseSchema,
+  publicSitemapSchoolSchema,
+  type PublicCourse,
+  type PublicSitemapSchool,
+} from '@/lib/api/schemas/courses';
 import { coreApiUrl } from './core-api';
 
 /** Storefront cache (SEO pages): short revalidation keeps course pages fresh without hammering core-api. */
 export const PUBLIC_REVALIDATE_SEC = 60;
+/** sitemap.xml is re-read by crawlers every few hours at most; an hour of staleness costs nothing. */
+const SITEMAP_REVALIDATE_SEC = 3600;
 const HTTP_NOT_FOUND = 404;
 
 async function fetchPublic<T extends z.ZodTypeAny>(
   path: string,
   schema: T,
   locale: string,
+  revalidate: number = PUBLIC_REVALIDATE_SEC,
 ): Promise<z.output<T> | null> {
   const response = await fetch(`${coreApiUrl()}${API_BASE_PATH}${path}`, {
     headers: { Accept: 'application/json', 'Accept-Language': locale },
-    next: { revalidate: PUBLIC_REVALIDATE_SEC },
+    next: { revalidate },
   });
   if (response.status === HTTP_NOT_FOUND) return null;
   if (!response.ok) throw new Error(`core-api ${path} responded ${response.status}`);
@@ -42,4 +50,14 @@ export function fetchPublicCourse(
     publicCourseSchema,
     locale,
   );
+}
+
+export async function fetchSitemap(): Promise<PublicSitemapSchool[]> {
+  const schools = await fetchPublic(
+    '/public/sitemap',
+    z.array(publicSitemapSchoolSchema),
+    'ru',
+    SITEMAP_REVALIDATE_SEC,
+  );
+  return schools ?? [];
 }

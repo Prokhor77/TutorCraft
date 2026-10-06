@@ -16,10 +16,14 @@ import { useAuditLog } from '@/features/admin/use-admin';
 import { flattenPages } from '@/lib/api/pagination';
 import { formatDateTime } from '@/lib/utils/format';
 import { fromDateTimeLocalValue } from '@/lib/utils/time';
+import { useAdminTenantStore } from '@/stores/admin-tenant-store';
 
 const DIFF_INDENT = 2;
 
-/** FR-REPORT-02: audit log with filters (who / what / when / where / object). */
+/**
+ * FR-REPORT-02: audit log with filters (who / what / when / where / object) — of every school on the platform or of the
+ * school picked in the header. Records of deleted schools stay (the deletion itself is one of them).
+ */
 export default function AdminAuditPage() {
   const t = useTranslations('adminAudit');
   const tAdmin = useTranslations('admin');
@@ -28,7 +32,9 @@ export default function AdminAuditPage() {
   const [objectType, setObjectType] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  const allTenants = useAdminTenantStore((state) => state.logScope === 'all');
   const log = useAuditLog({
+    allTenants: allTenants || undefined,
     objectType: objectType || undefined,
     from: fromDateTimeLocalValue(from) ?? undefined,
     to: fromDateTimeLocalValue(to) ?? undefined,
@@ -42,7 +48,7 @@ export default function AdminAuditPage() {
           <Badge tone="primary">{t('shownCount', { count: rows.length })}</Badge>
         ) : null
       }
-      description={t('panelHint')}
+      description={t(allTenants ? 'panelHintAll' : 'panelHint')}
       toolbar={
         <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end">
           <div className="relative md:w-64">
@@ -109,6 +115,7 @@ export default function AdminAuditPage() {
           <THead>
             <tr>
               <TH>{t('actor')}</TH>
+              {allTenants ? <TH className="hidden md:table-cell">{t('school')}</TH> : null}
               <TH>{t('action')}</TH>
               <TH>{t('object')}</TH>
               <TH className="hidden md:table-cell">{t('at')}</TH>
@@ -141,6 +148,13 @@ export default function AdminAuditPage() {
                     </span>
                   )}
                 </TD>
+                {allTenants ? (
+                  <TD className="hidden max-w-48 truncate text-sm md:table-cell">
+                    {entry.tenantName ?? (
+                      <span className="text-text-muted">{t('deletedSchool')}</span>
+                    )}
+                  </TD>
+                ) : null}
                 <TD>
                   <span className="whitespace-nowrap rounded-full bg-primary-soft px-2.5 py-1 font-mono text-xs text-primary">
                     {entry.action}
