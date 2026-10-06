@@ -13,7 +13,7 @@ export function Progress({
   value: number;
   label: string;
   className?: string;
-  tone?: 'primary' | 'success';
+  tone?: 'primary' | 'success' | 'danger';
 }) {
   const clamped = Math.min(PERCENT_MAX, Math.max(0, value));
   return (
@@ -25,7 +25,11 @@ export function Progress({
       <ProgressPrimitive.Indicator
         className={cn(
           'h-full rounded-full transition-transform duration-base',
-          tone === 'success' ? 'bg-success' : 'bg-gradient-to-r from-primary to-accent',
+          tone === 'success'
+            ? 'bg-success'
+            : tone === 'danger'
+              ? 'bg-danger'
+              : 'bg-gradient-to-r from-primary to-accent',
         )}
         style={{ transform: `translateX(-${PERCENT_MAX - clamped}%)` }}
       />

@@ -211,25 +211,31 @@ export function AcceptInvitationForm() {
       {error ? <Alert tone="danger" className="mb-4" title={error} /> : null}
       <form
         noValidate
-        onSubmit={form.handleSubmit(({ acceptOffer: _offer, acceptPrivacy: _privacy, ...values }) =>
-          accept.mutate(
-            { token, ...values, acceptTerms: true },
-            {
-              onSuccess: () => router.replace(ROUTES.home),
-              onError: (failure) => {
-                if (hasProblemCode(failure, PROBLEM_CODES.tokenInvalid))
-                  return setError(t('tokenInvalid'));
-                if (
-                  !applyServerFieldErrors(failure, form.setError, [
-                    'firstName',
-                    'lastName',
-                    'password',
-                  ])
-                )
-                  setError(describeProblem(failure, tErrors).title);
+        onSubmit={form.handleSubmit(
+          ({
+            acceptOffer: _offer,
+            acceptPrivacy: _privacy,
+            acceptCrossBorder: _crossBorder,
+            ...values
+          }) =>
+            accept.mutate(
+              { token, ...values, acceptTerms: true },
+              {
+                onSuccess: () => router.replace(ROUTES.home),
+                onError: (failure) => {
+                  if (hasProblemCode(failure, PROBLEM_CODES.tokenInvalid))
+                    return setError(t('tokenInvalid'));
+                  if (
+                    !applyServerFieldErrors(failure, form.setError, [
+                      'firstName',
+                      'lastName',
+                      'password',
+                    ])
+                  )
+                    setError(describeProblem(failure, tErrors).title);
+                },
               },
-            },
-          ),
+            ),
         )}
         className="flex flex-col gap-4"
       >

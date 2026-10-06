@@ -4,6 +4,7 @@ import com.tutorcraft.core.files.domain.StoredFile;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -26,6 +27,15 @@ public interface FileRepository {
     /** Сумма размеров непринятых к отказу файлов tenant (квота). */
     long usedBytes(UUID tenantId);
 
+    /** Системный запрос по всем tenant (админка платформы): объём и число непринятых к отказу файлов по назначению. */
+    List<PurposeUsageRow> usageByTenantAndPurpose();
+
+    /** Системный запрос: оценка объёма HLS-рендишенов готовых видео по tenant (длительность × битрейт). */
+    Map<UUID, Long> hlsBytesByTenant();
+
+    /** Файлы tenant, привязанные к владельцам типа ownerType: строка на связь, с оценкой объёма HLS для видео. */
+    List<LinkedFileSize> linkedFileSizes(UUID tenantId, String ownerType);
+
     void insertLink(UUID tenantId, UUID fileId, String ownerType, UUID ownerId, Instant at);
 
     List<FileLink> links(UUID tenantId, UUID fileId);
@@ -36,6 +46,12 @@ public interface FileRepository {
 
     /** @return false, если видео не найдено в tenant */
     boolean updateVideo(UUID tenantId, UUID fileId, VideoUpdate update, Instant at);
+
+    record PurposeUsageRow(UUID tenantId, String purpose, long bytes, long files) {
+    }
+
+    record LinkedFileSize(UUID fileId, UUID ownerId, long sizeBytes, long hlsBytes) {
+    }
 
     record FileLink(String ownerType, UUID ownerId) {
     }

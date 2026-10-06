@@ -88,6 +88,7 @@ export async function SiteFooter() {
             links={[
               { href: ROUTES.offer, label: t('offer') },
               { href: ROUTES.privacy, label: t('privacy') },
+              { href: ROUTES.crossBorder, label: t('crossBorder') },
             ]}
           />
           {company.length > 0 ? <FooterColumn title={t('company')} links={company} /> : null}

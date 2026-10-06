@@ -152,3 +152,17 @@ export function useDeliveries(webhookId: string | null) {
 export function usePlatformTenants(enabled = true) {
   return useQuery({ queryKey: queryKeys.platformTenants, queryFn: platformApi.tenants, enabled });
 }
+
+/** Space taken by every school (all uploads, as counted against the quota). */
+export function usePlatformStorage() {
+  return useQuery({ queryKey: queryKeys.platformStorage, queryFn: platformApi.storage });
+}
+
+/** Space taken by the course materials of one school. */
+export function usePlatformCourseStorage(tenantId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.platformCourseStorage(tenantId ?? 'none'),
+    queryFn: () => platformApi.courseStorage(tenantId as string),
+    enabled: !!tenantId,
+  });
+}

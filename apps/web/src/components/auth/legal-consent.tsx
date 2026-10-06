@@ -13,17 +13,25 @@ import { z } from 'zod';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ROUTES } from '@/features/auth/routes';
 
-export type LegalConsentValues = { acceptOffer: boolean; acceptPrivacy: boolean };
+export type LegalConsentValues = {
+  acceptOffer: boolean;
+  acceptPrivacy: boolean;
+  acceptCrossBorder: boolean;
+};
 
 export const LEGAL_CONSENT_DEFAULTS: LegalConsentValues = {
   acceptOffer: false,
   acceptPrivacy: false,
+  acceptCrossBorder: false,
 };
 
-/** Both boxes must be ticked: accepting the offer and consenting to personal data processing (Закон РБ № 99-З). */
+/**
+ * All three boxes must be ticked: accepting the offer, consenting to personal data processing and to its cross-border
+ * transfer (Закон РБ № 99-З, ст. 5 и 9).
+ */
 export function legalConsentSchema(message: string) {
   const ticked = z.boolean().refine(Boolean, message);
-  return { acceptOffer: ticked, acceptPrivacy: ticked };
+  return { acceptOffer: ticked, acceptPrivacy: ticked, acceptCrossBorder: ticked };
 }
 
 function DocumentLink({ href, children }: { href: string; children: ReactNode }) {
@@ -87,8 +95,8 @@ function ConsentCheckbox<T extends FieldValues>({
 }
 
 /**
- * Two mandatory consent checkboxes for sign-up forms. The documents open in a new tab so the form keeps its input.
- * The form sends `acceptTerms: true` only after both are ticked; core-api refuses sign-up without it and logs the
+ * Three mandatory consent checkboxes for sign-up forms. The documents open in a new tab so the form keeps its input.
+ * The form sends `acceptTerms: true` only after all of them are ticked; core-api refuses sign-up without it and logs the
  * consent with the document edition.
  */
 export function LegalConsentFields<T extends FieldValues & LegalConsentValues>({
@@ -120,6 +128,15 @@ export function LegalConsentFields<T extends FieldValues & LegalConsentValues>({
           link: (chunks) => <DocumentLink href={ROUTES.privacy}>{chunks}</DocumentLink>,
         })}
       </ConsentCheckbox>
+      <ConsentCheckbox
+        control={control}
+        name={'acceptCrossBorder' as Path<T>}
+        error={errors.acceptCrossBorder?.message as string | undefined}
+      >
+        {t.rich('acceptCrossBorder', {
+          link: (chunks) => <DocumentLink href={ROUTES.crossBorder}>{chunks}</DocumentLink>,
+        })}
+      </ConsentCheckbox>
     </fieldset>
   );
 }
@@ -132,6 +149,7 @@ export function OAuthConsentNotice() {
       {t.rich('oauthNotice', {
         offer: (chunks) => <DocumentLink href={ROUTES.offer}>{chunks}</DocumentLink>,
         privacy: (chunks) => <DocumentLink href={ROUTES.privacy}>{chunks}</DocumentLink>,
+        crossBorder: (chunks) => <DocumentLink href={ROUTES.crossBorder}>{chunks}</DocumentLink>,
       })}
     </p>
   );

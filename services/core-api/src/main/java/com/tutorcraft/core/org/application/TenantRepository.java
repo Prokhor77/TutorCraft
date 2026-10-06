@@ -35,7 +35,9 @@ public interface TenantRepository {
                               List<String> embedWhitelist, long version) {
     }
 
-    record TenantSummary(UUID id, String slug, String name, String status, java.time.Instant createdAt, long usersCount) {
+    /** storageQuotaMb — квота хранилища школы; null — без ограничения. */
+    record TenantSummary(UUID id, String slug, String name, String status, java.time.Instant createdAt, long usersCount,
+                         Long storageQuotaMb) {
     }
 
     record TenantSettingsUpdate(String name, UUID logoFileId, String primaryColor, String defaultLocale,

@@ -4,6 +4,7 @@ import {
   Activity,
   Building2,
   FolderTree,
+  HardDrive,
   Lock,
   Palette,
   PlugZap,
@@ -37,6 +38,7 @@ const SECTIONS: readonly { href: string; key: string; icon: LucideIcon }[] = [
   { href: ROUTES.adminBranding, key: 'branding', icon: Palette },
   { href: ROUTES.adminAudit, key: 'audit', icon: ScrollText },
   { href: ROUTES.adminActivity, key: 'activity', icon: Activity },
+  { href: ROUTES.adminStorage, key: 'storage', icon: HardDrive },
   { href: ROUTES.adminIntegrations, key: 'integrations', icon: PlugZap },
 ];
 

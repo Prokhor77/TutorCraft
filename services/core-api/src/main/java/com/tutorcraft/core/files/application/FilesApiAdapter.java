@@ -92,6 +92,14 @@ class FilesApiAdapter implements FilesApi {
         files.insertLink(tenantId, fileId, ownerType, ownerId, clock.instant());
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<LinkedFileSize> linkedFileSizes(UUID tenantId, String ownerType) {
+        return files.linkedFileSizes(tenantId, ownerType).stream()
+                .map(row -> new LinkedFileSize(row.fileId(), row.ownerId(), row.sizeBytes(), row.hlsBytes()))
+                .toList();
+    }
+
     private static FileRef toRef(StoredFile file) {
         return new FileRef(file.id(), file.tenantId(), file.name(), file.sizeBytes(), file.mime(), file.status().key(),
                 file.purpose().key(), file.uploadedBy());

@@ -65,7 +65,7 @@ class JdbcTenantRepository implements TenantRepository {
     public List<TenantSummary> list(String query, int limit) {
         String pattern = query == null || query.isBlank() ? null : "%" + query.trim().toLowerCase() + "%";
         return jdbc.sql("""
-                SELECT t.id, t.slug, t.name, t.status, t.created_at,
+                SELECT t.id, t.slug, t.name, t.status, t.created_at, t.quota_storage_mb,
                        (SELECT count(*) FROM users u WHERE u.tenant_id = t.id) AS users_count
                 FROM tenants t
                 WHERE t.slug <> :platformSlug
@@ -75,7 +75,8 @@ class JdbcTenantRepository implements TenantRepository {
                 """)
             .param("platformSlug", OrgApi.PLATFORM_TENANT_SLUG).param("pattern", pattern).param("limit", limit)
             .query((rs, n) -> new TenantSummary(rs.getObject("id", UUID.class), rs.getString("slug"), rs.getString("name"),
-                    rs.getString("status"), rs.getTimestamp("created_at").toInstant(), rs.getLong("users_count")))
+                    rs.getString("status"), rs.getTimestamp("created_at").toInstant(), rs.getLong("users_count"),
+                    rs.getObject("quota_storage_mb", Long.class)))
             .list();
     }
 

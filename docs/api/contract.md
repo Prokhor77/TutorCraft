@@ -91,7 +91,7 @@ type Branding = { logoUrl: string | null; primaryColor: string | null }
 - Повторное использование уже ротированного refresh-токена отзывает все сессии этого входа → 401 `auth.refresh_invalid`.
 - `/auth/oauth/*` для выключенного провайдера → 404 `auth.provider_disabled`; неверные данные → 401 `auth.oauth_invalid` / `auth.oauth_email_unverified`; неизвестный `tenantSlug` → 404 `auth.tenant_not_found`. Без `tenantSlug` новый пользователь становится владельцем новой школы (репетитор); с `tenantSlug` — участником этой школы без ролей. Пользователь Telegram получает служебный email `tg-<id>@telegram.invalid`.
 - `/auth/password/reset` и `/auth/invitations/accept` с неверным/истёкшим/использованным токеном → 422 `auth.token_invalid`. Ошибки политики пароля — 400 `validation.failed` с `errors[].code` из `password_too_short | password_too_long | password_digit_required | password_letter_required`.
-- `acceptTerms` — согласие с публичной офертой (`/offer`) и политикой обработки персональных данных (`/privacy`), обязательно для `/auth/register` и `/auth/invitations/accept`: отсутствует или `false` → 400 `validation.failed`, `errors[] = { field: "acceptTerms", code: "consent_required" }`. Согласие (в т. ч. при первом входе через Google/Telegram, создающем аккаунт) пишется в аудит как `legal.consent_accepted` с `diff = { offerVersion, privacyVersion, method }` (Закон РБ № 99-З, ст. 5).
+- `acceptTerms` — согласие с публичной офертой (`/offer`), политикой обработки персональных данных (`/privacy`) и на трансграничную передачу данных (`/cross-border`; клиент шлёт `true` только при всех трёх отмеченных галочках), обязательно для `/auth/register` и `/auth/invitations/accept`: отсутствует или `false` → 400 `validation.failed`, `errors[] = { field: "acceptTerms", code: "consent_required" }`. Согласие (в т. ч. при первом входе через Google/Telegram, создающем аккаунт) пишется в аудит как `legal.consent_accepted` с `diff = { offerVersion, privacyVersion, crossBorderVersion, method }` (Закон РБ № 99-З, ст. 5 и 9).
 
 ## 2. Профиль и «я» (`/me`)
 
@@ -241,6 +241,27 @@ type PlatformUser = { id: Id; email: string; firstName: string; lastName: string
 стирается, посты скрываются. Учётная запись обезличивается (`deleted-<id>@deleted.invalid`, «Удалённый пользователь»)
 и помечается удалённой — на неё продолжают ссылаться чужие данные: выставленные им оценки и отзывы, групповые сдачи,
 заказы, созданные им ссылки. email снова свободен. Файлы сдач в S3 пока не удаляются (только ссылки на них).
+
+### 4.3. Занятое школами место (`files`, `courses`, главный администратор)
+
+Право `platform.manage`, заголовок `X-Tenant-Id` не нужен.
+
+| GET | `/platform/storage` | `TenantStorage[]` — школы с файлами, по убыванию `usedBytes` |
+|---|---|---|
+| GET | `/platform/storage/{tenantId}/courses` | `CourseStorage[]` — курсы школы с файлами, по убыванию `bytes` |
+
+```ts
+type FilePurpose = 'content' | 'video' | 'submission' | 'cover' | 'avatar' | 'import'
+type TenantStorage = { tenantId: Id; usedBytes: number; filesCount: number; hlsBytes: number;
+                       byPurpose: { purpose: FilePurpose; bytes: number; files: number }[] }
+type CourseStorage = { courseId: Id; title: string; inTrash: boolean; bytes: number; hlsBytes: number; filesCount: number }
+```
+
+Детали: `usedBytes` считается как квота — сумма размеров всех загрузок, кроме отклонённых (дубликаты по SHA-256 тоже).
+`hlsBytes` — оценка HLS-рендишенов готовых видео (`duration_sec × Σ bandwidth / 8`), хранится сверх исходников.
+По курсу: файлы, привязанные к курсу (обложка, описание) и к его элементам, включая удалённые в корзину; файл
+считается в курсе один раз, а скопированный в несколько курсов — в каждом. Сдачи студентов и вопросы тестов не входят.
+Квота школы — `storageQuotaMb: number | null` в `GET /platform/tenants`.
 
 ## 5. Курсы и структура (`courses`)
 

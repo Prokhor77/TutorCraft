@@ -59,7 +59,12 @@ export function RegisterForm() {
   const errors = form.formState.errors;
 
   const onSubmit = form.handleSubmit(
-    ({ acceptOffer: _offer, acceptPrivacy: _privacy, ...values }) => {
+    ({
+      acceptOffer: _offer,
+      acceptPrivacy: _privacy,
+      acceptCrossBorder: _crossBorder,
+      ...values
+    }) => {
       setError(null);
       register.mutate(
         { ...values, schoolName: values.schoolName || undefined, acceptTerms: true },

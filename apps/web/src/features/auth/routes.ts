@@ -7,6 +7,7 @@ export const ROUTES = {
   acceptInvite: '/accept-invite',
   offer: '/offer',
   privacy: '/privacy',
+  crossBorder: '/cross-border',
   home: '/home',
   courses: '/courses',
   course: (id: string) => `/courses/${id}`,
@@ -44,6 +45,7 @@ export const ROUTES = {
   adminAudit: '/admin/audit',
   adminActivity: '/admin/activity',
   adminIntegrations: '/admin/integrations',
+  adminStorage: '/admin/storage',
   catalog: (tenantSlug: string) => `/c/${tenantSlug}`,
   courseLanding: (tenantSlug: string, courseSlug: string) => `/c/${tenantSlug}/${courseSlug}`,
 } as const;

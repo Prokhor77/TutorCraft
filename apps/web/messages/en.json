@@ -328,6 +328,7 @@
       "documents": "Legal",
       "offer": "Public offer",
       "privacy": "Personal data policy",
+      "crossBorder": "Cross-border transfer consent",
       "requisites": "{name}, taxpayer ID {taxId}, {address}"
     }
   },
@@ -1712,7 +1713,8 @@
       "audit": "Audit log",
       "activity": "Activity",
       "integrations": "Integrations",
-      "accounts": "All accounts"
+      "accounts": "All accounts",
+      "storage": "Storage"
     },
     "tenant": {
       "label": "School",
@@ -1727,6 +1729,41 @@
     "forbidden": {
       "title": "No access",
       "description": "Administration is available only to the platform main administrator."
+    },
+    "storage": {
+      "loadError": "Could not load storage usage",
+      "totalUsed": "Total used",
+      "totalFiles": "Files",
+      "totalHls": "Processed video",
+      "hlsHint": "Estimated from the duration and bitrate of HLS renditions; stored in addition to the originals",
+      "schoolsTitle": "Space by school",
+      "schoolsHint": "All uploads of a school, counted the same way as the quota. Click a school to see the per-course breakdown",
+      "emptySchools": "No schools yet",
+      "school": "School",
+      "files": "Files",
+      "used": "Used",
+      "hls": "HLS video",
+      "ofQuota": "of {quota} · {percent}%",
+      "noQuota": "no quota",
+      "usedOf": "Space used: {name}",
+      "breakdownTitle": "{name}: courses",
+      "coursesHint": "Covers, descriptions, item files and videos. A file copied into several courses counts in each; student submissions are not included",
+      "byPurpose": "Breakdown by file type",
+      "filesCount": "{count, plural, one {# file} other {# files}}",
+      "coursesLoadError": "Could not load the per-course breakdown",
+      "emptyCourses": "The school's courses have no files",
+      "course": "Course",
+      "inTrash": "In trash",
+      "purposes": {
+        "content": "Materials",
+        "video": "Video",
+        "submission": "Student work",
+        "cover": "Covers",
+        "avatar": "Avatars",
+        "import": "Import"
+      },
+      "emptySchoolsText": "Schools appear once tutors sign up",
+      "emptyCoursesText": "Files and videos uploaded to courses will show up here"
     }
   },
   "adminUsers": {
@@ -2254,12 +2291,14 @@
   "legal": {
     "offer": "Public offer",
     "privacy": "Personal data policy",
+    "crossBorder": "Consent to cross-border transfer of personal data",
     "toc": "Contents",
     "edition": "Edition of {date}",
     "bindingNote": "The document is published in Russian; the Russian text is legally binding.",
     "consentLegend": "Consent to the documents",
     "acceptOffer": "I accept the terms of the <link>public offer</link>",
     "acceptPrivacy": "I consent to the processing of my personal data under the <link>personal data policy</link>",
-    "oauthNotice": "By signing in with Google or Telegram for the first time you accept the <offer>public offer</offer> and consent to personal data processing under the <privacy>policy</privacy>."
+    "acceptCrossBorder": "I give my <link>consent to cross-border transfer of personal data</link> — storage on servers in the Republic of Belarus and transfer to the email service, Google and Telegram",
+    "oauthNotice": "By signing in with Google or Telegram for the first time you accept the <offer>public offer</offer>, consent to personal data processing under the <privacy>policy</privacy> and to its <crossBorder>cross-border transfer</crossBorder>."
   }
 }

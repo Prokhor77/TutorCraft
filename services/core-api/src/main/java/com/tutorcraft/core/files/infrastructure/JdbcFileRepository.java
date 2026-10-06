@@ -10,9 +10,12 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
@@ -22,6 +25,13 @@ class JdbcFileRepository implements FileRepository {
     private static final String COLUMNS = """
             id, tenant_id, uploaded_by, name, size_bytes, declared_mime, mime, purpose, status, storage_key, sha256, created_at
             """;
+
+    /** Оценка объёма HLS видео: длительность × сумма битрейтов рендишенов (бит/с) / 8. */
+    private static final String HLS_BYTES = """
+            CAST(v.duration_sec AS bigint) * (SELECT COALESCE(SUM(CAST(r ->> 'bandwidth' AS bigint)), 0)
+                                              FROM jsonb_array_elements(v.renditions) r) / 8""";
+    private static final String HLS_READY = """
+            v.status = 'ready' AND v.duration_sec IS NOT NULL AND jsonb_typeof(v.renditions) = 'array'""";
 
     private final JdbcClient jdbc;
 
@@ -96,6 +106,45 @@ class JdbcFileRepository implements FileRepository {
         return jdbc.sql("SELECT CAST(COALESCE(SUM(size_bytes), 0) AS bigint) FROM files WHERE tenant_id = :tenantId AND status <> 'rejected'")
                 .param("tenantId", tenantId)
                 .query(Long.class).single();
+    }
+
+    @Override
+    public List<PurposeUsageRow> usageByTenantAndPurpose() {
+        return jdbc.sql("""
+                SELECT tenant_id, purpose, CAST(SUM(size_bytes) AS bigint) AS bytes, count(*) AS files
+                FROM files WHERE status <> 'rejected'
+                GROUP BY tenant_id, purpose
+                """)
+            .query((rs, n) -> new PurposeUsageRow(rs.getObject("tenant_id", UUID.class), rs.getString("purpose"),
+                    rs.getLong("bytes"), rs.getLong("files")))
+            .list();
+    }
+
+    @Override
+    public Map<UUID, Long> hlsBytesByTenant() {
+        Map<UUID, Long> result = new HashMap<>();
+        jdbc.sql("""
+                SELECT tenant_id, CAST(SUM(bytes) AS bigint) AS bytes
+                FROM (SELECT v.tenant_id, %s AS bytes FROM videos v WHERE %s) hls
+                GROUP BY tenant_id
+                """.formatted(HLS_BYTES, HLS_READY))
+            .query((RowCallbackHandler) rs -> result.put(rs.getObject("tenant_id", UUID.class), rs.getLong("bytes")));
+        return result;
+    }
+
+    @Override
+    public List<LinkedFileSize> linkedFileSizes(UUID tenantId, String ownerType) {
+        return jdbc.sql("""
+                SELECT l.file_id, l.owner_id, f.size_bytes,
+                       COALESCE((SELECT %s FROM videos v WHERE v.file_id = f.id AND %s), 0) AS hls_bytes
+                FROM file_links l
+                JOIN files f ON f.id = l.file_id AND f.tenant_id = l.tenant_id
+                WHERE l.tenant_id = :tenantId AND l.owner_type = :ownerType AND f.status <> 'rejected'
+                """.formatted(HLS_BYTES, HLS_READY))
+            .param("tenantId", tenantId).param("ownerType", ownerType)
+            .query((rs, n) -> new LinkedFileSize(rs.getObject("file_id", UUID.class), rs.getObject("owner_id", UUID.class),
+                    rs.getLong("size_bytes"), rs.getLong("hls_bytes")))
+            .list();
     }
 
     @Override

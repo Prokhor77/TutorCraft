@@ -25,6 +25,15 @@ public interface FilesApi {
     /** Связь файла с владельцем (FileLink): 'item', 'submission', 'feedback', 'post', 'course', 'user'. */
     void link(UUID tenantId, UUID fileId, String ownerType, UUID ownerId);
 
+    /**
+     * Файлы tenant, привязанные к владельцам типа ownerType (учёт места): строка на связь; hlsBytes — оценка объёма
+     * HLS-рендишенов для готовых видео, иначе 0.
+     */
+    List<LinkedFileSize> linkedFileSizes(UUID tenantId, String ownerType);
+
+    record LinkedFileSize(UUID fileId, UUID ownerId, long sizeBytes, long hlsBytes) {
+    }
+
     record FileRef(UUID id, UUID tenantId, String name, long size, String mime, String status, String purpose,
                    UUID uploadedBy) {
     }

@@ -3,7 +3,11 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { SiteFooter } from '@/components/landing/site-footer';
 import { SiteHeader } from '@/components/landing/site-header';
 import { MAIN_CONTENT_ID } from '@/components/layout/skip-link';
-import { LEGAL_DOCUMENTS_VERSION, ORGANIZATION as ORG } from '@/content/legal/organization';
+import {
+  LEGAL_APPROVAL,
+  LEGAL_DOCUMENTS_VERSION,
+  ORGANIZATION as ORG,
+} from '@/content/legal/organization';
 import type { LegalBlock, LegalDocumentContent } from '@/content/legal/types';
 import { ROUTES } from '@/features/auth/routes';
 
@@ -35,6 +39,34 @@ function Contacts() {
         </div>
       ))}
     </dl>
+  );
+}
+
+/** «12» октября 2026 г. — дата приказа в грифе так, как её пишут в утверждённых документах. */
+function approvalDate(date: string): string {
+  const [day, month] = new Intl.DateTimeFormat('ru', { day: '2-digit', month: 'long' })
+    .formatToParts(new Date(`${date}T00:00:00Z`))
+    .filter((part) => part.type === 'day' || part.type === 'month')
+    .map((part) => part.value);
+  return `«${day}» ${month} ${date.slice(0, 4)} г.`;
+}
+
+/**
+ * Гриф утверждения справа над наименованием, как в утверждённых документах Оператора. Пока приказ не подписан
+ * (`LEGAL_APPROVAL` пуст), номер и дата — пустые строки для заполнения.
+ */
+function ApprovalStamp() {
+  const date = LEGAL_APPROVAL.date
+    ? approvalDate(LEGAL_APPROVAL.date)
+    : '«___» ___________ 2026 г.';
+  return (
+    <p lang="ru" className="ml-auto flex flex-col text-sm leading-snug text-text sm:w-72">
+      <span className="font-semibold uppercase tracking-wide">Утверждено</span>
+      <span>Приказом директора {ORG.shortName}</span>
+      <span>
+        от {date} № {LEGAL_APPROVAL.number ?? '___'}
+      </span>
+    </p>
   );
 }
 
@@ -86,7 +118,8 @@ function Block({ block }: { block: LegalBlock }) {
 }
 
 /**
- * Public legal document page (оферта, политика ПД): site header/footer, table of contents and numbered sections.
+ * Public legal document page (оферта, политика ПД, согласие на трансграничную передачу): approval stamp, site
+ * header/footer, table of contents and numbered sections.
  * The text itself is Russian only (marked `lang="ru"`) — it is the legally binding version for every UI locale.
  */
 export async function LegalDocument({ content }: { content: LegalDocumentContent }) {
@@ -100,6 +133,7 @@ export async function LegalDocument({ content }: { content: LegalDocumentContent
       <main id={MAIN_CONTENT_ID} className="flex-1">
         <article className="mx-auto flex max-w-prose flex-col gap-8 px-4 py-10 sm:py-16">
           <header className="flex flex-col gap-3">
+            <ApprovalStamp />
             <h1 lang="ru" className="font-heading text-3xl font-bold tracking-tight sm:text-4xl">
               {content.title}
             </h1>
@@ -146,6 +180,9 @@ export async function LegalDocument({ content }: { content: LegalDocumentContent
             </Link>
             <Link href={ROUTES.privacy} className="rounded-sm text-primary hover:underline">
               {t('privacy')}
+            </Link>
+            <Link href={ROUTES.crossBorder} className="rounded-sm text-primary hover:underline">
+              {t('crossBorder')}
             </Link>
           </footer>
         </article>

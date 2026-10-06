@@ -22,6 +22,9 @@ public interface ItemRepository {
 
     Map<UUID, CourseItem> findAll(UUID tenantId, Collection<UUID> ids);
 
+    /** Курс каждого найденного элемента, включая удалённые в корзину (учёт места). */
+    Map<UUID, UUID> courseIdsIncludingDeleted(UUID tenantId, Collection<UUID> ids);
+
     /** Не удалённые элементы курса, по позиции. */
     List<CourseItem> ofCourse(UUID tenantId, UUID courseId);
 

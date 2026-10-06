@@ -10,6 +10,7 @@ import static com.mongodb.client.model.Filters.lte;
 import static com.mongodb.client.model.Filters.ne;
 
 import com.mongodb.client.MongoCollection;
+import com.mongodb.client.model.Projections;
 import com.mongodb.client.model.Sorts;
 import com.mongodb.client.model.Updates;
 import com.tutorcraft.core.courses.ItemType;
@@ -20,6 +21,7 @@ import com.tutorcraft.core.courses.domain.CourseItem.KeyDates;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -71,6 +73,19 @@ class MongoItemRepository implements ItemRepository {
         }
         return list(and(eq(MongoFields.TENANT_ID, tenantId), in(MongoFields.ID, ids), eq(MongoFields.DELETED_AT, null))).stream()
                 .collect(Collectors.toMap(CourseItem::id, Function.identity()));
+    }
+
+    @Override
+    public Map<UUID, UUID> courseIdsIncludingDeleted(UUID tenantId, Collection<UUID> ids) {
+        Map<UUID, UUID> result = new HashMap<>();
+        if (ids.isEmpty()) {
+            return result;
+        }
+        collection().find(and(eq(MongoFields.TENANT_ID, tenantId), in(MongoFields.ID, ids)))
+                .projection(Projections.include(MongoFields.ID, MongoFields.COURSE_ID))
+                .forEach(document -> result.put(document.get(MongoFields.ID, UUID.class),
+                        document.get(MongoFields.COURSE_ID, UUID.class)));
+        return result;
     }
 
     @Override

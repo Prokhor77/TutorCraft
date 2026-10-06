@@ -63,6 +63,9 @@ export const queryKeys = {
   tenant: ['tenant'] as const,
   categories: ['categories'] as const,
   platformTenants: ['platform', 'tenants'] as const,
+  platformStorage: ['platform', 'storage'] as const,
+  platformCourseStorage: (tenantId: string) =>
+    ['platform', 'storage', tenantId, 'courses'] as const,
   users: (params: object) => ['users', params] as const,
   usersRoot: ['users'] as const,
   schoolMembers: (params: object) => ['school-members', params] as const,
