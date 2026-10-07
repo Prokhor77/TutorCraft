@@ -158,7 +158,7 @@ jobs:
           key: ${{ secrets.PROD_SSH_KEY }}
           # nginx-конфиги — справочно, чтобы правки vhost доезжали до сервера вместе с релизом
           # (ставятся в /etc/nginx вручную, см. docs/deployment-ip.md).
-          source: "infra/k8s/tutorcraft.rendered.yaml,infra/k8s/apply.sh,infra/deploy/backup.sh,infra/deploy/nginx/tutorcraft-ip.conf,infra/deploy/nginx/tutorcraft-proxy.conf"
+          source: "infra/k8s/tutorcraft.rendered.yaml,infra/k8s/apply.sh,infra/deploy/backup.sh,infra/deploy/nginx/tutorcraft-ip.conf,infra/deploy/nginx/tutorcraft-domain-le.conf,infra/deploy/nginx/tutorcraft-proxy.conf"
           target: ${{ secrets.PROD_PATH }}
           overwrite: true
 
