@@ -35,7 +35,7 @@ import { Brand, PRODUCT_NAME } from './brand';
 import { CourseActions } from './course-actions';
 import { NotificationsBell } from './notifications-bell';
 import { LanguageMenu, ThemeMenu } from './preferences-menu';
-import { MAIN_CONTENT_ID, SkipLink } from './skip-link';
+import { MAIN_CONTENT_ID } from './skip-link';
 import { UserMenu } from './user-menu';
 
 const ITEM_ID_PATTERN = /\/items\/([^/?#]+)/;
@@ -293,7 +293,6 @@ function MobileNav({ course }: { course: Course | undefined }) {
  * course and a section switcher menu inside one — plus «Предпросмотр» / «Опубликовать курс»; bottom navigation on mobile.
  */
 export function AppShell({ children }: { children: ReactNode }) {
-  const t = useTranslations('nav');
   const pathname = usePathname();
   const me = useMe();
   const updateMe = useUpdateMe();
@@ -341,7 +340,6 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-dvh bg-background">
-      <SkipLink label={t('skipToContent')} />
       {course ? <CourseProvider course={course}>{header}</CourseProvider> : header}
       <main
         id={MAIN_CONTENT_ID}

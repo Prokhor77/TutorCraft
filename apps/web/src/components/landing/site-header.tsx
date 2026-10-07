@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { Brand } from '@/components/layout/brand';
 import { LanguageMenu, ThemeMenu } from '@/components/layout/preferences-menu';
-import { SkipLink } from '@/components/layout/skip-link';
 import { Button } from '@/components/ui/button';
 import { LANDING } from '@/content/landing';
 import { ROUTES } from '@/features/auth/routes';
@@ -30,7 +29,6 @@ export async function SiteHeader({
   brandHref?: string;
 }) {
   const t = await getTranslations('landing');
-  const tNav = await getTranslations('nav');
   const anchors = [
     { id: LANDING_ANCHORS.features, label: t('nav.features') },
     { id: LANDING_ANCHORS.benefits, label: t('nav.benefits') },
@@ -41,7 +39,6 @@ export async function SiteHeader({
   ];
   return (
     <>
-      <SkipLink label={tNav('skipToContent')} />
       <header className="glass sticky top-0 z-30 border-b border-card-border shadow-sm">
         <div className="mx-auto flex h-header-public max-w-content items-center gap-3 px-page-x">
           <Brand name={brandName ?? t('product')} href={brandHref} className="min-w-0" />
