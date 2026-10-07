@@ -1,0 +1,41 @@
+# Учётка деплоя: GitHub Actions по SSH (пользователь tutorcraft) и cron бэкапа.
+#
+# Раньше tutorcraft состоял в группе docker, а это равносильно root на всём сервере, включая
+# контейнеры confeek и crm. Теперь у него встроенная роль admin только в namespace tutorcraft:
+# деплой, секреты, exec и port-forward в свои поды. Чужие namespace, узел и PersistentVolume ему
+# недоступны. Pod Security baseline (namespace.yaml) не даёт обойти это через hostPath или privileged.
+#
+# kubeconfig для этой учётки собирает infra/deploy/bootstrap-ip.sh в /home/tutorcraft/.kube/config.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: deployer
+  namespace: tutorcraft
+  labels: { app.kubernetes.io/part-of: tutorcraft }
+---
+# Долгоживущий токен для kubeconfig. Отзыв: удалить этот Secret, k3s выпустит новый,
+# затем перезапустить bootstrap-ip.sh, чтобы пересобрать kubeconfig.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: deployer-token
+  namespace: tutorcraft
+  labels: { app.kubernetes.io/part-of: tutorcraft }
+  annotations:
+    kubernetes.io/service-account.name: deployer
+type: kubernetes.io/service-account-token
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: deployer-admin
+  namespace: tutorcraft
+  labels: { app.kubernetes.io/part-of: tutorcraft }
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: admin
+subjects:
+  - kind: ServiceAccount
+    name: deployer
+    namespace: tutorcraft

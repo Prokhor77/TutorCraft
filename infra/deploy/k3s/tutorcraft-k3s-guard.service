@@ -1,0 +1,14 @@
+[Unit]
+Description=TutorCraft: закрыть снаружи служебные порты k3s (6443, 10250, 10256)
+# До k3s: API не должен ни секунды слушать интернет без правила. После ufw: его старт не уберёт правило.
+Before=k3s.service
+After=network-pre.target ufw.service
+Wants=network-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/tutorcraft-k3s-guard.sh
+
+[Install]
+WantedBy=multi-user.target

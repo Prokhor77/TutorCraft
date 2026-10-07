@@ -1,5 +1,5 @@
 # Профиль prod: сокращение публичной поверхности атаки и информации о внутреннем устройстве.
-# Активируется через SPRING_PROFILES_ACTIVE=prod (docker-compose.prod.yml).
+# Активируется через SPRING_PROFILES_ACTIVE=prod (infra/k8s/app/core-api.yaml).
 #
 # Почему это здесь, а не только в nginx: BFF-прокси Next.js (`/api/v1/[...path]`) пересылает в
 # core-api ЛЮБОЙ путь под /api/v1/, включая /api/v1/openapi.json. Блокировка на nginx — второй
@@ -26,7 +26,9 @@ management:
 
 server:
   tomcat:
-    # За nginx доверяем X-Forwarded-* только loopback и докер-сетям (в паре с
+    # За nginx доверяем X-Forwarded-* только loopback и внутренним сетям: 10/8 покрывает поды k3s
+    # (10.42/16), включая мост cni0 (10.42.0.1): с него после masquerade kube-proxy приходят
+    # запросы host-nginx на ClusterIP (в паре с
     # forward-headers-strategy: native из application.yml). Иначе клиент подделает
     # X-Forwarded-For и обойдёт троттлинг входа, подставляя на каждую попытку новый IP.
     remoteip:

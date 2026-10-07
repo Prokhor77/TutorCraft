@@ -1,0 +1,29 @@
+# /etc/rancher/k3s/config.yaml. k3s на общем сервере с confeek и crm (ADR-013).
+# Кладёт infra/deploy/bootstrap-ip.sh перед установкой k3s. Правка после установки:
+# поменять файл и выполнить `systemctl restart k3s` (поды переживут, данные на томах).
+
+write-kubeconfig-mode: "0600"
+
+# Порты 80 и 443 держит host-nginx, через него ходят и соседи. Встроенные Traefik и ServiceLB
+# (klipper) заняли бы эти порты на хосте. Вход в TutorCraft — host-nginx → ClusterIP сервисов.
+disable:
+  - traefik
+  - servicelb
+
+# host-gw вместо vxlan: узел один, а vxlan открыл бы UDP 8472 на внешнем интерфейсе.
+flannel-backend: host-gw
+
+# Значения по умолчанию, записанные явно. На них завязаны закреплённые ClusterIP в nginx
+# (10.43.0.100–102), firewall-правило tutorcraft-k3s-guard и internal-proxies в core-api (10/8).
+# Перед установкой проверить, что сети Docker соседей их не пересекают: ip -4 route | grep -E '10\.4[23]\.'
+cluster-cidr: 10.42.0.0/16
+service-cidr: 10.43.0.0/16
+
+# Secret tutorcraft-env — это весь .env (JWT_SECRET, DATA_ENCRYPTION_KEY, пароли БД). В базе k3s
+# он хранится зашифрованным.
+secrets-encryption: true
+
+kubelet-arg:
+  # Ротация логов контейнеров, как json-file 20m × 3 в compose.
+  - container-log-max-size=20Mi
+  - container-log-max-files=3

@@ -1,0 +1,43 @@
+# Прод-стек TutorCraft на k3s (docs/deployment-ip.md, ADR-013).
+#
+# Рендерить только через infra/k8s/render.sh: скрипт подставляет тег образа и снимает
+# load restrictor, потому что create-topics.sh лежит вне этого каталога (infra/kafka/, его же
+# использует dev-compose).
+#
+# Каждый объект помечен tutorcraft/tier: data (хранилища, тома, топики) или app (сервисы
+# приложения). infra/k8s/apply.sh применяет их в два этапа: сначала хранилища и топики, потом
+# приложения. Это замена depends_on из compose.
+#
+# Чего здесь нет намеренно (создаётся на сервере, в репозиторий и CI не попадает):
+#   secret/tutorcraft-env — из /opt/tutorcraft/.env (apply.sh)
+#   secret/ghcr           — pull-токен GHCR (apply.sh)
+#   namespace, PersistentVolume, RBAC деплоя — infra/k8s/cluster/, применяет root через bootstrap
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: tutorcraft
+
+labels:
+  - pairs: { app.kubernetes.io/part-of: tutorcraft }
+    includeSelectors: false
+    includeTemplates: true
+
+resources:
+  - volumes.yaml
+  - postgres.yaml
+  - mongo.yaml
+  - redis.yaml
+  - kafka.yaml
+  - kafka-init.yaml
+  - network-policies.yaml
+  - core-api.yaml
+  - media-worker.yaml
+  - notifier.yaml
+  - web.yaml
+
+configMapGenerator:
+  - name: kafka-topics
+    files:
+      - create-topics.sh=../../kafka/create-topics.sh
+    options:
+      labels: { tutorcraft/tier: data }

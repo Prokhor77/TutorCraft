@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  labels: { app.kubernetes.io/name: redis, tutorcraft/tier: data }
+spec:
+  selector: { app.kubernetes.io/name: redis }
+  ports:
+    - { name: redis, port: 6379, targetPort: redis }
+---
+# Только rate-limit, троттлинг входа и кэш витрины, поэтому персистентность не нужна:
+# Deployment без тома.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  labels: { app.kubernetes.io/name: redis, tutorcraft/tier: data }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app.kubernetes.io/name: redis }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: redis, tutorcraft/tier: data }
+      annotations:
+        # Хэш .env подставляет infra/k8s/apply.sh: смена REDIS_PASSWORD перезапускает и Redis,
+        # и core-api, иначе они разойдутся в пароле.
+        tutorcraft/env-sha: "__ENV_SHA__"
+    spec:
+      enableServiceLinks: false
+      automountServiceAccountToken: false
+      # Сразу от пользователя redis (999): entrypoint делает chown только когда запущен от root,
+      # а /data в образе уже принадлежит redis. Поэтому можно снять все capabilities.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          args:
+            - redis-server
+            - --requirepass
+            - $(REDIS_PASSWORD)
+            - --maxmemory
+            - 128mb
+            - --maxmemory-policy
+            - allkeys-lru
+            - --save
+            - ""
+            - --appendonly
+            - "no"
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom: { secretKeyRef: { name: tutorcraft-env, key: REDIS_PASSWORD } }
+          ports:
+            - { name: redis, containerPort: 6379 }
+          # REDISCLI_AUTH вместо -a: пароль не попадает в argv и в предупреждение redis-cli.
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", 'REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli ping | grep -q PONG']
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            tcpSocket: { port: redis }
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { cpu: 500m, memory: 192Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }

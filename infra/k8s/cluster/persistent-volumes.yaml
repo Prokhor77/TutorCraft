@@ -1,0 +1,64 @@
+# Тома с данными — обычные каталоги на диске сервера под /opt/tutorcraft/data.
+#
+# Почему не local-path из k3s: он создаёт каталоги со случайными именами (pvc-<uuid>_…), а здесь
+# пути известны заранее. Так проще перенос данных из compose, бэкап и восстановление.
+# Узел один, поэтому nodeAffinity не нужен.
+#
+# type: Directory, а не DirectoryOrCreate: если каталога нет, под не стартует с понятной ошибкой
+# вместо того, чтобы молча начать с пустой базы. Каталоги и их владельцев создаёт bootstrap-ip.sh.
+#
+# claimRef закрепляет каждый том за своим PVC (infra/k8s/app/volumes.yaml), и чужой claim его не займёт.
+# Retain: удаление PVC не удаляет данные.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: tutorcraft-postgres
+  labels: { app.kubernetes.io/part-of: tutorcraft }
+spec:
+  capacity: { storage: 20Gi }
+  accessModes: [ReadWriteOnce]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  claimRef: { namespace: tutorcraft, name: postgres-data }
+  hostPath: { path: /opt/tutorcraft/data/postgres, type: Directory }
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: tutorcraft-mongo
+  labels: { app.kubernetes.io/part-of: tutorcraft }
+spec:
+  capacity: { storage: 20Gi }
+  accessModes: [ReadWriteOnce]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  claimRef: { namespace: tutorcraft, name: mongo-data }
+  hostPath: { path: /opt/tutorcraft/data/mongo, type: Directory }
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: tutorcraft-kafka
+  labels: { app.kubernetes.io/part-of: tutorcraft }
+spec:
+  capacity: { storage: 10Gi }
+  accessModes: [ReadWriteOnce]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  claimRef: { namespace: tutorcraft, name: kafka-data }
+  hostPath: { path: /opt/tutorcraft/data/kafka, type: Directory }
+---
+# Загруженные файлы и HLS (STORAGE_DRIVER=local). Это единственная копия файлов.
+# Том общий для core-api и media-worker: ReadWriteOnce на одном узле допускает несколько подов.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: tutorcraft-files
+  labels: { app.kubernetes.io/part-of: tutorcraft }
+spec:
+  capacity: { storage: 200Gi }
+  accessModes: [ReadWriteOnce]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  claimRef: { namespace: tutorcraft, name: files-data }
+  hostPath: { path: /opt/tutorcraft/data/files, type: Directory }
