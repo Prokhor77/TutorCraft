@@ -1,0 +1,99 @@
+# Воркер только читает Kafka и пишет в хранилище, Service ему не нужен.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: media-worker
+  labels: { app.kubernetes.io/name: media-worker, tutorcraft/tier: app }
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  # Recreate: два FFmpeg одновременно на общем сервере не нужны. Незавершённое транскодирование
+  # переотдаётся консьюмер-группой: события at-least-once, обработка идемпотентна по eventId.
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app.kubernetes.io/name: media-worker }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: media-worker, tutorcraft/tier: app }
+      annotations:
+        tutorcraft/env-sha: "__ENV_SHA__"
+    spec:
+      enableServiceLinks: false
+      automountServiceAccountToken: false
+      imagePullSecrets: [{ name: ghcr }]
+      terminationGracePeriodSeconds: 45
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      initContainers:
+        - name: wait-for-kafka
+          image: busybox:1.37
+          command: ["sh", "-c", "until nc -z -w 2 kafka 9092; do echo 'waiting for kafka'; sleep 3; done"]
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { cpu: 100m, memory: 32Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+      containers:
+        - name: media-worker
+          image: ghcr.io/prokhor77/tutorcraft-media-worker:latest
+          # Воркеру не нужны JWT и пароли БД, поэтому .env целиком (envFrom) ему не отдаём, только
+          # свои ключи. optional: если ключа в .env нет, действует значение по умолчанию из
+          # internal/config. WORK_DIR и STORAGE_LOCAL_ROOT заданы в образе.
+          env:
+            - { name: KAFKA_BROKERS, value: "kafka:9092" }
+            - name: KAFKA_TOPIC_PREFIX
+              valueFrom: { secretKeyRef: { name: tutorcraft-env, key: KAFKA_TOPIC_PREFIX, optional: true } }
+            - name: STORAGE_DRIVER
+              valueFrom: { secretKeyRef: { name: tutorcraft-env, key: STORAGE_DRIVER, optional: true } }
+            - name: S3_ENDPOINT
+              valueFrom: { secretKeyRef: { name: tutorcraft-env, key: S3_ENDPOINT, optional: true } }
+            - name: S3_REGION
+              valueFrom: { secretKeyRef: { name: tutorcraft-env, key: S3_REGION, optional: true } }
+            - name: S3_BUCKET
+              valueFrom: { secretKeyRef: { name: tutorcraft-env, key: S3_BUCKET, optional: true } }
+            - name: S3_ACCESS_KEY
+              valueFrom: { secretKeyRef: { name: tutorcraft-env, key: S3_ACCESS_KEY, optional: true } }
+            - name: S3_SECRET_KEY
+              valueFrom: { secretKeyRef: { name: tutorcraft-env, key: S3_SECRET_KEY, optional: true } }
+            - name: LOG_LEVEL
+              valueFrom: { secretKeyRef: { name: tutorcraft-env, key: LOG_LEVEL, optional: true } }
+            - name: MAX_VIDEO_BYTES
+              valueFrom: { secretKeyRef: { name: tutorcraft-env, key: MAX_VIDEO_BYTES, optional: true } }
+            - name: TRANSCODE_TIMEOUT
+              valueFrom: { secretKeyRef: { name: tutorcraft-env, key: TRANSCODE_TIMEOUT, optional: true } }
+            # В .env на этом сервере — 1: один FFmpeg за раз. Без ключа воркер возьмёт свои 2.
+            - name: WORKER_CONCURRENCY
+              valueFrom: { secretKeyRef: { name: tutorcraft-env, key: WORKER_CONCURRENCY, optional: true } }
+          ports:
+            - { name: http, containerPort: 8091 }
+          readinessProbe:
+            httpGet: { path: /health/ready, port: http }
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet: { path: /health/live, port: http }
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 1500m, memory: 768Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: work, mountPath: /work }
+            # Общий с core-api том: воркер читает оригинал и пишет HLS в hls/{fileId}/.
+            - { name: files, mountPath: /data/files }
+      volumes:
+        # Scratch транскодирования (оригинал до 2 ГиБ + HLS). Размер ограничен, чтобы зависший
+        # FFmpeg не забил диск сервера. При превышении kubelet вытеснит под.
+        - name: work
+          emptyDir: { sizeLimit: 8Gi }
+        - name: files
+          persistentVolumeClaim: { claimName: files-data }

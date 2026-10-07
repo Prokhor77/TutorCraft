@@ -4,8 +4,13 @@ name: Deploy to Production
 # либо вручную. Собираем все четыре образа всегда: с кэшем слоёв неизменённые собираются за
 # секунды, а paths-filter поверх workflow_run — лишняя точка отказа.
 #
+# Выкладка в k3s на том же сервере (ADR-013): манифесты рендерятся и проверяются на раннере,
+# на сервер едет один YAML, его применяет infra/k8s/apply.sh под ServiceAccount с правами только
+# на namespace tutorcraft.
+#
 # Секреты репозитория:  PROD_HOST, PROD_USER, PROD_SSH_KEY, PROD_PATH (например /opt/tutorcraft),
-#                       GHCR_PULL_USER, GHCR_PULL_TOKEN (PAT с правом read:packages — для docker pull на сервере).
+#                       GHCR_PULL_USER, GHCR_PULL_TOKEN (PAT с правом read:packages — из него
+#                       apply.sh собирает imagePullSecret ghcr).
 # Переменные (vars):    PROD_WS_URL — адрес WebSocket для браузера, вшивается в бандл при сборке web.
 #                       Текущий деплой (голый IP, HTTP):  ws://91.149.179.186/ws
 #                       При переезде на домен с TLS:      wss://<домен>/ws
@@ -109,25 +114,42 @@ jobs:
         with:
           ref: ${{ needs.gate.outputs.ref }}
 
-      # Схемные ошибки compose ловим на раннере, а не на сервере с уже лежащим продом.
-      - name: Validate compose file
-        # Пустой .env: compose требует наличия файла из env_file даже для `config`.
-        run: |
-          touch .env
-          docker compose -f docker-compose.prod.yml -f docker-compose.ip.yml config -q
-        env:
-          POSTGRES_DB: x
-          POSTGRES_USER: x
-          POSTGRES_PASSWORD: x
-          REDIS_PASSWORD: x
-          MONGO_DB: x
-          S3_ENDPOINT: x
-          S3_BUCKET: x
-          S3_ACCESS_KEY: x
-          S3_SECRET_KEY: x
+      - uses: azure/setup-kubectl@v4
+        with: { version: v1.36.1 }
 
-      # Compose-файл и скрипт топиков всегда льём из репозитория: иначе правки лимитов/образов
-      # не доезжают до сервера до ручного git pull.
+      # Тег sha-<short> вычисляется так же, как в _build-image.yml. Образы с неизменяемым тегом
+      # (а не latest) дают kubelet повод перезапустить поды и позволяют откатиться `rollout undo`.
+      - name: Render manifests
+        id: render
+        run: |
+          tag="sha-$(git rev-parse --short=7 HEAD)"
+          infra/k8s/render.sh "$tag" > infra/k8s/tutorcraft.rendered.yaml
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      # Схемные ошибки ловим на раннере, а не на сервере с работающим продом. На сервере
+      # apply.sh дополнительно делает dry-run=server.
+      - name: Validate manifests
+        run: |
+          docker run --rm -i ghcr.io/yannh/kubeconform:v0.6.7 -strict -summary - < infra/k8s/tutorcraft.rendered.yaml
+
+      # В режиме deploy-only сборки не было: тег этого коммита мог не попасть в GHCR, и поды
+      # повисли бы в ImagePullBackOff. Проверяем заранее.
+      - uses: docker/login-action@v3
+        if: needs.gate.outputs.build != 'true'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check images exist
+        if: needs.gate.outputs.build != 'true'
+        run: |
+          for image in web core-api media-worker notifier; do
+            ref="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/tutorcraft-${image}:${{ steps.render.outputs.tag }}"
+            docker buildx imagetools inspect "$ref" >/dev/null || { echo "нет образа $ref: запустите Deploy с target=all"; exit 1; }
+          done
+
+      # Манифест и скрипты всегда льём из репозитория: иначе правки лимитов и образов не доезжают
+      # до сервера без ручного git pull.
       - name: Sync deploy files to server
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -136,7 +158,7 @@ jobs:
           key: ${{ secrets.PROD_SSH_KEY }}
           # nginx-конфиги — справочно, чтобы правки vhost доезжали до сервера вместе с релизом
           # (ставятся в /etc/nginx вручную, см. docs/deployment-ip.md).
-          source: "docker-compose.prod.yml,docker-compose.ip.yml,infra/kafka/create-topics.sh,infra/deploy/backup.sh,infra/deploy/nginx/tutorcraft-ip.conf,infra/deploy/nginx/tutorcraft-proxy.conf"
+          source: "infra/k8s/tutorcraft.rendered.yaml,infra/k8s/apply.sh,infra/deploy/backup.sh,infra/deploy/nginx/tutorcraft-ip.conf,infra/deploy/nginx/tutorcraft-domain-le.conf,infra/deploy/nginx/tutorcraft-proxy.conf"
           target: ${{ secrets.PROD_PATH }}
           overwrite: true
 
@@ -150,34 +172,10 @@ jobs:
           username: ${{ secrets.PROD_USER }}
           key: ${{ secrets.PROD_SSH_KEY }}
           envs: GHCR_PULL_USER,GHCR_PULL_TOKEN
+          # Хранилища (до 5 мин) + kafka-init (до 5 мин) + core-api (до 10 мин) + остальные.
+          command_timeout: 30m
           script: |
             set -e
             cd "${{ secrets.PROD_PATH }}"
-            test -f .env || { echo ".env отсутствует в $(pwd) — запустите infra/deploy/bootstrap-ip.sh"; exit 1; }
-            chmod +x infra/deploy/backup.sh
-
-            COMPOSE="docker compose -f docker-compose.prod.yml -f docker-compose.ip.yml"
-
-            # Логин под пользователем деплоя TutorCraft (свой ~/.docker/config.json):
-            # учётка confeek (admst-dz) в другом пользователе не затирается.
-            echo "$GHCR_PULL_TOKEN" | docker login ghcr.io -u "$GHCR_PULL_USER" --password-stdin
-
-            $COMPOSE pull
-            $COMPOSE up -d --remove-orphans
-
-            # Ждём healthcheck'и явно: `up --wait` по-разному трактует одноразовый kafka-init
-            # в разных версиях compose. core-api стартует до ~2 минут (Flyway + прогрев).
-            for svc in tutorcraft_core_api tutorcraft_web tutorcraft_notifier tutorcraft_media_worker; do
-              for attempt in $(seq 1 60); do
-                status=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$svc" 2>/dev/null || echo missing)
-                [ "$status" = "healthy" ] && { echo "$svc: healthy"; break; }
-                if [ "$attempt" = "60" ]; then
-                  echo "$svc не поднялся (status=$status)"
-                  docker logs --tail=100 "$svc" || true
-                  exit 1
-                fi
-                sleep 5
-              done
-            done
-            # Только dangling-слои; system prune запрещён — на хосте живут образы confeek.
-            docker image prune -f
+            chmod +x infra/k8s/apply.sh infra/deploy/backup.sh
+            infra/k8s/apply.sh

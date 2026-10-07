@@ -1,0 +1,115 @@
+# ClusterIP закреплён: host-nginx проксирует /storage/ прямо сюда (infra/deploy/nginx/tutorcraft-ip.conf),
+# минуя BFF Next.js. С хоста ClusterIP доступен через правила kube-proxy, а из интернета — нет:
+# в отличие от NodePort и hostPort, порт ни на одном интерфейсе не открывается.
+# 10.43.0.100–102 — нижняя «статическая» часть service-cidr: динамически k8s её почти не выдаёт.
+apiVersion: v1
+kind: Service
+metadata:
+  name: core-api
+  labels: { app.kubernetes.io/name: core-api, tutorcraft/tier: app }
+spec:
+  clusterIP: 10.43.0.102
+  selector: { app.kubernetes.io/name: core-api }
+  ports:
+    - { name: http, port: 8080, targetPort: http }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: core-api
+  labels: { app.kubernetes.io/name: core-api, tutorcraft/tier: app }
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  # Recreate, а не RollingUpdate: при раскатке два пода core-api по 1.5 ГБ жили бы одновременно,
+  # а на общем сервере с ~4.6 ГБ свободной RAM это риск OOM, в том числе для соседей. Цена —
+  # простой на время старта core-api (~1–2 минуты), как и при `compose up -d`. Когда появится
+  # память, достаточно перейти на RollingUpdate с maxUnavailable: 0. Миграции Flyway уже
+  # expand/contract и переживают две версии одновременно.
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app.kubernetes.io/name: core-api }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: core-api, tutorcraft/tier: app }
+      annotations:
+        # Хэш .env подставляет infra/k8s/apply.sh: правка .env перезапускает под без смены образа.
+        tutorcraft/env-sha: "__ENV_SHA__"
+    spec:
+      enableServiceLinks: false
+      automountServiceAccountToken: false
+      imagePullSecrets: [{ name: ghcr }]
+      terminationGracePeriodSeconds: 45
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      # После перезагрузки сервера все поды стартуют разом. Без ожидания core-api ушёл бы в
+      # CrashLoopBackOff с растущей паузой до 5 минут, пока поднимаются базы.
+      initContainers:
+        - name: wait-for-deps
+          image: busybox:1.37
+          command:
+            - sh
+            - -c
+            - >-
+              until nc -z -w 2 postgres 5432 && nc -z -w 2 mongo-0.mongo 27017 &&
+              nc -z -w 2 redis 6379 && nc -z -w 2 kafka 9092;
+              do echo "waiting for postgres, mongo, redis, kafka"; sleep 3; done
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { cpu: 100m, memory: 32Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+      containers:
+        - name: core-api
+          image: ghcr.io/prokhor77/tutorcraft-core-api:latest
+          # Явный -Xmx предсказуемее, чем MaxRAMPercentage из ENTRYPOINT образа. Остаток лимита
+          # 1.5 ГБ уходит на metaspace, потоки и off-heap клиентов Kafka и Mongo.
+          # Лимит памяти и -Xmx меняются только вместе.
+          command: ["java", "-Xms256m", "-Xmx1g", "-XX:+ExitOnOutOfMemoryError", "-jar", "/app/app.jar"]
+          envFrom:
+            - secretRef: { name: tutorcraft-env }
+          env:
+            - { name: SPRING_PROFILES_ACTIVE, value: prod }
+            - { name: POSTGRES_HOST, value: postgres }
+            - { name: POSTGRES_PORT, value: "5432" }
+            - name: MONGO_DB
+              valueFrom: { secretKeyRef: { name: tutorcraft-env, key: MONGO_DB } }
+            - { name: MONGO_URI, value: "mongodb://mongo-0.mongo:27017/$(MONGO_DB)?replicaSet=rs0" }
+            - { name: REDIS_HOST, value: redis }
+            - { name: REDIS_PORT, value: "6379" }
+            - { name: KAFKA_BOOTSTRAP, value: "kafka:9092" }
+            - { name: SEED_DEMO_DATA, value: "false" }
+            # STORAGE_DRIVER берётся из .env (по умолчанию local). Каталог — том files-data.
+            - { name: STORAGE_LOCAL_ROOT, value: /data/files }
+          ports:
+            - { name: http, containerPort: 8080 }
+          # Flyway и прогрев на холодном старте занимают до ~2 минут. startupProbe даёт до 5 минут
+          # и не даёт liveness убить под во время миграции.
+          startupProbe:
+            httpGet: { path: /health/live, port: http }
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: { path: /health/ready, port: http }
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet: { path: /health/live, port: http }
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests: { cpu: 250m, memory: 768Mi }
+            limits: { cpu: "2", memory: 1536Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: files, mountPath: /data/files }
+      volumes:
+        - name: files
+          persistentVolumeClaim: { claimName: files-data }

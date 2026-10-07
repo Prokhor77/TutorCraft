@@ -1,29 +1,53 @@
-# Развёртывание TutorCraft на 91.149.179.186 (голый IP, HTTP)
+# Развёртывание TutorCraft на 91.149.179.186 (голый IP, HTTP, k3s)
 
-Сценарий: приложение открывается по `http://91.149.179.186`, домена и TLS нет, внешний S3 не
-подключён, почта — через обычный ящик с паролем приложения (§6.2). Сервер общий с confeek — всё ниже сделано так, чтобы соседа не задеть.
+Сценарий: приложение открывается по `http://91.149.179.186`, домена и TLS нет, файлы лежат на
+диске сервера, почта — через обычный ящик с паролем приложения (§6.2). Сервер общий с confeek и
+crm. Всё ниже сделано так, чтобы соседей не задеть.
+
+TutorCraft работает в **k3s** (ADR-013): все восемь компонентов — от PostgreSQL до web — поды в
+namespace `tutorcraft`. Соседи остаются в Docker, перед всеми по-прежнему стоит host-nginx.
 
 Вариант с доменом, Cloudflare и внешним S3 описан отдельно в [`deployment.md`](deployment.md).
 
-> **Файлы временно хранятся на диске сервера** (`STORAGE_DRIVER=local`, с 2026-09-29). SeaweedFS
-> больше не поднимается: загруженные файлы и HLS лежат в docker-volume `file-storage`
-> (`/data/files` в core-api и media-worker). Браузер грузит и скачивает их через core-api по
-> подписанным ссылкам `/storage/{key}?…&sig=…` (HMAC от `JWT_SECRET`, срок — как у pre-signed
-> URL S3); публичен только префикс `hls/`. См. §6.1 — после первого деплоя с этим изменением
-> нужно один раз обновить nginx. Переезд на S3 — `STORAGE_DRIVER=s3` и `S3_*` в `.env`.
-
 ---
 
-## 0. Что изменилось в репозитории под этот сценарий
+## 0. Что лежит в репозитории
 
 | Файл | Что делает |
 |---|---|
-| `docker-compose.ip.yml` | оверлей к `docker-compose.prod.yml`: публикует core-api на `127.0.0.1:3180` для `/storage/`, лимиты под сервер |
-| `infra/deploy/nginx/tutorcraft-ip.conf` | vhost на IP: лимиты запросов, блокировка сканеров, `location /storage/` → core-api (файлы до 2 ГиБ) |
-| `infra/deploy/nginx/tutorcraft-proxy.conf` | общий сниппет proxy-заголовков |
-| `infra/deploy/bootstrap-ip.sh` | одноразовая подготовка сервера (пользователь, `.env`, vhost) |
-| `services/core-api/.../application-prod.yml` | выключены Swagger, OpenAPI и `/actuator`; таймауты Tomcat; доверие `X-Forwarded-*` только прокси |
-| `.github/workflows/e2e.yml` | e2e вынесен из `ci` — иначе автодеплой не запускался бы (см. §5) |
+| `infra/k8s/app/` | манифесты стека (Kustomize): хранилища, Job с топиками Kafka, четыре сервиса, NetworkPolicy |
+| `infra/k8s/cluster/` | namespace, PersistentVolume на `/opt/tutorcraft/data/*`, ServiceAccount деплоя. Применяет root один раз |
+| `infra/k8s/render.sh` | рендер манифестов с тегом образа (CI) |
+| `infra/k8s/apply.sh` | применение на сервере: секреты из `.env` → хранилища → топики → приложения |
+| `infra/deploy/k3s/` | `config.yaml` k3s и правило `tutorcraft-k3s-guard`, закрывающее порты k3s снаружи |
+| `infra/deploy/bootstrap-ip.sh` | одноразовая подготовка сервера: пользователь, `.env`, k3s, kubeconfig, vhost |
+| `infra/deploy/nginx/tutorcraft-ip.conf` | vhost на IP: лимиты запросов, блокировка сканеров, `/storage/` → core-api |
+| `infra/deploy/backup.sh` | ежедневный дамп PostgreSQL и MongoDB через `kubectl exec` |
+
+### Как устроено
+
+```
+посетитель → host-nginx :80 ─┬─ /          → 10.43.0.100:3000  (Service web)
+                             ├─ /ws        → 10.43.0.101:8090  (Service notifier)
+                             └─ /storage/  → 10.43.0.102:8080  (Service core-api)
+                                    k3s, namespace tutorcraft:
+                                    web → core-api → postgres-0, mongo-0, redis, kafka-0
+                                    media-worker, notifier ↔ kafka-0
+```
+
+- **Наружу не открыт ни один порт приложения.** nginx ходит в закреплённые ClusterIP сервисов:
+  с хоста они доступны через правила kube-proxy, из интернета — нет. Это строже прежней схемы
+  с `127.0.0.1:3100` и подобными портами.
+- **Встроенные Traefik и ServiceLB выключены**: 80/443 остаются за host-nginx и соседями.
+- **Порты самого k3s** (API 6443, kubelet 10250, kube-proxy 10256) слушают все интерфейсы. Снаружи
+  их закрывает точечное правило `tutorcraft-k3s-guard` (systemd-юнит), UFW не трогается.
+- **Данные** — обычные каталоги `/opt/tutorcraft/data/{postgres,mongo,kafka,files}`, подключённые
+  как PersistentVolume с `Retain`. Удаление подов, PVC и даже namespace их не стирает.
+- **Деплой** идёт под ServiceAccount `deployer` с ролью `admin` только в namespace `tutorcraft`.
+  Раньше пользователь `tutorcraft` был в группе `docker`, а это root на всём сервере. Pod Security
+  `baseline` не даёт обойти ограничение через hostPath или privileged-под.
+- **Порядок старта** вместо `depends_on`: `apply.sh` поднимает хранилища, ждёт Job `kafka-init`
+  и только потом приложения. После перезагрузки сервера init-контейнеры ждут свои зависимости по TCP.
 
 ---
 
@@ -31,27 +55,26 @@
 
 | Проверка | Результат |
 |---|---|
-| Кто на :80 и :443 | host-nginx 1.24.0 (Ubuntu) — схема с `127.0.0.1`-портами подходит |
-| Порты 9000, 3100, 8190, 9100, 5434 | свободны (`spruzhuk_minio 9000/tcp` — внутренний порт контейнера, на хост не опубликован) |
+| Кто на :80 и :443 | host-nginx 1.24.0 (Ubuntu) |
 | Занято соседями | `:8080` confeek (`spruzhuk_app`), `:8082` `crm-crm-1`, `:5433` `spruzhuk_db` |
 | Память | 7.9 ГБ всего, 3.2 ГБ занято, **4.6 ГБ available, swap = 0** |
 | Соседей на хосте | **два**: confeek (`spruzhuk_*`) и crm |
 
-Вывод по памяти: базовые лимиты `docker-compose.prod.yml` дают потолок ≈6.7 ГБ — это больше,
-чем есть. В `docker-compose.ip.yml` они урезаны до **≈5.4 ГБ** (postgres/mongo 512M, kafka и
-media-worker 768M, SeaweedFS 512M). Лимит — потолок, а не резерв: в покое стек занимает ~2.5 ГБ.
-
-Но при нулевом swap любой пик (транскодирование видео + прогрев JVM) упирается в OOM-killer
-сразу, а он выбирает жертву по объёму памяти, а не по владельцу — упасть может и confeek.
-Поэтому swap ниже обязателен.
+**Память.** Сумма лимитов подов ≈ 5.0 ГБ (postgres и mongo по 512M, redis 192M, kafka 768M,
+core-api 1.5G, media-worker 768M, notifier 256M, web 512M) — столько же, сколько было в compose.
+Сверху добавляется сам k3s: ~0.5–0.7 ГБ на API-сервер, kubelet, containerd, coredns и
+metrics-server. В покое стек займёт ~3 ГБ против ~2.5 ГБ в compose. Лимит — потолок, а не резерв.
+При нулевом swap любой пик (транскодирование видео + прогрев JVM) сразу упирается в OOM-killer,
+а тот выбирает жертву по объёму памяти, а не по владельцу: упасть может и confeek. **Swap из §3.1
+обязателен.**
 
 Если состав хоста изменится, перепроверить:
 
 ```bash
-ss -ltnp | grep -E ':(80|443|9000|3100|8190)\b'
-free -h; df -h /var/lib/docker; nproc
+ss -ltnp | grep -E ':(80|443|6443|10250)\b'
+free -h; df -h /var/lib/rancher /opt/tutorcraft; nproc
+ip -4 route | grep -E '10\.4[23]\.'     # пусто: сети k3s не пересекаются с Docker соседей
 docker ps --format '{{.Names}}\t{{.Ports}}'
-ufw status
 ```
 
 `default_server` у соседа помехой не является: точное совпадение `server_name 91.149.179.186`
@@ -72,11 +95,7 @@ GitHub `PROD_SSH_KEY` целиком, вместе со строками `-----B
 
 ## 3. Подготовка сервера (один раз, от root)
 
-### 3.1. Swap — сделать ДО первого деплоя
-
-На сервере 7.9 ГБ RAM, три приложения и ноль swap. Это единственное изменение, которое стоит
-внести на уровне хоста, и оно защищает все три приложения сразу: вместо мгновенного убийства
-процесса ядро вытеснит холодные страницы на диск.
+### 3.1. Swap — сделать ДО установки k3s
 
 ```bash
 fallocate -l 4G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
@@ -85,30 +104,43 @@ sysctl -w vm.swappiness=10 && echo 'vm.swappiness=10' > /etc/sysctl.d/99-swappin
 free -h                                               # Swap: 4.0Gi
 ```
 
-`swappiness=10` — не гонять в swap то, что активно используется; своп нужен как подушка на пике,
-а не как штатный режим. Если `/` мало места, положите файл на раздел посвободнее (`df -h`).
+`swappiness=10`: не гонять в swap то, что активно используется. Swap — подушка на пике, а не
+штатный режим. k3s со swap работает: `fail-swap-on=false` у него по умолчанию.
 
-Откатывается одной командой: `swapoff /swapfile && rm /swapfile` (и убрать строку из `/etc/fstab`).
+Откат: `swapoff /swapfile && rm /swapfile` и убрать строку из `/etc/fstab`.
 
-### 3.2. Пользователь, `.env`, vhost
+### 3.2. Bootstrap: пользователь, `.env`, k3s, vhost
 
-Скопируйте три файла на сервер и запустите bootstrap:
+Скопируйте на сервер **весь каталог `infra/`** и публичный ключ деплоя:
 
 ```bash
-scp infra/deploy/bootstrap-ip.sh infra/deploy/nginx/tutorcraft-ip.conf \
-    infra/deploy/nginx/tutorcraft-proxy.conf ~/.ssh/tutorcraft_deploy.pub \
-    root@91.149.179.186:/tmp/
+scp -r infra root@91.149.179.186:/tmp/tutorcraft-infra
 ```
 
 ```bash
-cd /tmp && bash bootstrap-ip.sh tutorcraft_deploy.pub
+scp ~/.ssh/tutorcraft_deploy.pub root@91.149.179.186:/tmp/
 ```
 
-Скрипт идемпотентен: заводит пользователя `tutorcraft`, создаёт `/opt/tutorcraft` и `.env` со
-случайными секретами, ставит vhost и перезагружает nginx **только после успешного `nginx -t`**.
-Существующий `.env` он не перезаписывает, контейнеры и конфиги confeek не трогает.
+На сервере:
 
-Пароль администратора он на экран не печатает (чтобы не осел в истории терминала):
+```bash
+bash /tmp/tutorcraft-infra/deploy/bootstrap-ip.sh /tmp/tutorcraft_deploy.pub
+```
+
+Скрипт идемпотентен. По шагам он:
+
+1. заводит пользователя `tutorcraft` **без** группы `docker`;
+2. создаёт `/opt/tutorcraft`, каталоги данных и `.env` со случайными секретами;
+3. ставит `tutorcraft-k3s-guard`, затем k3s (канал stable, конфиг из `infra/deploy/k3s/config.yaml`);
+4. применяет namespace, PersistentVolume и RBAC деплоя;
+5. собирает `/home/tutorcraft/.kube/config` с правами только на namespace `tutorcraft`;
+6. ставит vhost nginx и перезагружает его **только после успешного `nginx -t`**.
+
+Существующие `.env` и k3s он не трогает. Docker, контейнеры и конфиги соседей тоже.
+
+Версию k3s можно закрепить: `INSTALL_K3S_VERSION=v1.xx.y+k3s1 bash …/bootstrap-ip.sh …`.
+
+Пароль администратора скрипт на экран не печатает, чтобы тот не осел в истории терминала:
 
 ```bash
 sudo grep ADMIN_PASSWORD /opt/tutorcraft/.env
@@ -116,13 +148,133 @@ sudo grep ADMIN_PASSWORD /opt/tutorcraft/.env
 
 Сохраните весь `/opt/tutorcraft/.env` в менеджер паролей: `DATA_ENCRYPTION_KEY` расшифровывает
 секреты интеграций в БД, без него резервная копия базы бесполезна. Менять его после первого
-запуска нельзя, `JWT_SECRET` — разлогинит всех.
+запуска нельзя. Смена `JWT_SECRET` разлогинит всех.
+
+Проверка:
+
+```bash
+k3s kubectl get nodes                                  # Ready
+systemctl is-active tutorcraft-k3s-guard               # active
+iptables -S INPUT | grep tutorcraft-k3s-guard          # правило DROP на 6443,10250,10256
+sudo -iu tutorcraft kubectl get pods                   # No resources found — доступ есть
+sudo -iu tutorcraft kubectl get pods -n kube-system    # Forbidden — и это правильно
+```
+
+### 3.3. Переезд с docker compose (один раз, если стек уже работал в compose)
+
+Порядок важен: базы нельзя восстанавливать поверх работающего core-api. Простой — от остановки
+compose (шаг 1) до проверки (шаг 8), обычно 15–30 минут.
+
+> После мержа ветки с k3s автодеплой упадёт на шаге `apply.sh` с сообщением «kubectl не найден»:
+> k3s ещё не установлен. Это ожидаемо, compose-стек он не трогает. Но `scp` в том же деплое
+> заменит `infra/deploy/backup.sh` на версию для k3s, и ночной бэкап compose-стека перестанет
+> работать. Проводите переезд в тот же день.
+
+**1. Остановить запись и дождаться воркеров** (от root):
+
+```bash
+docker stop tutorcraft_web tutorcraft_core_api
+docker logs --since 5m tutorcraft_media_worker   # дождаться конца транскодирования, если оно идёт
+docker stop tutorcraft_media_worker tutorcraft_notifier
+```
+
+Kafka не переносится. Всё, что core-api не успел опубликовать, лежит в таблице `outbox` в
+PostgreSQL (ADR-005), и `OutboxRelay` отправит это в новый брокер после переезда.
+
+**2. Снять дампы:**
+
+```bash
+install -d -m 750 -o tutorcraft -g tutorcraft /opt/tutorcraft/migration
+cd /opt/tutorcraft/migration
+docker exec tutorcraft_postgres sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc --no-owner' > pg.dump
+docker exec tutorcraft_mongo mongodump --quiet --archive --gzip > mongo.archive.gz
+chown tutorcraft:tutorcraft pg.dump mongo.archive.gz
+ls -lh                                           # оба файла не нулевые
+```
+
+**3. Остановить старый стек, не удаляя тома** (они — путь отката):
+
+```bash
+cd /opt/tutorcraft
+docker compose -f docker-compose.prod.yml -f docker-compose.ip.yml stop
+```
+
+Compose-файлы на сервере остаются: `scp` из деплоя файлы не удаляет.
+
+**4. Bootstrap** (§3.2). vhost nginx переключится на ClusterIP, и до шага 6 сайт отдаёт 502.
+
+**5. Перенести загруженные файлы:**
+
+```bash
+src=$(docker volume inspect -f '{{.Mountpoint}}' tutorcraft_file-storage)
+cp -a "$src/." /opt/tutorcraft/data/files/
+chown -R 10001:10001 /opt/tutorcraft/data/files
+du -sh "$src" /opt/tutorcraft/data/files         # размеры совпадают
+```
+
+**6. Первый деплой:** GitHub → Actions → **Deploy to Production** → Run workflow → `all`.
+Поды поднимутся на пустых базах, core-api прогонит Flyway и создаст администратора. Это
+временно: шаг 7 заменит базы дампами.
+
+**7. Восстановить базы** (под `tutorcraft`):
+
+```bash
+sudo -iu tutorcraft
+k() { kubectl -n tutorcraft "$@"; }
+k scale deployment core-api media-worker notifier web --replicas=0
+
+k exec postgres-0 -- sh -c 'dropdb -U "$POSTGRES_USER" --force "$POSTGRES_DB" && createdb -U "$POSTGRES_USER" "$POSTGRES_DB"'
+k exec -i postgres-0 -- sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --no-owner --exit-on-error' \
+  < /opt/tutorcraft/migration/pg.dump
+# tutorcraft — значение MONGO_DB из .env
+k exec -i mongo-0 -- mongorestore --quiet --archive --gzip --drop --nsInclude='tutorcraft.*' \
+  < /opt/tutorcraft/migration/mongo.archive.gz
+
+cd /opt/tutorcraft && infra/k8s/apply.sh     # вернёт replicas: 1 и дождётся раскатки
+```
+
+**8. Проверить:** вход под существующей учётной записью, открыть курс с файлом и с видео (HLS),
+загрузить новый файл. Дальше — проверки из §6.
+
+**9. Уборка — через неделю стабильной работы** (от root):
+
+```bash
+cd /opt/tutorcraft
+docker compose -f docker-compose.prod.yml -f docker-compose.ip.yml down      # БЕЗ -v
+docker volume rm tutorcraft_pg-data tutorcraft_mongo-data tutorcraft_kafka-data \
+                 tutorcraft_media-scratch tutorcraft_file-storage            # только свои тома, по именам
+docker image ls 'ghcr.io/prokhor77/tutorcraft-*' -q | xargs -r docker image rm
+rm -f docker-compose.prod.yml docker-compose.ip.yml infra/kafka/create-topics.sh
+gpasswd -d tutorcraft docker && rm -f /home/tutorcraft/.docker/config.json
+rm -rf /opt/tutorcraft/migration
+```
+
+**Откат, если на шагах 4–8 что-то пошло не так:** k3s останавливается, старый стек поднимается
+с теми же томами. Данные, записанные уже в k3s, при этом теряются.
+
+```bash
+systemctl stop k3s && /usr/local/bin/k3s-killall.sh        # поды и сетевые правила k3s
+cd /opt/tutorcraft
+docker compose -f docker-compose.prod.yml -f docker-compose.ip.yml start
+```
+
+Затем вернуть vhost со старыми upstream `127.0.0.1:3100/8190/3180`. На сервере git нет, поэтому
+файл берётся из локального клона, из коммита до ADR-013:
+
+```bash
+git show <коммит-до-k3s>:infra/deploy/nginx/tutorcraft-ip.conf \
+  | ssh root@91.149.179.186 'cat > /etc/nginx/sites-available/tutorcraft.conf && nginx -t && systemctl reload nginx'
+```
+
+`k3s-killall.sh` убирает из iptables только цепочки `KUBE-*`, `CNI-*` и flannel, правила Docker
+соседей остаются. Полное удаление k3s — `/usr/local/bin/k3s-uninstall.sh`. Каталоги
+`/opt/tutorcraft/data` он не трогает.
 
 ---
 
 ## 4. Настройки GitHub (Settings → Secrets and variables → Actions)
 
-**Secrets:**
+**Secrets** — те же, что и до k3s:
 
 | Секрет | Значение |
 |---|---|
@@ -131,7 +283,7 @@ sudo grep ADMIN_PASSWORD /opt/tutorcraft/.env
 | `PROD_SSH_KEY` | приватный ключ `tutorcraft_deploy` целиком |
 | `PROD_PATH` | `/opt/tutorcraft` |
 | `GHCR_PULL_USER` | `Prokhor77` |
-| `GHCR_PULL_TOKEN` | classic PAT **только** с правом `read:packages` |
+| `GHCR_PULL_TOKEN` | classic PAT **только** с правом `read:packages`. Из него `apply.sh` собирает imagePullSecret `ghcr` |
 
 **Variables:**
 
@@ -140,8 +292,8 @@ sudo grep ADMIN_PASSWORD /opt/tutorcraft/.env
 | `PROD_WS_URL` | `ws://91.149.179.186/ws` |
 | `PROD_S3_ORIGIN` | `http://91.149.179.186:9000` |
 
-Обе вшиваются в JS-бандл при сборке образа и попадают в CSP. Пустой `PROD_S3_ORIGIN` = браузер
-заблокирует загрузку файлов; неверная схема в `PROD_WS_URL` = не будет живых уведомлений.
+Обе вшиваются в JS-бандл при сборке образа и попадают в CSP. Неверная схема в `PROD_WS_URL` —
+не будет живых уведомлений.
 
 ---
 
@@ -156,62 +308,63 @@ sudo grep ADMIN_PASSWORD /opt/tutorcraft/.env
 а сверка OpenAPI при отсутствии базового файла не валит сборку, а публикует сгенерированную
 спецификацию артефактом `openapi-spec` — скачать и закоммитить в `docs/api/openapi.json`.
 
-Сборка core-api проверена локально: **463 юнит-теста + ArchUnit проходят** (Maven 3.9, JDK 21).
-Запись в `docs/ROADMAP.md` о том, что Maven ни разу не запускался, больше не актуальна.
-
 ---
 
-## 6. Первый деплой
+## 6. Деплой и проверка
 
-GitHub → Actions → **Deploy to Production** → Run workflow → `all`.
+GitHub → Actions → **Deploy to Production** → Run workflow → `all`. Дальше каждый push в `main`
+→ зелёный `ci` → автодеплой.
 
-Workflow соберёт четыре образа в GHCR, зальёт compose-файлы и скрипты в `/opt/tutorcraft`,
-сделает `pull`, `up -d` и дождётся `healthy` у core-api, web, notifier и media-worker.
-Дальше каждый push в `main` → зелёный `ci` → автодеплой.
+Что делает workflow:
 
-Проверка:
+1. собирает четыре образа в GHCR (`latest` и `sha-<commit>`);
+2. рендерит манифесты с тегом `sha-<commit>` и проверяет их kubeconform;
+3. копирует `tutorcraft.rendered.yaml`, `apply.sh`, `backup.sh` и vhost в `/opt/tutorcraft`;
+4. запускает `infra/k8s/apply.sh`: Secret из `.env` → хранилища → `kafka-init` → приложения, и
+   ждёт каждую раскатку. При провале печатает `describe` и логи упавшего объекта.
+
+core-api раскатывается с **простоем ~1–2 минуты** (стратегия `Recreate`): два пода по 1.5 ГБ
+одновременно этот сервер не выдержит. web и notifier обновляются без простоя.
+
+Проверка (под `tutorcraft`):
 
 ```bash
-cd /opt/tutorcraft
-docker compose -f docker-compose.prod.yml -f docker-compose.ip.yml ps
-curl -sI http://91.149.179.186/ | head -1          # 200
-curl -sI http://91.149.179.186/api/v1/openapi.json | head -1   # 404 — спецификация закрыта
-curl -sI https://confeek.com/ | head -1            # соседа не задели
-docker stats --no-stream
-free -h                                            # available не должен уйти ниже ~1 ГБ
+sudo -iu tutorcraft
+kubectl get pods                    # всё Running/Ready, kafka-init — Completed
+curl -sI http://91.149.179.186/ | head -1                       # 200
+curl -sI http://91.149.179.186/api/v1/openapi.json | head -1    # 404 — спецификация закрыта
+curl -sI https://confeek.com/ | head -1                         # соседа не задели
 ```
 
-Первые пару дней стоит поглядывать на память — стек соседствует с двумя чужими приложениями:
+Снаружи (со своей машины) порты k3s должны быть закрыты:
 
 ```bash
-free -h; docker stats --no-stream --format '{{.Name}}\t{{.MemUsage}}'
+nc -zv -w 3 91.149.179.186 6443
+```
+
+То же для 10250: обе команды должны завершиться таймаутом.
+
+Первые дни поглядывайте на память (от root: у `deployer` нет прав на метрики узла):
+
+```bash
+free -h; k3s kubectl top node; k3s kubectl top pods -n tutorcraft
 dmesg -T | grep -i 'killed process' | tail          # пусто = OOM-killer не срабатывал
 ```
 
 Если `available` регулярно уходит ниже 1 ГБ — снижать `core-api` (лимит **и** `-Xmx` в
-`entrypoint`, они должны меняться вместе) либо добавлять RAM.
+`infra/k8s/app/core-api.yaml`, они меняются вместе) либо добавлять RAM.
 
 В браузере: `http://91.149.179.186` → вход под `ADMIN_EMAIL` / `ADMIN_PASSWORD` → создание курса.
 
----
+### 6.1. Файлы на диске сервера
 
+`STORAGE_DRIVER=local`: загруженные файлы и HLS лежат в `/opt/tutorcraft/data/files`. Это том
+`files-data`, общий для core-api и media-worker; оба пишут под UID 10001. Браузер грузит и
+скачивает их через core-api по подписанным ссылкам `/storage/{key}?…&sig=…` (HMAC от
+`JWT_SECRET`). Публичен только префикс `hls/`. nginx проводит `/storage/` прямо в core-api,
+минуя BFF Next.js: через него 2-гигабайтные видео упёрлись бы в лимиты и таймауты Node.
 
-### 6.1. Переход на локальное хранилище файлов (один раз)
-
-Деплой сам уберёт контейнеры SeaweedFS (`--remove-orphans`) и поднимет volume `file-storage`.
-nginx обновляется вручную — без этого файлы > 25 МБ не загрузятся (запросы `/storage/` пойдут
-через Next.js с лимитом `client_max_body_size 25m`):
-
-```bash
-cd /opt/tutorcraft
-sudo cp infra/deploy/nginx/tutorcraft-ip.conf /etc/nginx/sites-available/tutorcraft.conf
-sudo nginx -t && sudo systemctl reload nginx
-sudo nginx -T 2>/dev/null | grep -c 'location ^~ /storage/'   # 1 — новый vhost активен
-```
-
-Файлы, загруженные раньше в SeaweedFS, остаются в volume `tutorcraft_s3-data` и в новом
-хранилище не видны. Бэкап (`infra/deploy/backup.sh`) volume `file-storage` не копирует —
-при необходимости снимайте его отдельно (`docker run --rm -v tutorcraft_file-storage:/d …`).
+Переезд на S3 — `STORAGE_DRIVER=s3` и `S3_*` в `.env`, затем `infra/k8s/apply.sh`.
 
 ### 6.2. Почта: письма-приглашения и сброс пароля
 
@@ -226,21 +379,23 @@ sudo nginx -T 2>/dev/null | grep -c 'location ^~ /storage/'   # 1 — новый
 | Mail.ru | `smtp.mail.ru` | `465` | адрес ящика / пароль для внешних приложений | — |
 
 `SMTP_FROM` — тот же адрес, что и `SMTP_USERNAME`, с именем: `TutorCraft <you@gmail.com>`.
-Пароль приложения — это ключ от ящика: храните его только в `/opt/tutorcraft/.env` (и в
+Пароль приложения — это ключ от ящика. Храните его только в `/opt/tutorcraft/.env` (и в
 менеджере паролей), не в репозитории и не в GitHub Variables.
 
 ```bash
-sudo -u tutorcraft nano /opt/tutorcraft/.env      # заполнить SMTP_HOST/PORT/USERNAME/PASSWORD/FROM
-cd /opt/tutorcraft
-sudo -u tutorcraft docker compose -f docker-compose.prod.yml -f docker-compose.ip.yml up -d notifier
-docker logs tutorcraft_notifier 2>&1 | grep 'notifier started'   # должно быть "email":true
+sudo -iu tutorcraft
+nano /opt/tutorcraft/.env          # SMTP_HOST/PORT/USERNAME/PASSWORD/FROM, без кавычек
+cd /opt/tutorcraft && infra/k8s/apply.sh     # новый .env → Secret → перезапуск подов
+kubectl logs deploy/notifier | grep 'notifier started'   # должно быть "email":true
 ```
 
-Проверка: пригласите в курс свой второй адрес. Если письма нет — `docker logs tutorcraft_notifier`
-покажет код ответа SMTP (`535` — неверный пароль приложения, `connect: … timeout` — хостер
-закрыл исходящий порт; попробуйте `587`). Ссылки в письме ведут на `http://91.149.179.186`, поэтому
-первое письмо почтовик может положить в «Спам» — отметьте «Не спам». Когда появится домен, лучше
-перейти на транзакционный сервис (Unisender Go, Brevo, Postmark) с SPF/DKIM на домене.
+Проверка: пригласите в курс свой второй адрес. Если письма нет, `kubectl logs deploy/notifier`
+покажет код ответа SMTP: `535` — неверный пароль приложения, `connect: … timeout` — хостер
+закрыл исходящий порт (попробуйте `587`). Ссылки в письме ведут на `http://91.149.179.186`,
+поэтому первое письмо почтовик может положить в «Спам» — отметьте «Не спам». Когда появится
+домен, лучше перейти на транзакционный сервис (Unisender Go, Brevo, Postmark) с SPF/DKIM на домене.
+
+---
 
 ## 7. Что сделано для защиты
 
@@ -259,40 +414,45 @@ docker logs tutorcraft_notifier 2>&1 | grep 'notifier started'   # должно 
 **На уровне приложения:**
 
 - профиль `prod` выключает Swagger UI, генерацию OpenAPI и HTTP-доступ к `/actuator/**`
-  (healthcheck'и работают через собственный `HealthController`, минуя web-слой Actuator);
-- `X-Forwarded-For` принимается только от loopback и докер-сетей — иначе клиент подделал бы
-  заголовок и обошёл троттлинг входа, подставляя на каждую попытку новый IP;
-- CSP `connect-src` сужен до своего origin, сокета и S3: раньше он разрешал `http:`/`https:`,
-  то есть внедрённый скрипт мог бы отправить сессию на любой хост;
-- `console.*` вырезается из клиентского бандла (кроме `console.error`);
-- source maps не публикуются.
+  (пробы k8s ходят в собственный `HealthController`, минуя web-слой Actuator);
+- `X-Forwarded-For` принимается только от loopback и внутренних сетей (`10/8` покрывает поды и
+  адрес узла k3s). Иначе клиент подделал бы заголовок и обошёл троттлинг входа, подставляя на
+  каждую попытку новый IP;
+- CSP `connect-src` сужен до своего origin, сокета и S3;
+- `console.*` вырезается из клиентского бандла (кроме `console.error`), source maps не публикуются.
 
-**На уровне контейнеров:**
+**На уровне k3s:**
 
-- `no-new-privileges` у всех, `cap_drop: ALL` у четырёх контейнеров приложения (все они уже
-  работают под non-root);
-- наружу открыты только `127.0.0.1:3100`, `127.0.0.1:8190`, `127.0.0.1:3180` и `127.0.0.1:5434` —
-  публикация без `127.0.0.1:` обошла бы UFW через цепочку `DOCKER-USER`;
-- без подписи отдаётся только префикс `hls/`, остальные файлы — по подписанным ссылкам
-  `/storage/…` с ограниченным сроком; ответы `/storage/` идут с CSP `default-src 'none'`.
+- порты приложения не открыты ни на одном интерфейсе: nginx → ClusterIP;
+- API, kubelet и kube-proxy закрыты снаружи правилом `tutorcraft-k3s-guard`, flannel в режиме
+  `host-gw` (без UDP 8472 наружу);
+- деплой и бэкап — под ServiceAccount с правами только на namespace, без группы `docker`;
+- Pod Security `baseline` на namespace: никаких hostPath, privileged, hostNetwork в подах;
+- `seccompProfile: RuntimeDefault` у всех подов, `allowPrivilegeEscalation: false` у всех
+  контейнеров, `capabilities: drop [ALL]` у приложений, Redis, Kafka и init-контейнеров
+  (postgres и mongo без них не сменят пользователя на старте);
+- NetworkPolicy: PostgreSQL и Redis принимают только core-api, Kafka — только сервисы и
+  `kafka-init`;
+- Secret `tutorcraft-env` (весь `.env`) в базе k3s зашифрован (`secrets-encryption`);
+- токен ServiceAccount не монтируется ни в один под (`automountServiceAccountToken: false`);
+- без подписи отдаётся только префикс `hls/`, ответы `/storage/` идут с CSP `default-src 'none'`.
 
 ### Что защитой **не** закрыто
 
 1. **Трафик идёт открытым текстом.** Это прямое следствие выбора «голый IP без TLS»: пароли,
    access-токен и refresh-cookie видны любому на пути (Wi-Fi, провайдер, хостер). `COOKIE_SECURE`
    вынужденно `false`, иначе браузер выбросит cookie и вход будет слетать каждые 15 минут.
-   Пока по IP ходят только вы — терпимо; перед тем как пускать учеников, нужен домен с TLS
-   (это меняется в трёх строках `.env` и одной переменной `PROD_WS_URL`).
+   Перед тем как пускать учеников, нужен домен с TLS.
 2. **`script-src` содержит `'unsafe-inline'`** — inline-бутстрап Next.js. Nonce-based CSP числится
-   в TODO `apps/web/README.md` и требует отдельной работы.
-3. **Группа `docker` равносильна root.** Отдельный пользователь `tutorcraft` нужен из-за
-   `~/.docker/config.json` (одна учётка GHCR на пользователя), изоляцией от confeek он не является.
+   в TODO `apps/web/README.md`.
+3. **root на сервере по-прежнему видит всё**, включая `/opt/tutorcraft/.env` и kubeconfig
+   администратора k3s `/etc/rancher/k3s/k3s.yaml`. Изоляция защищает от утечки ключа деплоя,
+   а не от root.
 
 ### Опционально: UFW и fail2ban
 
-Сервер общий с двумя чужими приложениями, поэтому автоматически я это не включаю — неверное
-правило отрежет confeek или crm. Пока файлы хранятся на диске, отдельный порт 9000 не нужен:
-всё идёт через `:80` (правило `ufw allow 9000/tcp`, если оно было, можно удалить).
+Сервер общий с двумя чужими приложениями, поэтому автоматически это не включается: неверное
+правило отрежет confeek или crm. Наружу TutorCraft нужен только порт 80.
 
 fail2ban по логам nginx (`/var/log/nginx/tutorcraft.access.log`) имеет смысл ставить после того,
 как вы увидите реальный профиль атак — до этого лимитов nginx достаточно.
@@ -301,47 +461,77 @@ fail2ban по логам nginx (`/var/log/nginx/tutorcraft.access.log`) имее
 
 ## 8. Обфускация: что реально сделано и почему не больше
 
-Запрос был «обфусцировать код». Честно о том, что здесь применимо:
-
 - **Java (core-api) и Go (воркеры) на клиент не уходят вообще.** Их байткод и бинарники лежат
   только в образах на сервере. Обфусцировать их — значит защищаться от того, у кого уже есть root
-  на хосте; на этом этапе он и так может всё. ProGuard поверх Spring Boot вдобавок ломает
-  рефлексию (Jackson, маппинг строк JDBC по именам, имена бинов) — это риск падения прода ради
-  нулевой выгоды, поэтому не делаю.
-- **Go-бинарники уже собираются с `-trimpath -ldflags="-s -w"`** — таблицы символов и пути сборки
-  вырезаны, это было в Dockerfile до меня.
+  на хосте. ProGuard поверх Spring Boot вдобавок ломает рефлексию (Jackson, маппинг строк JDBC
+  по именам, имена бинов): риск падения прода ради нулевой выгоды.
+- **Go-бинарники собираются с `-trimpath -ldflags="-s -w"`**: таблицы символов и пути сборки вырезаны.
 - **Клиентский JS — единственное, что действительно отдаётся пользователю.** Next.js в production
-  и так минифицирует и манглит имена. Что добавлено: отключены source maps (с ними минификация
-  обратима в один клик в devtools) и вырезан `console.*`.
+  минифицирует и манглит имена. Дополнительно отключены source maps и вырезан `console.*`.
 - **Убрана информация о внутреннем устройстве**: OpenAPI-спецификация, Swagger UI, `/actuator`,
   версия nginx, стектрейсы в ответах.
 
-Дальше по этой линии двигаться некуда без вреда: JS, исполняемый в браузере, принципиально
-доступен для чтения. Реальную защиту дают пункты §7, а не запутывание кода.
-
 ---
 
-## 9. Откат и эксплуатация
+## 9. Эксплуатация и откат
+
+Под пользователем `tutorcraft` (`sudo -iu tutorcraft`), namespace по умолчанию — `tutorcraft`:
 
 ```bash
-cd /opt/tutorcraft
-COMPOSE="docker compose -f docker-compose.prod.yml -f docker-compose.ip.yml"
-
-$COMPOSE logs -f --tail=200 core-api
-$COMPOSE restart notifier
-echo 'TUTORCRAFT_IMAGE_TAG=sha-abc1234' >> .env && $COMPOSE up -d   # откат на прошлый образ
+kubectl get pods
+kubectl logs -f deploy/core-api --tail=200
+kubectl logs statefulset/kafka --tail=100
+kubectl rollout restart deploy/notifier
+kubectl exec -it postgres-0 -- psql -U tutorcraft tutorcraft
+kubectl port-forward svc/postgres 5434:5432       # DBeaver: SSH-туннель на сервер → 127.0.0.1:5434
 ```
 
-Миграции Flyway только вперёд: если в откатываемом релизе была миграция — сначала восстановить БД
-из бэкапа. После исправления убрать строку `TUTORCRAFT_IMAGE_TAG` из `.env`.
+**Откат приложения** на предыдущий образ:
 
-Бэкапы (от пользователя `tutorcraft`):
+```bash
+kubectl rollout undo deploy/core-api               # и/или web, notifier, media-worker
+kubectl rollout history deploy/core-api            # хранится 5 ревизий
+```
+
+Следующий деплой из `main` снова выставит свежий образ. Чтобы закрепить откат, откатите коммит
+в `main`. Миграции Flyway только вперёд: если в откатываемом релизе была миграция, сначала
+восстановить БД из бэкапа.
+
+**Правка `.env`** вступает в силу после `cd /opt/tutorcraft && infra/k8s/apply.sh`: поды с
+изменившимся `.env` перезапустятся сами (хэш файла в аннотации пода).
+
+**Бэкапы** (под `tutorcraft`):
 
 ```bash
 crontab -e
 0 3 * * * cd /opt/tutorcraft && ./infra/deploy/backup.sh >> backups/backup.log 2>&1
 ```
 
-**Чего не делать на общем сервере:** `docker system prune -a`, `docker volume prune`,
-`docker compose down -v` (снесут образы и тома confeek), сборку образов на сервере
-(`up --build` — Maven и Next.js съедят память соседнего прода), `systemctl reload nginx` без `nginx -t`.
+Дампы PostgreSQL и MongoDB лежат в `/opt/tutorcraft/backups` 14 дней. Каталог файлов
+`/opt/tutorcraft/data/files` скрипт не копирует: снимайте его отдельно на другой сервер или в
+S3. Копия на том же диске от потери сервера не спасает.
+
+**Восстановление из дампа** — как в §3.3, шаг 7, только с файлами из `backups/`. Для
+PostgreSQL дамп в текстовом формате:
+`gunzip -c backups/postgres_….sql.gz | kubectl exec -i postgres-0 -- sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'`.
+
+**От root** — сам k3s:
+
+```bash
+systemctl status k3s; journalctl -u k3s --since '1 hour ago'
+k3s kubectl get pods -A
+k3s crictl images | grep tutorcraft                # образы в containerd k3s, не в Docker
+```
+
+Неиспользуемые образы k3s удаляет сам (image GC kubelet при заполнении диска на 85 %).
+
+### Чего не делать
+
+- `docker system prune -a`, `docker volume prune`: снесут образы и тома соседей;
+- `kubectl delete namespace tutorcraft` или удаление PVC: данные на `Retain`-томах уцелеют, но
+  стек ляжет, и тома придётся освобождать от root (`claimRef`);
+- менять `cluster-cidr` и `service-cidr` в `/etc/rancher/k3s/config.yaml` после установки: на них
+  завязаны ClusterIP в nginx, правило guard и NetworkPolicy;
+- запускать `k3s-killall.sh` или `k3s-uninstall.sh` без нужды: это остановка всего стека;
+- собирать образы на сервере: Maven и Next.js съедят память соседнего прода;
+- `systemctl reload nginx` без `nginx -t`.
