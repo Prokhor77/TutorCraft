@@ -10,7 +10,7 @@ import {
 } from '@/lib/api/endpoints/auth';
 import { meApi, type UpdateMeInput } from '@/lib/api/endpoints/me';
 import { http, SESSION_EXPIRED_EVENT } from '@/lib/api/http';
-import type { AuthResponse, TelegramAuthPayload } from '@/lib/api/schemas/auth';
+import type { AuthResponse } from '@/lib/api/schemas/auth';
 import { applyBrandColor } from '@/lib/utils/color';
 import { useAuthStore } from '@/stores/auth-store';
 import { queryKeys } from '../query-keys';
@@ -82,15 +82,6 @@ export function useGoogleLogin() {
   const onAuthenticated = useOnAuthenticated();
   return useMutation({
     mutationFn: (input: { idToken: string; tenantSlug?: string }) => authApi.google(input),
-    onSuccess: onAuthenticated,
-    meta: SILENT,
-  });
-}
-
-export function useTelegramLogin() {
-  const onAuthenticated = useOnAuthenticated();
-  return useMutation({
-    mutationFn: (input: TelegramAuthPayload & { tenantSlug?: string }) => authApi.telegram(input),
     onSuccess: onAuthenticated,
     meta: SILENT,
   });

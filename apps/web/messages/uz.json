@@ -2441,7 +2441,7 @@
     "acceptOffer": "Men <link>ommaviy oferta</link> shartlarini qabul qilaman",
     "acceptPrivacy": "Men shaxsiy maʼlumotlarimni <link>shaxsiy maʼlumotlarni qayta ishlash siyosati</link>ga muvofiq qayta ishlashga rozilik beraman",
     "acceptCrossBorder": "Men <link>shaxsiy maʼlumotlarni chegaradan tashqariga uzatishga rozilik</link> beraman — Belarus Respublikasidagi serverlarda saqlash va pochta xizmati, Google va Telegram’ga uzatish",
-    "oauthNotice": "Google yoki Telegram orqali birinchi marta kirib, siz <offer>ommaviy ofertani</offer> qabul qilasiz, shaxsiy maʼlumotlarni <privacy>siyosatga</privacy> muvofiq qayta ishlashga va ularni <crossBorder>chegaradan tashqariga uzatishga</crossBorder> rozilik berasiz."
+    "oauthNotice": "Google orqali birinchi marta kirib, siz <offer>ommaviy ofertani</offer> qabul qilasiz, shaxsiy maʼlumotlarni <privacy>siyosatga</privacy> muvofiq qayta ishlashga va ularni <crossBorder>chegaradan tashqariga uzatishga</crossBorder> rozilik berasiz."
   },
   "seo": {
     "home": "Bosh sahifa",

@@ -40,13 +40,3 @@ export type AuthProviders = z.infer<typeof providersSchema>;
 
 export const tenantChoiceSchema = z.object({ slug: z.string(), name: z.string() });
 export type TenantChoice = z.infer<typeof tenantChoiceSchema>;
-
-export type TelegramAuthPayload = {
-  id: number;
-  first_name: string;
-  last_name?: string;
-  username?: string;
-  photo_url?: string;
-  auth_date: number;
-  hash: string;
-};

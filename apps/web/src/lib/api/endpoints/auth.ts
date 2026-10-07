@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { http } from '../http';
-import { authResponseSchema, providersSchema, type TelegramAuthPayload } from '../schemas/auth';
+import { authResponseSchema, providersSchema } from '../schemas/auth';
 
 export type LoginInput = { email: string; password: string; tenantSlug?: string };
 export type RegisterInput = {
@@ -30,13 +30,6 @@ export const authApi = {
     http.request('/auth/login', { ...PUBLIC, method: 'POST', body, schema: authResponseSchema }),
   google: (body: { idToken: string; tenantSlug?: string }) =>
     http.request('/auth/oauth/google', {
-      ...PUBLIC,
-      method: 'POST',
-      body,
-      schema: authResponseSchema,
-    }),
-  telegram: (body: TelegramAuthPayload & { tenantSlug?: string }) =>
-    http.request('/auth/oauth/telegram', {
       ...PUBLIC,
       method: 'POST',
       body,

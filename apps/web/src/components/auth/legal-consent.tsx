@@ -141,7 +141,7 @@ export function LegalConsentFields<T extends FieldValues & LegalConsentValues>({
   );
 }
 
-/** Notice under Google/Telegram buttons: those can create an account without the sign-up form. */
+/** Notice under the Google button: it can create an account without the sign-up form. */
 export function OAuthConsentNotice() {
   const t = useTranslations('legal');
   return (

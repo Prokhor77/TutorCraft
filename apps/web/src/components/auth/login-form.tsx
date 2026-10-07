@@ -13,27 +13,14 @@ import { Field } from '@/components/ui/field';
 import { IconInput, PasswordInput } from '@/components/ui/input';
 import { describeProblem } from '@/features/app/use-problem-toast';
 import { NEXT_PARAM, ROUTES, safeNextPath } from '@/features/auth/routes';
-import {
-  useAuthProviders,
-  useGoogleLogin,
-  useLogin,
-  useTelegramLogin,
-} from '@/features/auth/use-auth';
+import { useAuthProviders, useGoogleLogin, useLogin } from '@/features/auth/use-auth';
 import { isApiProblem, PROBLEM_CODES } from '@/lib/api/problem';
-import {
-  tenantChoiceSchema,
-  type TelegramAuthPayload,
-  type TenantChoice,
-} from '@/lib/api/schemas/auth';
+import { tenantChoiceSchema, type TenantChoice } from '@/lib/api/schemas/auth';
 import { AuthHeading } from './auth-heading';
 import { GoogleButton } from './google-button';
 import { OAuthConsentNotice } from './legal-consent';
-import { TelegramButton } from './telegram-button';
 
-type PendingLogin =
-  | { kind: 'password' }
-  | { kind: 'google'; idToken: string }
-  | { kind: 'telegram'; payload: TelegramAuthPayload };
+type PendingLogin = { kind: 'password' } | { kind: 'google'; idToken: string };
 
 function tenantsFromProblem(error: unknown): TenantChoice[] {
   if (!isApiProblem(error) || error.code !== PROBLEM_CODES.tenantRequired) return [];
@@ -50,7 +37,6 @@ export function LoginForm() {
   const providers = useAuthProviders();
   const login = useLogin();
   const google = useGoogleLogin();
-  const telegram = useTelegramLogin();
   const [tenants, setTenants] = useState<TenantChoice[]>([]);
   const [pending, setPending] = useState<PendingLogin | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -85,8 +71,6 @@ export function LoginForm() {
     };
     if (attempt.kind === 'google')
       return google.mutate({ idToken: attempt.idToken, tenantSlug }, callbacks);
-    if (attempt.kind === 'telegram')
-      return telegram.mutate({ ...attempt.payload, tenantSlug }, callbacks);
     const values = form.getValues();
     login.mutate({ email: values.email.trim(), password: values.password, tenantSlug }, callbacks);
   };
@@ -101,7 +85,7 @@ export function LoginForm() {
               <Button
                 variant="secondary"
                 className="w-full justify-start"
-                loading={login.isPending || google.isPending || telegram.isPending}
+                loading={login.isPending || google.isPending}
                 onClick={() => run(pending, tenant.slug)}
               >
                 {tenant.name}
@@ -117,7 +101,6 @@ export function LoginForm() {
   }
 
   const googleConfig = providers.data?.google;
-  const telegramConfig = providers.data?.telegram;
   return (
     <div>
       <AuthHeading title={t('loginTitle')} description={t('loginSubtitle')} visuallyHidden />
@@ -168,25 +151,17 @@ export function LoginForm() {
           {t('loginCta')} <ArrowRight aria-hidden />
         </Button>
       </form>
-      {googleConfig || telegramConfig ? (
+      {googleConfig ? (
         <div className="mt-6 flex flex-col gap-3">
           <div className="flex items-center gap-3 text-xs text-text-muted">
             <span className="h-px flex-1 bg-border" />
             {t('orVia')}
             <span className="h-px flex-1 bg-border" />
           </div>
-          {googleConfig ? (
-            <GoogleButton
-              clientId={googleConfig.clientId}
-              onCredential={(idToken) => run({ kind: 'google', idToken })}
-            />
-          ) : null}
-          {telegramConfig ? (
-            <TelegramButton
-              botUsername={telegramConfig.botUsername}
-              onAuth={(payload) => run({ kind: 'telegram', payload })}
-            />
-          ) : null}
+          <GoogleButton
+            clientId={googleConfig.clientId}
+            onCredential={(idToken) => run({ kind: 'google', idToken })}
+          />
           <OAuthConsentNotice />
         </div>
       ) : null}

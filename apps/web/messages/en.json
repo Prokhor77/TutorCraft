@@ -2441,7 +2441,7 @@
     "acceptOffer": "I accept the terms of the <link>public offer</link>",
     "acceptPrivacy": "I consent to the processing of my personal data under the <link>personal data policy</link>",
     "acceptCrossBorder": "I give my <link>consent to cross-border transfer of personal data</link> — storage on servers in the Republic of Belarus and transfer to the email service, Google and Telegram",
-    "oauthNotice": "By signing in with Google or Telegram for the first time you accept the <offer>public offer</offer>, consent to personal data processing under the <privacy>policy</privacy> and to its <crossBorder>cross-border transfer</crossBorder>."
+    "oauthNotice": "By signing in with Google for the first time you accept the <offer>public offer</offer>, consent to personal data processing under the <privacy>policy</privacy> and to its <crossBorder>cross-border transfer</crossBorder>."
   },
   "seo": {
     "home": "Home",
