@@ -1,0 +1,80 @@
+# Хранилища принимают соединения только от тех, кому они нужны (NetworkPolicy применяет
+# встроенный в k3s kube-router). Без этих правил любой под namespace мог бы читать Mongo и Redis:
+# у них нет аутентификации или она слабая.
+#
+# Политики только на хранилища. Поды приложения принимают трафик от host-nginx, а у k3s он
+# приходит с адреса узла после SNAT. Закрыть их политикой, не рискуя прод-трафиком, нельзя.
+# Снаружи они и так недоступны: у их сервисов только ClusterIP.
+#
+# kubectl port-forward и exec в эти поды политика не затрагивает: kubelet заходит в сетевое
+# пространство пода напрямую.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-ingress
+  labels: { tutorcraft/tier: data }
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: postgres }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - { key: app.kubernetes.io/name, operator: In, values: [core-api] }
+      ports:
+        - { port: 5432, protocol: TCP }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mongo-ingress
+  labels: { tutorcraft/tier: data }
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: mongo }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              # mongo — сам себе: проверка членства в replica set идёт по mongo-0.mongo:27017.
+              - { key: app.kubernetes.io/name, operator: In, values: [core-api, mongo] }
+      ports:
+        - { port: 27017, protocol: TCP }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: redis-ingress
+  labels: { tutorcraft/tier: data }
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: redis }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - { key: app.kubernetes.io/name, operator: In, values: [core-api] }
+      ports:
+        - { port: 6379, protocol: TCP }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kafka-ingress
+  labels: { tutorcraft/tier: data }
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: kafka }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values: [core-api, media-worker, notifier, kafka-init, kafka]
+      ports:
+        - { port: 9092, protocol: TCP }

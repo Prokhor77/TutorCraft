@@ -1,0 +1,77 @@
+# Headless-сервис: имя mongo-0.mongo резолвится прямо в IP пода. Это же имя записано членом
+# replica set rs0, и по нему драйвер core-api находит primary.
+#
+# publishNotReadyAddresses обязателен: под станет Ready только после rs.initiate, а для rs.initiate
+# mongod должен найти себя по имени mongo-0.mongo. Если DNS-запись появляется только у Ready-пода,
+# получается взаимная блокировка.
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo
+  labels: { app.kubernetes.io/name: mongo, tutorcraft/tier: data }
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector: { app.kubernetes.io/name: mongo }
+  ports:
+    - { name: mongo, port: 27017, targetPort: mongo }
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongo
+  labels: { app.kubernetes.io/name: mongo, tutorcraft/tier: data }
+spec:
+  serviceName: mongo
+  replicas: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: mongo }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: mongo, tutorcraft/tier: data }
+    spec:
+      enableServiceLinks: false
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: mongo
+          image: mongo:7
+          # replSet нужен транзакциям core-api. wiredTigerCacheSizeGB ограничивает кэш: иначе Mongo
+          # считает от RAM всего хоста, а не от лимита пода.
+          args: ["--replSet", "rs0", "--bind_ip_all", "--wiredTigerCacheSizeGB", "0.25"]
+          ports:
+            - { name: mongo, containerPort: 27017 }
+          # Проба заодно инициализирует replica set на пустом каталоге, как healthcheck в compose.
+          # Ready означает, что этот узел primary: до выборов core-api писать не сможет.
+          readinessProbe:
+            exec:
+              command:
+                - mongosh
+                - --quiet
+                - --eval
+                - >-
+                  try { rs.status() } catch (e) {
+                  rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'mongo-0.mongo:27017'}]}) };
+                  if (!db.hello().isWritablePrimary) { quit(1) }
+            initialDelaySeconds: 5
+            periodSeconds: 15
+            timeoutSeconds: 10
+          # mongosh — процесс на Node.js, ~100 МБ и секунда CPU на запуск. Для liveness хватает TCP.
+          livenessProbe:
+            tcpSocket: { port: mongo }
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            failureThreshold: 6
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: "1", memory: 512Mi }
+          # Как у postgres: entrypoint делает chown /data/db от root и переходит в пользователя mongodb.
+          securityContext:
+            allowPrivilegeEscalation: false
+          volumeMounts:
+            - { name: data, mountPath: /data/db }
+      volumes:
+        - name: data
+          persistentVolumeClaim: { claimName: mongo-data }

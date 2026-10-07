@@ -123,4 +123,4 @@ com.tutorcraft.core
 
 ## 7. Развёртывание
 - Локально: `docker compose up` (ARCH-08) — все зависимости + сиды (демо-tenant, преподаватель, 20 студентов, демо-курс).
-- Прод: контейнеры, stateless-сервисы (NFR-PERF-04); Kubernetes — позже; CDN — Cloudflare перед web и S3 (HLS).
+- Прод: однонодовый k3s на общем сервере (ADR-013, `infra/k8s/`), stateless-сервисы (NFR-PERF-04); CDN — Cloudflare перед web и S3 (HLS).

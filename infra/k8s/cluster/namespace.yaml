@@ -1,0 +1,15 @@
+# Namespace TutorCraft. Применяет root один раз (infra/deploy/bootstrap-ip.sh): ServiceAccount деплоя
+# работает только внутри namespace и создать его не может.
+#
+# Pod Security «baseline» запрещает в namespace hostPath в поде, privileged, hostNetwork и hostPort.
+# Поэтому даже с правами admin в namespace деплой не получит root на хосте. Каталоги данных
+# подключаются только через PersistentVolume из persistent-volumes.yaml: их создаёт root,
+# а не деплой.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tutorcraft
+  labels:
+    app.kubernetes.io/part-of: tutorcraft
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/warn: baseline

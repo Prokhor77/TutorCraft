@@ -44,7 +44,7 @@ footer links to `/home`, `/grades`, …). User files get `X-Robots-Tag: noindex,
 
 While production runs on a bare IP, indexing is off automatically: robots.txt is `Disallow: /`, every page is
 `noindex, nofollow` and the sitemap is empty. An indexed IP would compete with the future domain as a duplicate.
-`docker-compose.prod.yml` passes `PUBLIC_BASE_URL` to the web container as `SITE_URL`.
+`infra/k8s/app/web.yaml` passes `PUBLIC_BASE_URL` to the web container as `SITE_URL`.
 
 ### Going live on a domain
 

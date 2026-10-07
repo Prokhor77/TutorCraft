@@ -76,6 +76,20 @@ jobs:
           work-dir: services/${{ matrix.module }}
           go-version-input: '1.27'
 
+  # Прод-манифесты k3s (ADR-013): ошибка в YAML должна краснеть в PR, а не на шаге деплоя.
+  k8s-manifests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-kubectl@v4
+        with: { version: v1.36.1 }
+      # Версия kubeconform закреплена по той же причине, что и trivy выше.
+      - name: Render and validate
+        run: |
+          infra/k8s/render.sh > /tmp/tutorcraft.yaml
+          docker run --rm -v "$PWD/infra/k8s/cluster:/cluster:ro" ghcr.io/yannh/kubeconform:v0.6.7 -strict -summary /cluster
+          docker run --rm -i ghcr.io/yannh/kubeconform:v0.6.7 -strict -summary - < /tmp/tutorcraft.yaml
+
   web:
     runs-on: ubuntu-latest
     defaults: { run: { working-directory: apps/web } }

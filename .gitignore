@@ -17,6 +17,9 @@ coverage/
 # Локальное хранилище файлов (STORAGE_DRIVER=local) при запуске core-api с хоста
 /services/core-api/data/
 
+# Отрендеренный прод-манифест k3s (infra/k8s/render.sh в deploy-production.yml)
+/infra/k8s/tutorcraft.rendered.yaml
+
 # javac @argfiles from ad-hoc compile harnesses
 javac.*.args
 /.claude/

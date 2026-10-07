@@ -1,77 +1,81 @@
-# Развёртывание TutorCraft на общем сервере с confeek
+# Развёртывание TutorCraft на общем сервере с confeek (домен, Cloudflare, внешний S3)
 
-Сервер уже обслуживает confeek.com (репозиторий sproogeek). TutorCraft встаёт рядом отдельным
-compose-проектом в своём каталоге и на своём домене и ничего из confeek не трогает.
+Сервер уже обслуживает confeek.com (репозиторий sproogeek). TutorCraft встаёт рядом в k3s
+(ADR-013): свой namespace `tutorcraft`, свой домен. Из confeek он ничего не трогает: соседи
+остаются в Docker.
+
+Базовая установка — k3s, пользователь деплоя, `.env`, CI — общая со сценарием «голый IP» и
+описана в [`deployment-ip.md`](deployment-ip.md). Этот документ — про отличия: домен, TLS,
+Cloudflare, внешние S3 и SMTP.
 
 ## 1. Схема
 
 ```
-посетитель → Cloudflare → reverse proxy на хосте (:443)
+посетитель → Cloudflare → host-nginx (:443)
                             ├─ confeek.com          → 127.0.0.1:8080 → spruzhuk_app → backend …   (как было)
                             ├─ sproogeek.com        → 301 на confeek.com                            (как было)
-                            └─ <домен TutorCraft>   → 127.0.0.1:3100 → tutorcraft_web (Next.js)
-                                                         └─ /api/v1/* → core-api (внутри tutorcraft_net)
-                                                    → 127.0.0.1:8190 → tutorcraft_notifier (/ws)
+                            └─ <домен TutorCraft>   → 10.43.0.100:3000 → Service web (Next.js)
+                                                         └─ /api/v1/* → core-api (внутри кластера)
+                                                    → 10.43.0.101:8090 → Service notifier (/ws)
 браузер ⇄ внешний S3 (загрузка по pre-signed URL, HLS-видео) — мимо сервера
 ```
 
 | | confeek (sproogeek) | TutorCraft |
 |---|---|---|
-| Каталог | `$PROD_PATH` confeek | `/opt/tutorcraft` |
-| Linux-пользователь деплоя | текущий `PROD_USER` | **новый** `tutorcraft` (см. §4.3) |
-| Compose-проект / сеть | по имени каталога / `spruzhuk_net` | `tutorcraft` / `tutorcraft_net` |
-| Контейнеры | `spruzhuk_*` | `tutorcraft_*` |
-| Порты на хосте | `127.0.0.1:8080`, `127.0.0.1:5433` | `127.0.0.1:3100`, `127.0.0.1:8190`, `127.0.0.1:5434` |
-| Образы | `ghcr.io/admst-dz/spruzhyk-*` | `ghcr.io/prokhor77/tutorcraft-*` |
+| Каталог | `$PROD_PATH` confeek | `/opt/tutorcraft` (данные — `/opt/tutorcraft/data`) |
+| Linux-пользователь деплоя | текущий `PROD_USER` | `tutorcraft`, без группы `docker`, kubeconfig на свой namespace |
+| Оркестрация | Docker Compose, сеть `spruzhuk_net` | k3s, namespace `tutorcraft`, сети `10.42/16` и `10.43/16` |
+| Вход с хоста | `127.0.0.1:8080`, `127.0.0.1:5433` | ClusterIP `10.43.0.100–102` (только с хоста) |
+| Образы | `ghcr.io/admst-dz/spruzhyk-*` | `ghcr.io/prokhor77/tutorcraft-*` (containerd k3s, не Docker) |
 
-Конфликтов по именам, портам, сетям и томам нет. Общими остаются только reverse proxy, RAM/CPU/диск.
+Конфликтов по именам, портам, сетям и томам нет. Общими остаются только host-nginx, RAM, CPU и диск.
 
 ## 2. Перед началом — проверить сервер
 
 ```bash
 free -h                      # сколько свободно RAM
 docker stats --no-stream     # сколько реально ест confeek
-df -h /var/lib/docker        # место под образы и тома
+df -h /var/lib/rancher /opt  # место под образы k3s и данные
 nproc
 ss -ltnp | grep -E ':(80|443)\b'                 # кто слушает 80/443: nginx, caddy или docker-proxy (traefik)
 nginx -T 2>/dev/null | grep -E 'server_name|ssl_certificate|include' | sort -u   # если nginx
+ip -4 route | grep -E '10\.4[23]\.'              # пусто: сети k3s свободны
 ```
 
-**Память — главный риск.** Лимиты confeek в `docker-compose.prod.yml` дают ≈ 7–8 ГБ потолка
-(backend 4G, renderer 1.5G, material/glb по 512M + Postgres/Kafka/MinIO без лимитов), и в его
-комментариях записано, что свободными оставалось ~4 ГБ до того, как backend получил ещё +1 ГБ.
-TutorCraft в покое ≈ 2,5–3,5 ГБ (потолок лимитов ≈ 6 ГБ, пик — транскодирование видео).
+**Память — главный риск.** Лимиты confeek в его `docker-compose.prod.yml` дают ≈ 7–8 ГБ потолка
+(backend 4G, renderer 1.5G, material/glb по 512M + Postgres/Kafka/MinIO без лимитов). TutorCraft
+в покое ≈ 3–4 ГБ вместе с самим k3s (~0.5–0.7 ГБ), потолок лимитов подов ≈ 5 ГБ, пик —
+транскодирование видео.
 
-- `available` в `free -h` ≥ 4 ГБ — можно запускать;
-- 3–4 ГБ — запускать, но добавить swap 4 ГБ и следить за `docker stats` первые дни;
-- < 3 ГБ — сначала увеличить RAM сервера. Иначе OOM-killer начнёт убивать контейнеры, в том числе confeek.
+- `available` в `free -h` ≥ 4.5 ГБ — можно запускать;
+- 3.5–4.5 ГБ — запускать, но добавить swap 4 ГБ и следить за `k3s kubectl top pods -n tutorcraft` первые дни;
+- < 3.5 ГБ — сначала увеличить RAM сервера. Иначе OOM-killer начнёт убивать процессы, в том числе confeek.
 
-Кто на хосте терминирует HTTPS: в репозитории confeek встречаются и host-nginx (`edge/README-analytics-log.md`,
-самое свежее описание), и Caddy (комментарий в compose), и Traefik (README). Команда `ss` выше даст ответ.
-Ниже основной вариант — nginx; для Caddy — §4.6б; если это Traefik в Docker, схема с `127.0.0.1`-портами
-не подходит (нужны labels и общая сеть) — конфиг придётся переделать.
+Кто на хосте терминирует HTTPS, покажет команда `ss` выше. Ниже основной вариант — nginx, для
+Caddy — §4.6б. Если это Traefik в Docker, сначала нужно решить, кто держит 80/443: k3s со
+встроенным Traefik на этом сервере не ставится (он выключен в `infra/deploy/k3s/config.yaml`).
 
 ## 3. Что уже подготовлено в репозитории
 
 | Файл | Назначение |
 |---|---|
-| `docker-compose.prod.yml` | prod-стек: образы из GHCR, лимиты памяти/CPU, ротация логов, наружу только `127.0.0.1` |
+| `infra/k8s/app/`, `infra/k8s/cluster/` | манифесты стека и кластерные объекты (namespace, PersistentVolume, RBAC) |
+| `infra/deploy/bootstrap-ip.sh` | подготовка сервера: пользователь, `.env`, k3s, kubeconfig, vhost |
 | `.env.prod.example` | шаблон `.env` для сервера |
 | `infra/deploy/nginx/tutorcraft.conf` | vhost для host-nginx: `/` → web, `/ws` → notifier, 80 → 443 |
 | `infra/deploy/nginx/cloudflare-realip.conf` | реальный IP посетителя из `CF-Connecting-IP` (только для vhost TutorCraft) |
 | `infra/deploy/backup.sh` | ежедневный дамп PostgreSQL + MongoDB с ротацией |
-| `.github/workflows/_build-image.yml` | сборка образа в GHCR с тегами `latest` и `sha-<commit>` |
-| `.github/workflows/deploy-production.yml` | после зелёного `ci` на `main`: сборка 4 образов → scp compose → `pull` + `up -d` → ожидание healthcheck'ов |
+| `.github/workflows/deploy-production.yml` | после зелёного `ci` на `main`: сборка 4 образов → рендер и проверка манифестов → `apply.sh` на сервере |
 
-Отличия от dev-`docker-compose.yml`: нет SeaweedFS и Mailpit (внешние S3 и SMTP), нет публикации
-Postgres/Mongo/Redis/Kafka наружу, у Kafka данные на томе и heap 512 МБ, у Mongo кэш 256 МБ,
-у core-api `-Xmx1g` вместо `MaxRAMPercentage=75`, демо-сиды выключены, `WORKER_CONCURRENCY=1`.
+Отличия прода от dev-`docker-compose.yml`: нет SeaweedFS и Mailpit (внешние S3 и SMTP), нет
+публикации Postgres/Mongo/Redis/Kafka наружу, у Kafka данные на томе и heap 512 МБ, у Mongo кэш
+256 МБ, у core-api `-Xmx1g` вместо `MaxRAMPercentage=75`, демо-сиды выключены, `WORKER_CONCURRENCY=1`.
 
 ## 4. Пошагово
 
 ### 4.0. Предусловие — зелёный CI
-Реальная сборка Maven ещё не проходила. Деплой запускается только после успешного `ci` на `main`,
-поэтому сначала `cd services/core-api && mvn verify` локально и исправить ошибки.
+Деплой запускается только после успешного `ci` на `main`. В `ci` входит и проверка
+k8s-манифестов (job `k8s-manifests`).
 
 ### 4.1. Домен и Cloudflare
 1. Добавить домен в Cloudflare (отдельная зона), сменить NS у регистратора.
@@ -86,34 +90,28 @@ Postgres/Mongo/Redis/Kafka наружу, у Kafka данные на томе и 
    `Effect: Allow, Principal: *, Action: s3:GetObject, Resource: tutorcraft-prod/hls/*`.
    Оригиналы и остальные файлы отдаются только по pre-signed URL.
 
-### 4.3. Пользователь и каталог на сервере (от root)
-```bash
-adduser --disabled-password --gecos "" tutorcraft
-usermod -aG docker tutorcraft
-mkdir -p /opt/tutorcraft && chown tutorcraft:tutorcraft /opt/tutorcraft
-# ключ для GitHub Actions: сгенерировать локально (ssh-keygen -t ed25519 -f tutorcraft_deploy -N ""),
-# публичную часть — сюда, приватную — в секрет PROD_SSH_KEY
-install -d -m 700 -o tutorcraft -g tutorcraft /home/tutorcraft/.ssh
-cat tutorcraft_deploy.pub >> /home/tutorcraft/.ssh/authorized_keys
-chown tutorcraft:tutorcraft /home/tutorcraft/.ssh/authorized_keys && chmod 600 /home/tutorcraft/.ssh/authorized_keys
-```
-**Почему отдельный пользователь.** `docker login ghcr.io` хранится в `~/.docker/config.json` — одна
-учётка на реестр. Логин под `prokhor77` в пользователе confeek затрёт учётку `admst-dz`, и следующий
-деплой confeek упадёт на `pull`. Изоляцией по безопасности это не является: группа `docker` ≈ root.
+### 4.3. Сервер: k3s, пользователь, каталог (от root)
+Swap и bootstrap — как в [`deployment-ip.md` §3.1–3.2](deployment-ip.md#3-подготовка-сервера-один-раз-от-root).
+Для другого сервера передайте его адрес: `TUTORCRAFT_IP=<ip> bash …/bootstrap-ip.sh …`.
+Скрипт поставит vhost для IP, для домена замените его на `tutorcraft.conf` (§4.6).
+
+**Почему отдельный пользователь.** Деплой идёт под ServiceAccount с правами только на namespace
+`tutorcraft`. У confeek своя учётка и свой Docker, а `tutorcraft` в группе `docker` не состоит.
 
 ### 4.4. `.env` на сервере (под пользователем tutorcraft)
+bootstrap уже создал `/opt/tutorcraft/.env` со случайными секретами. Поправить под домен:
+
 ```bash
-cd /opt/tutorcraft
-# положить .env.prod.example (scp) и:
-cp .env.prod.example .env && chmod 600 .env
-for k in POSTGRES_PASSWORD REDIS_PASSWORD JWT_SECRET; do
-  sed -i "s|^$k=.*|$k=$(openssl rand -base64 48 | tr -d '/+=\n' | cut -c1-48)|" .env
-done
-sed -i "s|^DATA_ENCRYPTION_KEY=.*|DATA_ENCRYPTION_KEY=$(openssl rand -base64 32)|" .env
-nano .env   # домен в WEB_ORIGIN/PUBLIC_BASE_URL, ключи S3, SMTP, OAuth, платежи
+sudo -iu tutorcraft nano /opt/tutorcraft/.env
 ```
-`DATA_ENCRYPTION_KEY` и `JWT_SECRET` после запуска не менять: первый шифрует секреты интеграций
-в БД, смена второго разлогинит всех. Сохранить `.env` в менеджер паролей — без него бэкап БД бесполезен.
+
+- `WEB_ORIGIN` и `PUBLIC_BASE_URL` → `https://<домен>`, `COOKIE_SECURE=true`;
+- `STORAGE_DRIVER=s3` и `S3_*` из §4.2;
+- `SMTP_*`, OAuth, платежи.
+
+Значения — без кавычек. `DATA_ENCRYPTION_KEY` и `JWT_SECRET` после запуска не менять: первый
+шифрует секреты интеграций в БД, смена второго разлогинит всех. Сохранить `.env` в менеджер
+паролей — без него бэкап БД бесполезен.
 
 ### 4.5. GitHub (репозиторий Prokhor77/TutorCraft → Settings)
 Secrets → Actions:
@@ -127,7 +125,8 @@ Secrets → Actions:
 | `GHCR_PULL_USER` | `Prokhor77` |
 | `GHCR_PULL_TOKEN` | classic PAT только с `read:packages` |
 
-Variables → Actions: `PROD_DOMAIN` = домен без схемы (вшивается в `NEXT_PUBLIC_WS_URL=wss://<домен>/ws`).
+Variables → Actions: `PROD_WS_URL` = `wss://<домен>/ws`, `PROD_S3_ORIGIN` = origin бакета.
+Обе вшиваются в бандл при сборке web.
 
 ### 4.6. TLS и reverse proxy
 
@@ -138,11 +137,11 @@ certbot — можно им же: `certbot certonly --webroot -w /var/www/certbo
 
 **а) host-nginx** (от root):
 ```bash
-cd /tmp && # скопировать сюда оба файла из infra/deploy/nginx/
-sed -i 's/tutorcraft\.example/<домен>/g' tutorcraft.conf
+cd /tmp/tutorcraft-infra/deploy/nginx
+sed -i 's/tutorcraft\.example/<домен>/g' tutorcraft.conf cloudflare-realip.conf
 cp cloudflare-realip.conf /etc/nginx/snippets/tutorcraft-cloudflare-realip.conf
 cp tutorcraft.conf /etc/nginx/sites-available/tutorcraft.conf      # или /etc/nginx/conf.d/, если sites-* нет
-ln -s /etc/nginx/sites-available/tutorcraft.conf /etc/nginx/sites-enabled/
+ln -sfn /etc/nginx/sites-available/tutorcraft.conf /etc/nginx/sites-enabled/tutorcraft.conf
 nginx -t && systemctl reload nginx     # nginx -t обязателен: ошибка уронит и confeek
 ```
 До первого деплоя домен отдаёт 502 — это нормально.
@@ -151,8 +150,8 @@ nginx -t && systemctl reload nginx     # nginx -t обязателен: ошиб
 ```
 <домен> {
     tls /etc/caddy/ssl/<домен>.pem /etc/caddy/ssl/<домен>.key
-    reverse_proxy /ws 127.0.0.1:8190
-    reverse_proxy 127.0.0.1:3100 {
+    reverse_proxy /ws 10.43.0.101:8090
+    reverse_proxy 10.43.0.100:3000 {
         header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
     }
 }
@@ -164,18 +163,16 @@ www.<домен> {
 затем `caddy validate --config /etc/caddy/Caddyfile && systemctl reload caddy`.
 
 ### 4.7. Первый деплой
-GitHub → Actions → **Deploy to Production** → Run workflow → `all`. Workflow соберёт образы, зальёт
-`docker-compose.prod.yml` + `infra/kafka/create-topics.sh` + `infra/deploy/backup.sh` в `/opt/tutorcraft`,
-сделает `pull`, `up -d` и дождётся `healthy` у core-api, web, notifier, media-worker (до 5 минут на каждый).
+GitHub → Actions → **Deploy to Production** → Run workflow → `all`. Workflow соберёт образы,
+отрендерит и проверит манифесты, скопирует их в `/opt/tutorcraft` и запустит `infra/k8s/apply.sh`.
+Тот поднимет хранилища, создаст топики Kafka и раскатит приложения, дожидаясь готовности каждого.
 Дальше каждый push в `main` → `ci` → автодеплой.
 
 ### 4.8. Проверка
 ```bash
-cd /opt/tutorcraft
-docker compose -f docker-compose.prod.yml ps          # все Up (healthy), kafka-init — Exited (0)
+sudo -iu tutorcraft kubectl get pods                  # все Running/Ready, kafka-init — Completed
 curl -sI https://<домен>/ | head -1                   # 200
-docker stats --no-stream                              # память и TutorCraft, и confeek
-ss -ltnp | grep -E '3100|8190|5434'                   # только 127.0.0.1
+k3s kubectl top pods -n tutorcraft; docker stats --no-stream   # память TutorCraft и confeek (от root)
 curl -sI https://confeek.com/ | head -1               # соседа не задели
 ```
 В браузере: регистрация/вход, загрузка файла, короткое видео (статус «готово» приходит по WebSocket),
@@ -195,25 +192,25 @@ crontab -e    # под пользователем tutorcraft
 
 ## 5. Откат
 ```bash
-cd /opt/tutorcraft
-echo 'TUTORCRAFT_IMAGE_TAG=sha-abc1234' >> .env        # тег из GHCR / истории Actions
-docker compose -f docker-compose.prod.yml up -d
+sudo -iu tutorcraft
+kubectl rollout undo deploy/core-api                  # и/или web, notifier, media-worker
 ```
 Миграции Flyway только вперёд: если в откатываемом релизе была миграция, сначала восстановить БД из бэкапа.
-После исправления убрать строку `TUTORCRAFT_IMAGE_TAG` из `.env`.
+Следующий деплой из `main` выставит свежий образ — чтобы закрепить откат, откатите коммит.
 
 ## 6. Чего не делать на общем сервере
-- `docker system prune -a`, `docker volume prune`, `docker compose down -v` — удалят образы/тома, в том числе confeek;
-- публиковать порты без `127.0.0.1:` — Docker обходит UFW, сервис окажется в интернете в обход Cloudflare;
-- собирать образы на сервере (`up --build`) — Maven и Next.js build съедят память продакшна confeek;
+- `docker system prune -a`, `docker volume prune` — удалят образы и тома confeek;
+- включать в k3s встроенные Traefik/ServiceLB или NodePort/hostPort-сервисы — займут порты хоста или откроют их в интернет в обход Cloudflare;
+- собирать образы на сервере — Maven и Next.js build съедят память продакшна confeek;
 - запускать dev-`docker-compose.yml` на сервере — займёт порт 8080 у confeek;
 - `systemctl reload nginx` без `nginx -t`.
 
 ## 7. Эксплуатация
 ```bash
-cd /opt/tutorcraft
-docker compose -f docker-compose.prod.yml logs -f --tail=200 core-api
-docker compose -f docker-compose.prod.yml restart notifier
-docker compose -f docker-compose.prod.yml exec postgres psql -U tutorcraft tutorcraft
+sudo -iu tutorcraft
+kubectl logs -f deploy/core-api --tail=200
+kubectl rollout restart deploy/notifier
+kubectl exec -it postgres-0 -- psql -U tutorcraft tutorcraft
+kubectl port-forward svc/postgres 5434:5432      # DBeaver: SSH-туннель на сервер → 127.0.0.1:5434
 ```
-DBeaver: SSH-туннель на сервер → `127.0.0.1:5434`.
+Подробнее — [`deployment-ip.md` §9](deployment-ip.md#9-эксплуатация-и-откат).

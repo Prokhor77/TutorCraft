@@ -1,0 +1,79 @@
+# host-nginx → этот ClusterIP (см. core-api.yaml, почему закреплённый ClusterIP).
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  labels: { app.kubernetes.io/name: web, tutorcraft/tier: app }
+spec:
+  clusterIP: 10.43.0.100
+  selector: { app.kubernetes.io/name: web }
+  ports:
+    - { name: http, port: 3000, targetPort: http }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  labels: { app.kubernetes.io/name: web, tutorcraft/tier: app }
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector:
+    matchLabels: { app.kubernetes.io/name: web }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: web, tutorcraft/tier: app }
+      annotations:
+        tutorcraft/env-sha: "__ENV_SHA__"
+    spec:
+      enableServiceLinks: false
+      automountServiceAccountToken: false
+      imagePullSecrets: [{ name: ghcr }]
+      terminationGracePeriodSeconds: 30
+      # В образе USER nextjs задан именем. Без числового UID kubelet не может проверить runAsNonRoot.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: web
+          image: ghcr.io/prokhor77/tutorcraft-web:latest
+          # web-поду .env не отдаём: ему нужны только адрес core-api и SEO-настройки.
+          env:
+            - { name: CORE_API_URL, value: "http://core-api:8080" }
+            # В поде k8s переменная HOSTNAME равна имени пода и перекрывает HOSTNAME=0.0.0.0 из
+            # образа. Тогда standalone-сервер Next.js слушал бы только IP пода, а не все адреса.
+            - { name: HOSTNAME, value: "0.0.0.0" }
+            # SEO (apps/web/docs/seo.md): канонический адрес — тот же PUBLIC_BASE_URL. На голом IP
+            # индексация выключается автоматически.
+            - name: SITE_URL
+              valueFrom: { secretKeyRef: { name: tutorcraft-env, key: PUBLIC_BASE_URL } }
+            - name: SEO_INDEXING
+              valueFrom: { secretKeyRef: { name: tutorcraft-env, key: SEO_INDEXING, optional: true } }
+            - name: YANDEX_VERIFICATION
+              valueFrom: { secretKeyRef: { name: tutorcraft-env, key: YANDEX_VERIFICATION, optional: true } }
+            - name: GOOGLE_SITE_VERIFICATION
+              valueFrom: { secretKeyRef: { name: tutorcraft-env, key: GOOGLE_SITE_VERIFICATION, optional: true } }
+          ports:
+            - { name: http, containerPort: 3000 }
+          # Тот же статический ресурс, что в HEALTHCHECK Dockerfile: не дёргает core-api.
+          readinessProbe:
+            httpGet: { path: /manifest.webmanifest, port: http }
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet: { path: /manifest.webmanifest, port: http }
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests: { cpu: 100m, memory: 192Mi }
+            limits: { cpu: "1", memory: 512Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }

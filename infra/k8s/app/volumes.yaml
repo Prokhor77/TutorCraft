@@ -1,0 +1,46 @@
+# Claim'ы на заранее созданные тома (infra/k8s/cluster/persistent-volumes.yaml).
+# storageClassName: "" обязателен: без него k3s подставит StorageClass local-path по умолчанию
+# и создаст новый пустой каталог вместо привязки к нашему тому.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data
+  labels: { tutorcraft/tier: data }
+spec:
+  storageClassName: ""
+  volumeName: tutorcraft-postgres
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 20Gi } }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongo-data
+  labels: { tutorcraft/tier: data }
+spec:
+  storageClassName: ""
+  volumeName: tutorcraft-mongo
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 20Gi } }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kafka-data
+  labels: { tutorcraft/tier: data }
+spec:
+  storageClassName: ""
+  volumeName: tutorcraft-kafka
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 10Gi } }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: files-data
+  labels: { tutorcraft/tier: data }
+spec:
+  storageClassName: ""
+  volumeName: tutorcraft-files
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 200Gi } }

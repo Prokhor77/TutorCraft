@@ -1,7 +1,8 @@
 name: Reusable image build
 
 # Собирает один образ и публикует в GHCR под двумя тегами: latest и sha-<short>.
-# Второй тег — для отката: TUTORCRAFT_IMAGE_TAG=sha-abc1234 docker compose -f docker-compose.prod.yml up -d
+# Деплой (infra/k8s/render.sh) ставит в манифесты sha-<short>, latest остаётся для ручных проверок.
+# Откат: kubectl -n tutorcraft rollout undo deployment/<имя> (docs/deployment-ip.md §9).
 
 on:
   workflow_call:

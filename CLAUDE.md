@@ -31,7 +31,8 @@ mvn test -Dtest=GradeCalculatorTest         # single unit test (surefire exclude
 mvn failsafe:integration-test -Dit.test=CoursesIT   # single integration test
 ```
 
-### Go workers (`services/{workerkit,media-worker,notifier}`, Go 1.24, separate modules)
+### Go workers (`services/{workerkit,media-worker,notifier}`, separate modules)
+`go.mod` says `go 1.24` (language floor only); CI builds with Go 1.27 because govulncheck fails on unpatched 1.24 stdlib.
 ```bash
 cd services/notifier && go vet ./... && go test -race ./...
 go test ./internal/telegram/ -run TestLinkCode      # single test
@@ -44,7 +45,7 @@ the repo. `media-worker` tests invoke a real `ffmpeg` binary.
 cd apps/web && npm ci
 CORE_API_URL=http://localhost:8080 NEXT_PUBLIC_WS_URL=ws://localhost:8090/ws npm run dev
 npm run lint && npm run typecheck && npm run format:check
-npm run i18n:check       # every used key exists in BOTH messages/ru.json and messages/en.json
+npm run i18n:check       # every used key exists in ALL of messages/{ru,en,uz}.json, identical key sets
 npm run contrast:check   # WCAG AA for ~26 token pairs, light + dark
 npm test                 # vitest (jsdom) — src/**/*.test.{ts,tsx}
 npx vitest run src/lib/blockdoc/doc.test.ts         # single test file
@@ -106,11 +107,12 @@ Full conventions (mandatory reading before touching core-api):
   items, activity settings, block documents and the question bank (schema varies by `ActivityType`/question type);
   Redis for rate limits, login throttling, storefront cache; S3 for files and HLS. Mongo has no transactions, so Mongo
   operations must be idempotent.
-- **Flyway migration numbers are reserved per module** (V1 shared … V15 integrations — see the table in
-  backend-conventions). A new module takes the next free number; schema changes are expand/contract.
+- **Flyway migrations** — V1–V15 were one-per-module; since V16 each change simply takes the next free number.
+  Every new migration must be added as a row to the table in backend-conventions; schema
+  changes are expand/contract.
 - **Errors** — RFC 9457 problems from `shared.domain` exceptions with codes `<module>.<reason>`; each code needs text in
-  `src/main/resources/i18n/<module>_ru.properties`, `<module>_en.properties` **and** `<module>.properties` (ru copy, the
-  fallback bundle).
+  `src/main/resources/i18n/<module>_ru.properties`, `<module>_en.properties`, `<module>_uz.properties` **and**
+  `<module>.properties` (ru copy, the fallback bundle).
 - **Optimistic locking** — `version BIGINT` column, `UPDATE … WHERE version = :expected`; controllers resolve it with
   `IfMatch.resolve(header, body.version())` and the client sends `If-Match`.
 - **Pagination** is keyset/cursor: `PageQuery.of(cursor, limit)` → `page.toPage(rows, sortKeyFn, idFn)`.
@@ -130,7 +132,8 @@ Layout and rules are documented in [`apps/web/README.md`](apps/web/README.md) (r
 - No authenticated SSR (ADR-003): the `(app)` layout restores the session client-side.
 - Server state is TanStack Query with central `src/features/query-keys.ts`; every mutation invalidates or patches keys.
 - Visual decisions live only in `src/styles/tokens.css`; `tailwind.config.ts` just maps utilities to tokens.
-- All UI strings go through next-intl in `messages/{ru,en}.json` (`npm run i18n:check` enforces parity).
+- All UI strings go through next-intl in `messages/{ru,en,uz}.json` (`npm run i18n:check` enforces parity); the locale
+  list lives in `src/i18n/config.ts`, default `ru`.
 - SEO lives in `src/lib/seo/` ([`apps/web/docs/seo.md`](apps/web/docs/seo.md)): public pages use `pageMetadata()` +
   `<JsonLd>`; the root layout defaults to `noindex, follow`, so a page must opt into the index. Indexing switches off
   automatically while `SITE_URL`/`PUBLIC_BASE_URL` is a bare IP.
@@ -145,18 +148,39 @@ core change), implement `courses.spi.ActivityType` in your own module, plus `Ite
 
 ## Deployment
 
-Two documented targets, both driven by `.github/workflows/deploy-production.yml` (push to `main` → green `ci` →
-build 4 images to GHCR → scp compose files → `pull` + `up -d` → wait for healthchecks):
+Prod is a single-node **k3s** on a server shared with other apps (ADR-013); there is no prod compose any more —
+`docker-compose.yml` is dev/e2e only. `.github/workflows/deploy-production.yml`: push to `main` → green `ci` → build 4
+images to GHCR (`latest` + `sha-<short>`) → `infra/k8s/render.sh sha-<short>` + kubeconform → scp the rendered YAML →
+`infra/k8s/apply.sh` on the server.
 
-- [`docs/deployment-ip.md`](docs/deployment-ip.md) — **current**: bare IP `91.149.179.186` over HTTP, files on the
-  server's disk (`STORAGE_DRIVER=local`, volume `file-storage`), email via a mailbox app password (§6.2: Gmail/Yandex on
-  port 465 = implicit TLS). `COOKIE_SECURE=false` is mandatory here, since browsers drop
-  `Secure` cookies over HTTP.
-- [`docs/deployment.md`](docs/deployment.md) — domain + Cloudflare + external S3/SMTP.
+```bash
+infra/k8s/render.sh sha-abc1234 > /tmp/tc.yaml      # local render (needs only kubectl; `ci` job k8s-manifests validates it)
+```
+
+- `infra/k8s/app/` (Kustomize, namespace `tutorcraft`) — every object carries `tutorcraft/tier: data|app`; `apply.sh`
+  applies `data` (Postgres/Mongo/Redis/Kafka, PVCs, NetworkPolicies, `kafka-init` Job), waits, then `app`. That is the
+  replacement for `depends_on`. `kafka-init` mounts `infra/kafka/create-topics.sh` (shared with dev compose) via a
+  configMapGenerator, which is why rendering needs `--load-restrictor=LoadRestrictionsNone`.
+- `infra/k8s/cluster/` (namespace with Pod Security `baseline`, hostPath PVs on `/opt/tutorcraft/data/*`, `deployer`
+  ServiceAccount with `admin` in the namespace only) is applied once by root via `infra/deploy/bootstrap-ip.sh`, not by
+  the deploy — the deploy user cannot create PVs or namespaces.
+- Secrets: `/opt/tutorcraft/.env` on the server → Secret `tutorcraft-env` (values unquoted: `--from-env-file` keeps
+  quotes). Its hash is substituted for `__ENV_SHA__` in pod annotations, so editing `.env` restarts pods.
+- Host-nginx proxies to **pinned ClusterIPs** (`web` 10.43.0.100, `notifier` .101, `core-api` .102) — no NodePort or
+  hostPort; Traefik/ServiceLB are disabled (80/443 belong to host-nginx). Changing a ClusterIP means changing
+  `infra/deploy/nginx/*.conf` too.
+- Gotchas encoded in the manifests: `enableServiceLinks: false` everywhere (otherwise `KAFKA_PORT=tcp://…` breaks
+  the apache/kafka image); web needs `HOSTNAME=0.0.0.0`; Mongo's rs member is `mongo-0.mongo:27017` behind a headless
+  Service with `publishNotReadyAddresses`; core-api and media-worker use `Recreate` because of memory, not correctness.
+
+Docs: [`docs/deployment-ip.md`](docs/deployment-ip.md) — **current**: bare IP `91.149.179.186` over HTTP, files on the
+server's disk (`STORAGE_DRIVER=local`, `/opt/tutorcraft/data/files`), email via a mailbox app password (§6.2), one-time
+migration from compose (§3.3). `COOKIE_SECURE=false` is mandatory there, since browsers drop `Secure` cookies over
+HTTP. [`docs/deployment.md`](docs/deployment.md) — domain + Cloudflare + external S3/SMTP.
 
 Server-side prod config lives in `application-prod.yml` (Swagger/OpenAPI/`/actuator` disabled, Tomcat timeouts,
-`X-Forwarded-*` trusted only from proxies) and `infra/deploy/nginx/tutorcraft-ip.conf` (rate limits, scanner
-blocking, `/storage/` routed straight to core-api on `127.0.0.1:3180`).
+`X-Forwarded-*` trusted only from 127/8, 172.16/12, 10/8 — the last covers k3s pods and the cni0 bridge) and
+`infra/deploy/nginx/tutorcraft-ip.conf` (rate limits, scanner blocking, `/storage/` routed straight to core-api).
 
 **File storage is temporarily local** (`tutorcraft.storage.driver`, env `STORAGE_DRIVER`, default `local`):
 `files.application.ObjectStorage` has two implementations — `LocalObjectStorage` (disk under `STORAGE_LOCAL_ROOT`,
@@ -164,8 +188,9 @@ signed `/storage/{key}` links served by `files.web.StorageController` via the `D
 derived from `JWT_SECRET`, only `hls/` is public) and `S3ObjectStorage` (`STORAGE_DRIVER=s3` + `S3_*`). media-worker
 mirrors it (`STORAGE_DRIVER`, `internal/localfs`) and shares the volume with core-api (both run as UID 10001).
 
-**What gates a deploy.** `ci` runs only fast, hermetic checks: gitleaks, `mvn verify -DskipITs` + trivy,
-`go vet`/`test -race`/govulncheck, and the web lint/type/format/i18n/contrast/test/build/audit chain. The two
+**What gates a deploy.** `ci` runs only fast checks: gitleaks, `mvn verify -DskipITs` + trivy,
+`go vet`/`test -race`/govulncheck, the web lint/type/format/i18n/contrast/test/build/audit chain, and k8s manifest
+render + kubeconform. The two
 container-dependent suites are standalone workflows on a nightly schedule plus `workflow_dispatch`, so neither
 can block a deploy of already-verified code:
 
