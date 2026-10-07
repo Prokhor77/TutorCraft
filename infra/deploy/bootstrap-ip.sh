@@ -227,10 +227,22 @@ else
   cp "$INFRA/deploy/nginx/tutorcraft-proxy.conf" "$SNIPPETS/tutorcraft-proxy.conf"
 
   if [[ -d /etc/nginx/sites-available ]]; then
-    cp "$INFRA/deploy/nginx/tutorcraft-ip.conf" /etc/nginx/sites-available/tutorcraft.conf
-    ln -sfn /etc/nginx/sites-available/tutorcraft.conf /etc/nginx/sites-enabled/tutorcraft.conf
+    VHOST=/etc/nginx/sites-available/tutorcraft.conf
   else
-    cp "$INFRA/deploy/nginx/tutorcraft-ip.conf" /etc/nginx/conf.d/tutorcraft.conf
+    VHOST=/etc/nginx/conf.d/tutorcraft.conf
+  fi
+
+  # Существующий vhost не перезаписываем: в нём может быть домен с TLS (так прод на
+  # tutorcraft.sproogeekdev.tech однажды потерял HTTPS). Upstream в нём переводятся на k3s вручную,
+  # см. docs/deployment-ip.md §3.2.
+  installed=false
+  if [[ -f "$VHOST" ]]; then
+    info "vhost $VHOST уже есть, не трогаю. Upstream должны указывать на 10.43.0.100–102:"
+    grep -nE '^\s*server [0-9.]+:[0-9]+;' "$VHOST" || true
+  else
+    cp "$INFRA/deploy/nginx/tutorcraft-ip.conf" "$VHOST"
+    if [[ -d /etc/nginx/sites-enabled ]]; then ln -sfn "$VHOST" /etc/nginx/sites-enabled/tutorcraft.conf; fi
+    installed=true
   fi
 
   # nginx -t обязателен: битый конфиг при reload уронит и confeek.
@@ -238,9 +250,9 @@ else
     systemctl reload nginx
     info "nginx перезагружен"
   else
-    info "nginx -t не прошёл, откатываю vhost, confeek не затронут"
-    rm -f /etc/nginx/sites-enabled/tutorcraft.conf /etc/nginx/conf.d/tutorcraft.conf
-    die "проверьте вывод nginx -t выше"
+    # Свой только что поставленный vhost убираем, чтобы следующий reload соседей не упал на нём.
+    if $installed; then rm -f "$VHOST" /etc/nginx/sites-enabled/tutorcraft.conf; fi
+    die "nginx -t не прошёл, reload не делал: confeek не затронут. Проверьте вывод выше"
   fi
 fi
 
