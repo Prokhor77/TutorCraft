@@ -1,18 +1,24 @@
 package com.tutorcraft.core.files.application;
 
 import com.tutorcraft.core.files.FilesApi;
+import com.tutorcraft.core.files.application.FileRepository.VideoPrefix;
+import com.tutorcraft.core.files.domain.StorageKeys;
 import com.tutorcraft.core.files.domain.StoredFile;
 import com.tutorcraft.core.shared.domain.FieldViolation;
 import com.tutorcraft.core.shared.domain.NotFoundException;
 import com.tutorcraft.core.shared.domain.ValidationException;
 import java.time.Clock;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,13 +26,19 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 class FilesApiAdapter implements FilesApi {
 
+    private static final Logger log = LoggerFactory.getLogger(FilesApiAdapter.class);
+    private static final String HLS_ROOT = "hls/";
+    private static final String PREFIX_END = "/";
+
     private final FileRepository files;
     private final FileUrls urls;
+    private final ObjectStorage storage;
     private final Clock clock;
 
-    FilesApiAdapter(FileRepository files, FileUrls urls, Clock clock) {
+    FilesApiAdapter(FileRepository files, FileUrls urls, ObjectStorage storage, Clock clock) {
         this.files = files;
         this.urls = urls;
+        this.storage = storage;
         this.clock = clock;
     }
 
@@ -98,6 +110,33 @@ class FilesApiAdapter implements FilesApi {
         return files.linkedFileSizes(tenantId, ownerType).stream()
                 .map(row -> new LinkedFileSize(row.fileId(), row.ownerId(), row.sizeBytes(), row.hlsBytes()))
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<String> storagePrefixes(UUID tenantId) {
+        LinkedHashSet<String> prefixes = new LinkedHashSet<>();
+        prefixes.add(StorageKeys.tenantPrefix(tenantId));
+        for (VideoPrefix video : files.videoPrefixes(tenantId)) {
+            prefixes.add(StorageKeys.hlsPrefix(video.fileId()));
+            if (isHlsDirectory(video.hlsPrefix())) {
+                prefixes.add(video.hlsPrefix());
+            }
+        }
+        return new ArrayList<>(prefixes);
+    }
+
+    @Override
+    public int deleteStorage(Collection<String> prefixes) {
+        int deleted = prefixes.stream().mapToInt(storage::deletePrefix).sum();
+        log.info("Deleted {} storage objects under {} prefixes", deleted, prefixes.size());
+        return deleted;
+    }
+
+    /** Префикс от media-worker принимается, только если это отдельный каталог внутри hls/ (не весь hls/). */
+    private static boolean isHlsDirectory(String prefix) {
+        return prefix != null && prefix.startsWith(HLS_ROOT) && prefix.endsWith(PREFIX_END)
+                && prefix.length() > HLS_ROOT.length() + PREFIX_END.length() && !prefix.contains("..");
     }
 
     private static FileRef toRef(StoredFile file) {

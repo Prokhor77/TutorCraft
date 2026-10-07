@@ -35,9 +35,15 @@ public interface TenantRepository {
                               List<String> embedWhitelist, long version) {
     }
 
-    /** storageQuotaMb — квота хранилища школы; null — без ограничения. */
+    /**
+     * storageQuotaMb — квота хранилища школы; null — без ограничения. owner — владелец, на которого школа
+     * зарегистрирована (null — не назначен); coursesCount — курсы, кроме удалённых в корзину.
+     */
     record TenantSummary(UUID id, String slug, String name, String status, java.time.Instant createdAt, long usersCount,
-                         Long storageQuotaMb) {
+                         long coursesCount, Long storageQuotaMb, TenantOwner owner) {
+    }
+
+    record TenantOwner(UUID id, String email, String firstName, String lastName) {
     }
 
     record TenantSettingsUpdate(String name, UUID logoFileId, String primaryColor, String defaultLocale,

@@ -24,6 +24,9 @@ export function buildNavigation(hints: {
   isAdmin: boolean;
   ownsSchool?: boolean;
 }): NavItem[] {
+  // The platform administrator's account is for the admin console only (no courses, grades or calendar).
+  if (hints.isAdmin)
+    return [{ href: ROUTES.admin, labelKey: 'admin', icon: Settings2, mobile: true }];
   const items: NavItem[] = [
     { href: ROUTES.home, labelKey: 'home', icon: Home, mobile: true },
     { href: ROUTES.courses, labelKey: 'courses', icon: BookOpen, mobile: true },
@@ -46,8 +49,6 @@ export function buildNavigation(hints: {
   items.push({ href: ROUTES.calendar, labelKey: 'calendar', icon: CalendarDays, mobile: true });
   if (hints.ownsSchool)
     items.push({ href: ROUTES.schoolStudents, labelKey: 'students', icon: Users, mobile: false });
-  if (hints.isAdmin)
-    items.push({ href: ROUTES.admin, labelKey: 'admin', icon: Settings2, mobile: false });
   return items;
 }
 

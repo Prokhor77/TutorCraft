@@ -44,6 +44,13 @@ var labelsByLanguage = map[string]labels{
 		Footer:        "You received this email because TutorCraft notifications are enabled. You can change this in your profile.",
 		AccountFooter: "This is a TutorCraft service email. If you were not expecting it, just ignore it — nothing happens unless you follow the link.",
 	},
+	"uz": {
+		Brand:         "TutorCraft",
+		Open:          "Ochish",
+		LinkHint:      "Agar tugma ishlamasa, ushbu havolani brauzerning manzil satriga nusxalang:",
+		Footer:        "Siz bu xatni TutorCraft bildirishnomalari yoqilgani uchun oldingiz. Sozlamalarni profilingizda oʻzgartirishingiz mumkin.",
+		AccountFooter: "Bu TutorCraft xizmat xati. Agar uni kutmagan boʻlsangiz, eʼtibor bermang — havolaga oʻtmasangiz, hech narsa sodir boʻlmaydi.",
+	},
 }
 
 func labelsFor(language string) labels {

@@ -10,7 +10,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { LOCALES } from '@/i18n/config';
+import { LOCALES, type AppLocale } from '@/i18n/config';
 import { cn } from '@/lib/utils/cn';
 import { persistLocale } from '@/features/app/locale';
 import { THEMES, useUiStore, type ThemePreference } from '@/stores/ui-store';
@@ -50,11 +50,11 @@ export function ThemeMenu() {
 }
 
 /** Switches UI language (NFR-I18N-01). `onChange` lets authenticated users persist it on the profile. */
-export function LanguageMenu({ onChange }: { onChange?: (locale: 'ru' | 'en') => void }) {
+export function LanguageMenu({ onChange }: { onChange?: (locale: AppLocale) => void }) {
   const t = useTranslations('preferences');
   const locale = useLocale();
   const router = useRouter();
-  const select = (next: 'ru' | 'en') => {
+  const select = (next: AppLocale) => {
     persistLocale(next);
     onChange?.(next);
     router.refresh();

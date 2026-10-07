@@ -61,7 +61,7 @@
 
 | Роль | Разрешения |
 |---|---|
-| `platform_admin` | все (главный администратор, единственный) |
+| `platform_admin` | все, кроме `course.create` (главный администратор, единственный; учётная запись только для админки) |
 | `tenant_admin` (владелец школы) | все, кроме админ-прав: `platform.manage`, `tenant.manage`, `tenant.branding`, `user.view`, `user.manage`, `user.import`, `user.impersonate`, `role.manage`, `category.manage`, `audit.view`, `integration.manage`, `billing.manage` |
 | `category_manager` | `course.create`, `course.view`, `course.viewHidden`, `course.edit`, `course.delete`, `course.publish`, `content.view`, `enrollment.view`, `enrollment.manage`, `group.manage`, `report.view`, `file.upload` |
 | `teacher` | `course.view`, `course.viewHidden`, `course.edit`, `course.delete`, `course.publish`, `content.view`, `enrollment.view`, `enrollment.manage`, `group.manage`, `submission.viewAll`, `submission.grade`, `grade.viewAll`, `grade.edit`, `grade.publish`, `grade.export`, `gradebook.configure`, `quiz.manage`, `quiz.viewReports`, `qbank.manage`, `forum.post`, `forum.moderate`, `forum.announce`, `completion.viewAll`, `report.view`, `file.upload` |
@@ -87,3 +87,9 @@
 - в админке главный администратор выбирает школу; запросы идут с заголовком `X-Tenant-Id`. Заголовок учитывается
   только при роли `platform_admin`, а сама роль перепроверяется по БД (не только по токену);
 - список школ: `GET /api/v1/platform/tenants` (`platform.manage`).
+- журналы аудита и активности всех школ сразу: `allTenants=true` (`platform.manage`);
+- полное удаление школы вместе с владельцем и всеми данными: `DELETE /api/v1/platform/tenants/{id}` (`platform.manage`);
+- курсы всех школ (автор-репетитор, число учеников): `GET /api/v1/platform/courses` (`platform.manage`); описание,
+  материалы и участников курса админка показывает только для чтения через эндпоинты курса с `X-Tenant-Id`;
+- учётная запись главного администратора — только для админки: `course.create` у `platform_admin` нет, в интерфейсе
+  ему доступны лишь админка и личные настройки.

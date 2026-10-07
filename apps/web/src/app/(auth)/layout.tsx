@@ -1,4 +1,5 @@
 import { CheckCircle2, FileQuestion, FolderTree, GraduationCap, Video } from 'lucide-react';
+import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { AuthTabs } from '@/components/auth/auth-tabs';
@@ -6,6 +7,12 @@ import { SiteFooter } from '@/components/landing/site-footer';
 import { SiteHeader } from '@/components/landing/site-header';
 import { LogoMark } from '@/components/layout/brand';
 import { MAIN_CONTENT_ID } from '@/components/layout/skip-link';
+import { robots } from '@/lib/seo/metadata';
+
+/** Sign-in and sign-up forms are thin pages: out of the index, but links (landing, legal) are followed. */
+export function generateMetadata(): Metadata {
+  return { robots: robots('unlisted') };
+}
 
 const BRAND_FEATURES = [
   { key: 'builder', icon: FolderTree },

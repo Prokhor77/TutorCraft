@@ -3,15 +3,13 @@ import { useEffect, useRef } from 'react';
 import type { TelegramAuthPayload } from '@/lib/api/schemas/auth';
 
 const TELEGRAM_WIDGET_SRC = 'https://telegram.org/js/telegram-widget.js?22';
-const CALLBACK_NAME = 'tcOnTelegramAuth';
+const TELEGRAM_OAUTH_ORIGIN = 'https://oauth.telegram.org';
 
-declare global {
-  interface Window {
-    [CALLBACK_NAME]?: (user: TelegramAuthPayload) => void;
-  }
-}
-
-/** Telegram Login Widget (FR-AUTH-HYB-01). The widget calls a global callback with signed user data. */
+/**
+ * Telegram Login Widget (FR-AUTH-HYB-01). The widget's iframe posts signed user data to the page. We listen for that
+ * message ourselves instead of using `data-onauth`: the widget turns that attribute into a function via `eval`, which
+ * our CSP (no 'unsafe-eval') blocks.
+ */
 export function TelegramButton({
   botUsername,
   onAuth,
@@ -26,7 +24,19 @@ export function TelegramButton({
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    window[CALLBACK_NAME] = (user) => callbackRef.current(user);
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== TELEGRAM_OAUTH_ORIGIN) return;
+      const iframe = container.querySelector('iframe');
+      if (!iframe || event.source !== iframe.contentWindow) return;
+      let data: { event?: string; auth_data?: TelegramAuthPayload } | null = null;
+      try {
+        data = typeof event.data === 'string' ? JSON.parse(event.data) : null;
+      } catch {
+        return;
+      }
+      if (data?.event === 'auth_user' && data.auth_data) callbackRef.current(data.auth_data);
+    };
+    window.addEventListener('message', onMessage);
     const script = document.createElement('script');
     script.src = TELEGRAM_WIDGET_SRC;
     script.async = true;
@@ -34,11 +44,10 @@ export function TelegramButton({
     script.setAttribute('data-size', 'large');
     script.setAttribute('data-radius', '8');
     script.setAttribute('data-request-access', 'write');
-    script.setAttribute('data-onauth', `${CALLBACK_NAME}(user)`);
     container.appendChild(script);
     return () => {
+      window.removeEventListener('message', onMessage);
       container.innerHTML = '';
-      delete window[CALLBACK_NAME];
     };
   }, [botUsername]);
 

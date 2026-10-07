@@ -93,6 +93,11 @@ class LocalObjectStorage implements ObjectStorage {
     }
 
     @Override
+    public int deletePrefix(String prefix) {
+        return files.deleteTree(prefix);
+    }
+
+    @Override
     public String publicUrl(String key) {
         return PATH_PREFIX + key;
     }

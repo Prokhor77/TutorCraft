@@ -70,6 +70,9 @@ const nextConfig: NextConfig = {
   // readable sources (component names, comments, internal route helpers) in any browser devtools.
   // This is the only "obfuscation" that means anything here — server code never leaves the host.
   productionBrowserSourceMaps: false,
+  // `opengraph-image` routes read their TTF fonts with fs at runtime (src/lib/seo/og-image.tsx);
+  // without this the standalone output would not copy them next to server.js.
+  outputFileTracingIncludes: { '/**/*': ['./src/assets/og/*.ttf'] },
   compiler: {
     // Strip console.* from the client bundle; console.error stays so real failures are still
     // visible in production. Removes stray debug output that leaks internal state and ids.
@@ -80,6 +83,13 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       { source: '/:path*', headers: securityHeaders },
+      // API JSON and user files must never show up in search results. A header (not a robots.txt
+      // Disallow) is what keeps a leaked URL out of the index: a blocked crawler never sees noindex.
+      { source: '/api/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] },
+      {
+        source: '/storage/:path*',
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow, noimageindex' }],
+      },
       {
         source: '/sw.js',
         headers: [

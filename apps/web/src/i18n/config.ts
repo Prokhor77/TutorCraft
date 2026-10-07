@@ -1,4 +1,4 @@
-export const LOCALES = ['ru', 'en'] as const;
+export const LOCALES = ['ru', 'en', 'uz'] as const;
 export type AppLocale = (typeof LOCALES)[number];
 export const DEFAULT_LOCALE: AppLocale = 'ru';
 export const LOCALE_COOKIE = 'NEXT_LOCALE';

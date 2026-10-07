@@ -31,10 +31,11 @@ class JdbcAuditQueryRepository implements AuditQueryRepository {
     public List<AuditEntryView> search(UUID tenantId, AuditFilter filter, PageQuery page) {
         CursorCodec.Position after = page.after().orElse(null);
         return jdbc.sql("""
-                SELECT a.id, a.at, a.actor_id, u.first_name || ' ' || u.last_name AS actor_name, a.action,
+                SELECT a.id, a.at, a.tenant_id, t.name AS tenant_name, a.actor_id,
+                       u.first_name || ' ' || u.last_name AS actor_name, a.action,
                        a.object_type, a.object_id, a.ip, a.diff::text AS diff
-                FROM audit_log a LEFT JOIN users u ON u.id = a.actor_id
-                WHERE a.tenant_id = :tenantId
+                FROM audit_log a LEFT JOIN users u ON u.id = a.actor_id LEFT JOIN tenants t ON t.id = a.tenant_id
+                WHERE (:allTenants OR a.tenant_id = :tenantId)
                   AND (CAST(:actorId AS uuid) IS NULL OR a.actor_id = :actorId)
                   AND (CAST(:objectType AS text) IS NULL OR a.object_type = :objectType)
                   AND (CAST(:from AS timestamptz) IS NULL OR a.at >= :from)
@@ -44,6 +45,7 @@ class JdbcAuditQueryRepository implements AuditQueryRepository {
                 LIMIT :limit
                 """)
             .param("tenantId", tenantId)
+            .param("allTenants", filter.allTenants())
             .param("actorId", filter.actorId())
             .param("objectType", filter.objectType())
             .param("from", Timestamps.of(filter.from()))
@@ -52,7 +54,7 @@ class JdbcAuditQueryRepository implements AuditQueryRepository {
             .param("afterId", after == null ? null : after.id())
             .param("limit", page.fetchSize())
             .query((rs, n) -> new AuditEntryView(rs.getObject("id", UUID.class), Timestamps.read(rs, "at"),
-                    rs.getObject("actor_id", UUID.class), rs.getString("actor_name"), rs.getString("action"),
+                    rs.getObject("tenant_id", UUID.class), rs.getString("tenant_name"), rs.getObject("actor_id", UUID.class), rs.getString("actor_name"), rs.getString("action"),
                     rs.getString("object_type"), rs.getString("object_id"), rs.getString("ip"),
                     json.read(rs.getString("diff"), MAP)))
             .list();

@@ -59,6 +59,8 @@ com.tutorcraft.core.<module>/
 | V17 | billing | tenant_subscriptions, subscription_payments |
 | V18 | identity | users: created_by, created_via, platform_blocked_at, platform_block_reason |
 | V19 | communication.calendar | calendar_lessons, calendar_lesson_attendees; calendar_personal_events: description, all_day |
+| V20 | audit | audit_log: индекс `(at, id)` для журнала всех школ |
+| V21 | identity | users: `locale` допускает `uz` |
 
 ## MongoDB
 - `MongoTemplate`, коллекции: `modules`, `items` (courses); `question_categories`, `questions`, `question_versions`, `quiz_layouts` (assessment.quiz).

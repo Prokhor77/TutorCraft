@@ -9,7 +9,7 @@ import { join, relative } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const SRC = join(ROOT, 'src');
-const LOCALES = ['ru', 'en'];
+const LOCALES = ['ru', 'en', 'uz'];
 
 function walk(dir) {
   return readdirSync(dir).flatMap((entry) => {

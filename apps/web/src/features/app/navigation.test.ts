@@ -14,4 +14,10 @@ describe('buildNavigation', () => {
       ROUTES.schoolStudents,
     );
   });
+
+  it('gives the platform administrator the admin console only', () => {
+    expect(hrefs({ teaches: true, learns: true, isAdmin: true, ownsSchool: true })).toEqual([
+      ROUTES.admin,
+    ]);
+  });
 });

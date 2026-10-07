@@ -196,6 +196,20 @@ class JdbcEnrollmentRepository implements EnrollmentRepository {
         jdbc.sql("SELECT pg_advisory_xact_lock(:key)").param("key", key).query((rs, n) -> Boolean.TRUE).single();
     }
 
+    @Override
+    public List<RoleCount> countActiveByCourseAndRole(UUID tenantId, Collection<UUID> courseIds, Instant now) {
+        if (courseIds.isEmpty()) {
+            return List.of();
+        }
+        return jdbc.sql("SELECT e.course_id, e.role_key, count(*) AS cnt FROM enrollments e"
+                        + " WHERE e.tenant_id = :tenantId AND e.course_id IN (:courseIds) AND " + ACTIVE_NOW
+                        + " GROUP BY e.course_id, e.role_key")
+            .param("tenantId", tenantId).param("courseIds", courseIds).param("now", Timestamps.of(now))
+            .query((rs, n) -> new RoleCount(rs.getObject("course_id", UUID.class),
+                    CourseRole.fromKey(rs.getString("role_key")), rs.getInt("cnt")))
+            .list();
+    }
+
     private static List<String> roleKeys(Set<CourseRole> roles) {
         if (roles == null || roles.isEmpty()) {
             return List.of(NO_ID.toString());

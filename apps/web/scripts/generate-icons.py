@@ -69,6 +69,8 @@ def main() -> None:
         render(size, False).save(OUT / f"icon-{size}.png")
         render(size, True).save(OUT / f"icon-maskable-{size}.png")
     render(180, False).save(OUT / "apple-touch-icon.png")
+    # /favicon.ico: Yandex still reads the .ico first for the snippet icon.
+    render(48, False).save(OUT.parent / "favicon.ico", sizes=[(16, 16), (32, 32), (48, 48)])
 
 
 if __name__ == "__main__":

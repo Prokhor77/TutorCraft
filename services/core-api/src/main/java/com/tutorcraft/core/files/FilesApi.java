@@ -31,6 +31,15 @@ public interface FilesApi {
      */
     List<LinkedFileSize> linkedFileSizes(UUID tenantId, String ownerType);
 
+    /**
+     * Префиксы хранилища со всеми объектами tenant: исходные загрузки и HLS-рендишены видео. Читается до удаления
+     * школы, пока строки files/videos ещё существуют.
+     */
+    List<String> storagePrefixes(UUID tenantId);
+
+    /** Удаляет объекты по префиксам из {@link #storagePrefixes}; «по возможности». @return число объектов */
+    int deleteStorage(Collection<String> prefixes);
+
     record LinkedFileSize(UUID fileId, UUID ownerId, long sizeBytes, long hlsBytes) {
     }
 

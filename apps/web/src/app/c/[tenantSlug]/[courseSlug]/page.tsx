@@ -7,45 +7,97 @@ import { BlockRenderer } from '@/components/blockdoc/block-renderer';
 import { SiteFooter } from '@/components/landing/site-footer';
 import { SiteHeader } from '@/components/landing/site-header';
 import { MAIN_CONTENT_ID } from '@/components/layout/skip-link';
+import { JsonLd } from '@/components/seo/json-ld';
 import { CourseCta } from '@/components/public/course-cta';
 import { CoverPlaceholder } from '@/components/public/storefront-course-card';
 import { Avatar } from '@/components/ui/avatar';
 import { ROUTES } from '@/features/auth/routes';
 import { docToPlainText } from '@/lib/blockdoc/doc';
 import { mathTextToPlain } from '@/lib/math/inline-math';
+import type { PublicCourse } from '@/lib/api/schemas/courses';
 import { fetchPublicCourse } from '@/lib/server/public-api';
+import { excerpt, pageMetadata } from '@/lib/seo/metadata';
+import { absoluteUrl, siteUrl } from '@/lib/seo/site';
+import {
+  breadcrumbNode,
+  courseNode,
+  graph,
+  ids,
+  schoolNode,
+  webPageNode,
+} from '@/lib/seo/structured-data';
 
 type Params = { params: Promise<{ tenantSlug: string; courseSlug: string }> };
-const META_DESCRIPTION_MAX = 160;
 const CHIP =
   'flex items-center gap-2 rounded-full border border-card-border bg-surface px-4 py-2 text-label-lg shadow-sm';
 
+function courseOgImagePath(tenantSlug: string, courseSlug: string): string {
+  return `${ROUTES.courseLanding(tenantSlug, courseSlug)}/opengraph-image`;
+}
+
+async function courseDescription(course: PublicCourse): Promise<string> {
+  const text = excerpt(mathTextToPlain(docToPlainText(course.description)));
+  if (text) return text;
+  const t = await getTranslations('seo');
+  return t('courseDescriptionFallback', { course: course.title, school: course.tenantName });
+}
+
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { tenantSlug, courseSlug } = await params;
-  const course = await fetchPublicCourse(tenantSlug, courseSlug, await getLocale()).catch(
-    () => null,
-  );
+  const locale = await getLocale();
+  const course = await fetchPublicCourse(tenantSlug, courseSlug, locale).catch(() => null);
   if (!course) return {};
-  const description = mathTextToPlain(docToPlainText(course.description)).slice(
-    0,
-    META_DESCRIPTION_MAX,
+  const t = await getTranslations('seo');
+  return pageMetadata({
+    path: ROUTES.courseLanding(tenantSlug, courseSlug),
+    title: t('courseTitle', { course: course.title, school: course.tenantName }),
+    description: await courseDescription(course),
+    locale,
+    siteName: course.tenantName,
+    imagePath: courseOgImagePath(tenantSlug, courseSlug),
+    imageAlt: course.title,
+  });
+}
+
+/** Course (free for students, ADR-012) + its school + breadcrumbs «Главная → школа → курс». */
+async function CourseStructuredData({ course }: { course: PublicCourse }) {
+  const t = await getTranslations('seo');
+  const locale = await getLocale();
+  const origin = siteUrl();
+  const catalogUrl = absoluteUrl(ROUTES.catalog(course.tenantSlug));
+  const url = absoluteUrl(ROUTES.courseLanding(course.tenantSlug, course.slug));
+  const description = await courseDescription(course);
+  return (
+    <JsonLd
+      data={graph(
+        schoolNode(origin, course.tenantSlug, course.tenantName),
+        courseNode(origin, {
+          url,
+          name: course.title,
+          description,
+          locale,
+          tenantSlug: course.tenantSlug,
+          teacherName: course.teacher.name,
+          imageUrl: absoluteUrl(courseOgImagePath(course.tenantSlug, course.slug)),
+          moduleTitles: course.modules.map((module) => module.title),
+        }),
+        webPageNode(origin, {
+          url,
+          type: 'ItemPage',
+          name: t('courseTitle', { course: course.title, school: course.tenantName }),
+          description,
+          locale,
+          about: ids.course(url),
+          hasBreadcrumb: true,
+        }),
+        breadcrumbNode(url, [
+          { name: t('home'), url: `${origin}/` },
+          { name: course.tenantName, url: catalogUrl },
+          { name: course.title, url },
+        ]),
+      )}
+    />
   );
-  return {
-    title: course.title,
-    description,
-    openGraph: {
-      title: course.title,
-      description,
-      type: 'website',
-      siteName: course.tenantName,
-      images: course.coverUrl ? [course.coverUrl] : undefined,
-    },
-    twitter: {
-      card: course.coverUrl ? 'summary_large_image' : 'summary',
-      title: course.title,
-      description,
-    },
-  };
 }
 
 /** SSR course landing with the enrol CTA (FR-COURSE-HYB-01); courses are free for students (ADR-012). */
@@ -60,6 +112,7 @@ export default async function CourseLandingPage({ params }: Params) {
 
   return (
     <div className="flex min-h-dvh flex-col bg-background">
+      <CourseStructuredData course={course} />
       <SiteHeader brandName={course.tenantName} brandHref={ROUTES.catalog(tenantSlug)} />
       <main id={MAIN_CONTENT_ID} className="flex-1">
         <section className="mx-auto max-w-content px-page-x pt-6 md:pt-10">

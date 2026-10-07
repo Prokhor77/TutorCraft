@@ -270,6 +270,14 @@ export const publicCourseSchema = z.object({
 });
 export type PublicCourse = z.infer<typeof publicCourseSchema>;
 
+/** PublicSitemapSchool (contract §13): a storefront with its published courses, for sitemap.xml. */
+export const publicSitemapSchoolSchema = z.object({
+  tenantSlug: z.string(),
+  lastModified: z.string().nullable(),
+  courses: z.array(z.object({ slug: z.string(), lastModified: z.string().nullable() })),
+});
+export type PublicSitemapSchool = z.infer<typeof publicSitemapSchoolSchema>;
+
 export const completionMeSchema = z.object({
   percent: z.number(),
   completedAt: nullableInstant,

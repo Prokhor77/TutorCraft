@@ -53,14 +53,15 @@ public class ActivityQueryService {
     public PageResponse<EntryView> search(ActivityFilter filter, PageQuery page) {
         validateText("actor", filter.actor());
         validateText("route", filter.route());
-        ActivityScope scope = scope(filter.includeAnonymous());
+        ActivityScope scope = scope(filter.includeAnonymous(), filter.allTenants());
         return page.toPage(repository.search(scope, filter, page), EntryView::at, EntryView::id);
     }
 
     /** Действия того же пользователя (или вкладки браузера, или IP для анонимных) вокруг записи. */
     @Transactional(readOnly = true)
-    public TrailView trail(UUID entryId) {
-        ActivityScope scope = scope(canSeeAnonymous());
+    public TrailView trail(UUID entryId, boolean allTenants) {
+        boolean platformAdmin = canSeeAnonymous();
+        ActivityScope scope = scope(platformAdmin, allTenants && platformAdmin);
         EntryView focus = repository.find(scope, entryId)
                 .orElseThrow(() -> new NotFoundException("activity.not_found", "Activity entry not found"));
         Instant from = focus.at().minus(properties.trailBefore());
@@ -78,8 +79,8 @@ public class ActivityQueryService {
     }
 
     @Transactional(readOnly = true)
-    public SummaryView summary(Instant from, Instant to, boolean includeAnonymous) {
-        ActivityScope scope = scope(includeAnonymous);
+    public SummaryView summary(Instant from, Instant to, boolean includeAnonymous, boolean allTenants) {
+        ActivityScope scope = scope(includeAnonymous, allTenants);
         Instant end = to == null ? clock.instant() : to;
         Instant start = from == null ? end.minus(DEFAULT_SUMMARY_WINDOW) : from;
         if (!start.isBefore(end) || Duration.between(start, end).compareTo(MAX_SUMMARY_WINDOW) > 0) {
@@ -102,16 +103,19 @@ public class ActivityQueryService {
         return ANCHOR_SESSION.equals(anchor) ? focus.sessionId() : null;
     }
 
-    private ActivityScope scope(boolean includeAnonymous) {
+    private ActivityScope scope(boolean includeAnonymous, boolean allTenants) {
         access.require(Permission.AUDIT_VIEW, AccessContext.tenant());
         UUID tenantId = currentUser.require().tenantId();
         if (includeAnonymous && !canSeeAnonymous()) {
             throw new ForbiddenException("activity.anonymous_forbidden", "Only the platform administrator sees anonymous activity");
         }
-        return new ActivityScope(tenantId, includeAnonymous);
+        if (allTenants && !canSeeAnonymous()) {
+            throw new ForbiddenException("activity.all_tenants_forbidden", "Only the platform administrator sees every school");
+        }
+        return new ActivityScope(tenantId, includeAnonymous, allTenants);
     }
 
-    /** Анонимные записи не принадлежат ни одной школе — их видит только главный администратор платформы. */
+    /** Анонимные записи и записи всех школ сразу видит только главный администратор платформы. */
     private boolean canSeeAnonymous() {
         return access.can(Permission.PLATFORM_MANAGE, AccessContext.tenant());
     }

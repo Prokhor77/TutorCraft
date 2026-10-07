@@ -3,6 +3,7 @@ package com.tutorcraft.core.enrollment;
 import com.tutorcraft.core.access.domain.CourseRole;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -15,6 +16,9 @@ public interface EnrollmentApi {
 
     /** Активные участники курса в указанных ролях. */
     List<Member> activeMembers(UUID tenantId, UUID courseId, Set<CourseRole> roles);
+
+    /** Число активных участников каждого курса по ролям (курсы без участников в ответ не попадают). */
+    Map<UUID, Map<CourseRole, Integer>> activeCountsByRole(UUID tenantId, Collection<UUID> courseIds);
 
     Optional<Member> membership(UUID tenantId, UUID courseId, UUID userId);
 

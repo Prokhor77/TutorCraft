@@ -21,7 +21,7 @@ class WebConfig implements WebMvcConfigurer {
         "i18n/dashboard", "i18n/billing", "i18n/integrations", "i18n/activity"
     };
     private static final Locale DEFAULT_LOCALE = Locale.forLanguageTag("ru");
-    private static final List<Locale> SUPPORTED_LOCALES = List.of(DEFAULT_LOCALE, Locale.ENGLISH);
+    private static final List<Locale> SUPPORTED_LOCALES = List.of(DEFAULT_LOCALE, Locale.ENGLISH, Locale.forLanguageTag("uz"));
 
     private final RequestContextInterceptor requestContextInterceptor;
     private final RateLimitInterceptor rateLimitInterceptor;

@@ -64,6 +64,7 @@ export const queryKeys = {
   categories: ['categories'] as const,
   platformTenants: ['platform', 'tenants'] as const,
   platformStorage: ['platform', 'storage'] as const,
+  platformCourses: (params: object) => ['platform', 'courses', params] as const,
   platformCourseStorage: (tenantId: string) =>
     ['platform', 'storage', tenantId, 'courses'] as const,
   users: (params: object) => ['users', params] as const,
@@ -74,7 +75,8 @@ export const queryKeys = {
   platformUsersRoot: ['platform', 'users'] as const,
   auditLog: (params: object) => ['audit-log', params] as const,
   activityLog: (params: object) => ['activity-log', params] as const,
-  activityTrail: (entryId: string) => ['activity-log', 'trail', entryId] as const,
+  activityTrail: (entryId: string, allTenants: boolean) =>
+    ['activity-log', 'trail', entryId, { allTenants }] as const,
   activitySummary: (params: object) => ['activity-log', 'summary', params] as const,
   subscription: ['billing', 'subscription'] as const,
   tokens: ['tokens'] as const,

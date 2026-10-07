@@ -46,6 +46,18 @@ public interface CourseRepository {
     /** Опубликованные (видимые студентам в now) курсы tenant для публичной витрины. */
     List<Course> published(UUID tenantId, Instant now);
 
+    /**
+     * Опубликованные курсы всех tenant для sitemap.xml (FR-COURSE-HYB-01, SEO): только slug и время изменения,
+     * не больше limit строк, свежие первыми. Единственный межтенантный список — данные и так публичны.
+     */
+    List<PublishedCourseRef> publishedEverywhere(Instant now, int limit);
+
+    /**
+     * Системный (админка главного администратора): страница не удалённых курсов всех tenant или одного
+     * ({@code tenantId} не null), keyset (created_at DESC, id DESC); q — подстрока названия/краткого имени.
+     */
+    List<Course> listAcrossTenants(UUID tenantId, String q, PageQuery page);
+
     void softDelete(UUID tenantId, UUID id, Instant now);
 
     void restore(UUID tenantId, UUID id, Instant now);
@@ -81,6 +93,9 @@ public interface CourseRepository {
         public static CourseScope everything() {
             return new CourseScope(true, List.of(), List.of(), List.of());
         }
+    }
+
+    record PublishedCourseRef(UUID tenantId, String slug, Instant updatedAt) {
     }
 
     record TenantCourseId(UUID tenantId, UUID courseId, Instant deletedAt) {

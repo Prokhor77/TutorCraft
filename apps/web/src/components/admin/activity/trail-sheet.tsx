@@ -22,16 +22,19 @@ import { KindIcon, OutcomeBadge } from './entry-parts';
  */
 export function TrailSheet({
   entryId,
+  allTenants = false,
   onSelect,
   onClose,
 }: {
   entryId: string | null;
+  /** The entry may belong to any school (the log shows every school). */
+  allTenants?: boolean;
   onSelect: (entryId: string) => void;
   onClose: () => void;
 }) {
   const t = useTranslations('adminActivity.trail');
   const tCommon = useTranslations('common');
-  const trail = useActivityTrail(entryId);
+  const trail = useActivityTrail(entryId, allTenants);
   return (
     <Sheet open={entryId !== null} onOpenChange={(open) => !open && onClose()}>
       <SheetContent

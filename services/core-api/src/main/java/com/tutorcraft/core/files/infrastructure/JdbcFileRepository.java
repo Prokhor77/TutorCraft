@@ -133,6 +133,14 @@ class JdbcFileRepository implements FileRepository {
     }
 
     @Override
+    public List<VideoPrefix> videoPrefixes(UUID tenantId) {
+        return jdbc.sql("SELECT file_id, hls_prefix FROM videos WHERE tenant_id = :tenantId")
+            .param("tenantId", tenantId)
+            .query((rs, n) -> new VideoPrefix(rs.getObject("file_id", UUID.class), rs.getString("hls_prefix")))
+            .list();
+    }
+
+    @Override
     public List<LinkedFileSize> linkedFileSizes(UUID tenantId, String ownerType) {
         return jdbc.sql("""
                 SELECT l.file_id, l.owner_id, f.size_bytes,

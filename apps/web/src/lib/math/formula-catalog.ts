@@ -30,7 +30,8 @@ function group(id: string, ru: string, en: string, tuples: readonly EntryTuple[]
 }
 
 export function localize(text: LocalizedText, locale: string): string {
-  return locale === 'ru' ? text.ru : text.en;
+  // No Uzbek labels in the catalog yet: Uzbek falls back to Russian, like the default locale.
+  return locale === 'en' ? text.en : text.ru;
 }
 
 /** KaTeX cannot render MathLive placeholders — show an empty slot box instead. */

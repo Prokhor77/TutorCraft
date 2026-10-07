@@ -236,6 +236,13 @@ services:
     container_name: tutorcraft_web
     environment:
       CORE_API_URL: http://core-api:8080
+      # SEO (apps/web/docs/seo.md): канонический адрес для canonical/OG/sitemap. На голом IP
+      # индексация выключена автоматически (robots.txt `Disallow: /` + noindex); SEO_INDEXING=true
+      # включает её принудительно, false — выключает на домене (staging).
+      SITE_URL: ${PUBLIC_BASE_URL}
+      SEO_INDEXING: ${SEO_INDEXING:-}
+      YANDEX_VERIFICATION: ${YANDEX_VERIFICATION:-}
+      GOOGLE_SITE_VERIFICATION: ${GOOGLE_SITE_VERIFICATION:-}
     ports:
       # Только 127.0.0.1: host-nginx проксирует https://<домен>/ сюда. 8080 занят confeek.
       - "127.0.0.1:3100:3000"

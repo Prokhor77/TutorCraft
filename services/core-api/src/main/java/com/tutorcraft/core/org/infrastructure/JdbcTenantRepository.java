@@ -5,6 +5,7 @@ import com.tutorcraft.core.org.OrgApi;
 import com.tutorcraft.core.org.OrgApi.PasswordPolicy;
 import com.tutorcraft.core.org.OrgApi.TenantInfo;
 import com.tutorcraft.core.org.application.TenantRepository;
+import com.tutorcraft.core.org.application.TenantRepository.TenantOwner;
 import com.tutorcraft.core.shared.persistence.JsonCodec;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -20,6 +21,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 class JdbcTenantRepository implements TenantRepository {
 
+    /** Владелец школы — системная роль tenant_admin (access.domain.SystemRole), назначенная при регистрации. */
+    private static final String OWNER_ROLE = "tenant_admin";
     private static final TypeReference<List<String>> STRING_LIST = new TypeReference<>() { };
     private static final String COLUMNS = """
             id, slug, name, status, default_locale, default_timezone, logo_file_id, primary_color,
@@ -66,17 +69,30 @@ class JdbcTenantRepository implements TenantRepository {
         String pattern = query == null || query.isBlank() ? null : "%" + query.trim().toLowerCase() + "%";
         return jdbc.sql("""
                 SELECT t.id, t.slug, t.name, t.status, t.created_at, t.quota_storage_mb,
-                       (SELECT count(*) FROM users u WHERE u.tenant_id = t.id) AS users_count
+                       (SELECT count(*) FROM users u WHERE u.tenant_id = t.id AND u.deleted_at IS NULL) AS users_count,
+                       (SELECT count(*) FROM courses c WHERE c.tenant_id = t.id AND c.deleted_at IS NULL) AS courses_count,
+                       o.id AS owner_id, o.email AS owner_email, o.first_name AS owner_first_name,
+                       o.last_name AS owner_last_name
                 FROM tenants t
+                LEFT JOIN LATERAL (
+                    SELECT u.id, u.email, u.first_name, u.last_name
+                    FROM role_assignments ra
+                    JOIN roles r ON r.id = ra.role_id AND r.key = :ownerRole
+                    JOIN users u ON u.id = ra.user_id AND u.tenant_id = t.id
+                    WHERE ra.tenant_id = t.id AND ra.context_type = 'tenant'
+                    ORDER BY ra.created_at, u.id
+                    LIMIT 1
+                ) o ON true
                 WHERE t.slug <> :platformSlug
                   AND (CAST(:pattern AS TEXT) IS NULL OR lower(t.name) LIKE :pattern OR t.slug LIKE :pattern)
                 ORDER BY t.created_at DESC, t.id
                 LIMIT :limit
                 """)
             .param("platformSlug", OrgApi.PLATFORM_TENANT_SLUG).param("pattern", pattern).param("limit", limit)
+            .param("ownerRole", OWNER_ROLE)
             .query((rs, n) -> new TenantSummary(rs.getObject("id", UUID.class), rs.getString("slug"), rs.getString("name"),
                     rs.getString("status"), rs.getTimestamp("created_at").toInstant(), rs.getLong("users_count"),
-                    rs.getObject("quota_storage_mb", Long.class)))
+                    rs.getLong("courses_count"), rs.getObject("quota_storage_mb", Long.class), owner(rs)))
             .list();
     }
 
@@ -123,6 +139,12 @@ class JdbcTenantRepository implements TenantRepository {
             .param("whitelist", json.toJsonb(update.embedWhitelist() == null ? List.of() : update.embedWhitelist()))
             .param("now", Timestamp.from(clock.instant())).param("id", id).param("version", expectedVersion)
             .update() == 1;
+    }
+
+    private static TenantOwner owner(ResultSet rs) throws SQLException {
+        UUID id = rs.getObject("owner_id", UUID.class);
+        return id == null ? null : new TenantOwner(id, rs.getString("owner_email"), rs.getString("owner_first_name"),
+                rs.getString("owner_last_name"));
     }
 
     private TenantInfo toInfo(ResultSet rs) throws SQLException {

@@ -56,7 +56,7 @@ class ActivityQueryServiceTest {
     void searchIsScopedToCurrentTenant() {
         when(repository.search(any(), any(), any())).thenReturn(List.of());
 
-        service.search(filter(false), PageQuery.of(null, null));
+        service.search(filter(false, false), PageQuery.of(null, null));
 
         verify(access).require(Permission.AUDIT_VIEW, AccessContext.tenant());
         verify(repository).search(eq(new ActivityScope(TENANT, false)), any(), any());
@@ -66,9 +66,28 @@ class ActivityQueryServiceTest {
     void anonymousActivityRequiresPlatformAdmin() {
         when(access.can(Permission.PLATFORM_MANAGE, AccessContext.tenant())).thenReturn(false);
 
-        assertThatThrownBy(() -> service.search(filter(true), PageQuery.of(null, null)))
+        assertThatThrownBy(() -> service.search(filter(true, false), PageQuery.of(null, null)))
                 .isInstanceOf(ForbiddenException.class);
         verify(repository, never()).search(any(), any(), any());
+    }
+
+    @Test
+    void everySchoolRequiresPlatformAdmin() {
+        when(access.can(Permission.PLATFORM_MANAGE, AccessContext.tenant())).thenReturn(false);
+
+        assertThatThrownBy(() -> service.search(filter(false, true), PageQuery.of(null, null)))
+                .isInstanceOf(ForbiddenException.class);
+        verify(repository, never()).search(any(), any(), any());
+    }
+
+    @Test
+    void platformAdminSearchesEverySchool() {
+        when(access.can(Permission.PLATFORM_MANAGE, AccessContext.tenant())).thenReturn(true);
+        when(repository.search(any(), any(), any())).thenReturn(List.of());
+
+        service.search(filter(false, true), PageQuery.of(null, null));
+
+        verify(repository).search(eq(new ActivityScope(TENANT, false, true)), any(), any());
     }
 
     @Test
@@ -77,7 +96,7 @@ class ActivityQueryServiceTest {
         when(repository.find(any(), eq(focus.id()))).thenReturn(Optional.of(focus));
         when(repository.trail(any(), any())).thenReturn(List.of(focus, focus, focus));
 
-        TrailView trail = service.trail(focus.id());
+        TrailView trail = service.trail(focus.id(), false);
 
         ArgumentCaptor<TrailQuery> query = ArgumentCaptor.forClass(TrailQuery.class);
         verify(repository).trail(any(), query.capture());
@@ -98,16 +117,17 @@ class ActivityQueryServiceTest {
 
     @Test
     void summaryWindowIsLimited() {
-        assertThatThrownBy(() -> service.summary(NOW.minus(Duration.ofDays(40)), NOW, false))
+        assertThatThrownBy(() -> service.summary(NOW.minus(Duration.ofDays(40)), NOW, false, false))
                 .isInstanceOf(ValidationException.class);
     }
 
-    private static ActivityFilter filter(boolean includeAnonymous) {
-        return new ActivityFilter(null, null, null, null, null, null, null, null, null, null, includeAnonymous);
+    private static ActivityFilter filter(boolean includeAnonymous, boolean allTenants) {
+        return new ActivityFilter(null, null, null, null, null, null, null, null, null, null, includeAnonymous,
+                allTenants);
     }
 
     private static EntryView entry(UUID userId, String sessionId, Instant at) {
-        return new EntryView(UUID.randomUUID(), at, "request", TENANT, userId, null, null, "10.0.0.1", null, "r-1",
+        return new EntryView(UUID.randomUUID(), at, "request", TENANT, null, userId, null, null, "10.0.0.1", null, "r-1",
                 sessionId, "/home", "GET", "/api/v1/me", "/api/v1/me", null, null, 500, 12L, "internal.error",
                 null, null, null);
     }

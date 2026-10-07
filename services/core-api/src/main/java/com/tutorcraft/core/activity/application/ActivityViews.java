@@ -11,8 +11,11 @@ public final class ActivityViews {
     private ActivityViews() {
     }
 
-    /** Запись журнала для администратора. {@code errorStack} заполнен только в трассировке. */
-    public record EntryView(UUID id, Instant at, String kind, UUID tenantId, UUID userId, String actorName,
+    /**
+     * Запись журнала для администратора. {@code errorStack} заполнен только в трассировке; {@code tenantName} пуст
+     * у анонимных записей и у записей удалённой школы.
+     */
+    public record EntryView(UUID id, Instant at, String kind, UUID tenantId, String tenantName, UUID userId, String actorName,
                             String actorEmail, String ip, String userAgent, String requestId, String sessionId,
                             String page, String method, String route, String path, Map<String, String> pathParams,
                             String handler, Integer status, Long durationMs, String errorCode, String errorType,

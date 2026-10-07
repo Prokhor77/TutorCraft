@@ -38,6 +38,9 @@ public interface EnrollmentRepository {
 
     int countActiveByRole(UUID tenantId, UUID courseId, CourseRole role);
 
+    /** Число записей, дающих доступ в now, по курсам и ролям (одним запросом). */
+    List<RoleCount> countActiveByCourseAndRole(UUID tenantId, Collection<UUID> courseIds, Instant now);
+
     void touchLastAccess(UUID tenantId, UUID courseId, UUID userId, Instant now);
 
     /** Сериализует конкурентную запись на курс (лимит мест) до конца транзакции. */
@@ -54,5 +57,8 @@ public interface EnrollmentRepository {
     }
 
     record EnrollmentFilter(String q, String roleKey, UUID groupId) {
+    }
+
+    record RoleCount(UUID courseId, CourseRole role, int count) {
     }
 }

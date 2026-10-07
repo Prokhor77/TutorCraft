@@ -28,14 +28,19 @@ public class AuditQueryService {
     @Transactional(readOnly = true)
     public PageResponse<AuditEntryView> search(AuditFilter filter, PageQuery page) {
         access.require(Permission.AUDIT_VIEW, AccessContext.tenant());
+        if (filter.allTenants()) {
+            access.require(Permission.PLATFORM_MANAGE, AccessContext.tenant());
+        }
         UUID tenantId = currentUser.require().tenantId();
         return page.toPage(repository.search(tenantId, filter, page), AuditEntryView::at, AuditEntryView::id);
     }
 
-    public record AuditFilter(UUID actorId, String objectType, Instant from, Instant to) {
+    /** @param allTenants записи всех школ, а не только текущей (только главный администратор платформы) */
+    public record AuditFilter(UUID actorId, String objectType, Instant from, Instant to, boolean allTenants) {
     }
 
-    public record AuditEntryView(UUID id, Instant at, UUID actorId, String actorName, String action, String objectType,
-                                 String objectId, String ip, Map<String, Object> diff) {
+    /** {@code tenantName} пуст, если школа удалена (записи аудита переживают удаление школы). */
+    public record AuditEntryView(UUID id, Instant at, UUID tenantId, String tenantName, UUID actorId, String actorName,
+                                 String action, String objectType, String objectId, String ip, Map<String, Object> diff) {
     }
 }

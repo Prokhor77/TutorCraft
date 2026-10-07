@@ -131,6 +131,9 @@ Layout and rules are documented in [`apps/web/README.md`](apps/web/README.md) (r
 - Server state is TanStack Query with central `src/features/query-keys.ts`; every mutation invalidates or patches keys.
 - Visual decisions live only in `src/styles/tokens.css`; `tailwind.config.ts` just maps utilities to tokens.
 - All UI strings go through next-intl in `messages/{ru,en}.json` (`npm run i18n:check` enforces parity).
+- SEO lives in `src/lib/seo/` ([`apps/web/docs/seo.md`](apps/web/docs/seo.md)): public pages use `pageMetadata()` +
+  `<JsonLd>`; the root layout defaults to `noindex, follow`, so a page must opt into the index. Indexing switches off
+  automatically while `SITE_URL`/`PUBLIC_BASE_URL` is a bare IP.
 - Offline queue (`src/lib/offline/queue.ts`) persists submit / quiz-answer / finish operations with their idempotency
   keys and flushes on reconnect.
 

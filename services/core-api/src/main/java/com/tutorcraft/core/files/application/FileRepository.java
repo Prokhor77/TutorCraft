@@ -33,6 +33,9 @@ public interface FileRepository {
     /** Системный запрос: оценка объёма HLS-рендишенов готовых видео по tenant (длительность × битрейт). */
     Map<UUID, Long> hlsBytesByTenant();
 
+    /** Видео tenant (любого статуса): fileId и записанный media-worker префикс HLS (null, если ещё не обработано). */
+    List<VideoPrefix> videoPrefixes(UUID tenantId);
+
     /** Файлы tenant, привязанные к владельцам типа ownerType: строка на связь, с оценкой объёма HLS для видео. */
     List<LinkedFileSize> linkedFileSizes(UUID tenantId, String ownerType);
 
@@ -54,6 +57,9 @@ public interface FileRepository {
     }
 
     record FileLink(String ownerType, UUID ownerId) {
+    }
+
+    record VideoPrefix(UUID fileId, String hlsPrefix) {
     }
 
     record VideoRecord(UUID fileId, String status, String masterPlaylistKey, Integer durationSec) {
