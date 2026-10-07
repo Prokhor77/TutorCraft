@@ -151,8 +151,10 @@ systemctl daemon-reload
 systemctl enable --now tutorcraft-k3s-guard.service
 systemctl restart tutorcraft-k3s-guard.service
 
+# 644: секретов в конфиге нет, а kubectl из k3s читает его при каждом запуске, в том числе под
+# пользователем tutorcraft. С 600 каждая команда деплоя печатала бы «permission denied».
 install -d -m 755 /etc/rancher/k3s
-install -m 600 "$INFRA/deploy/k3s/config.yaml" /etc/rancher/k3s/config.yaml
+install -m 644 "$INFRA/deploy/k3s/config.yaml" /etc/rancher/k3s/config.yaml
 
 if command -v k3s >/dev/null; then
   info "k3s уже установлен: $(k3s --version | head -1)"
