@@ -51,6 +51,7 @@ export const ROUTES = {
   /** Read-only view of a course of any school; `school` makes the admin console act in that school. */
   adminCourse: (tenantId: string, courseId: string) =>
     `/admin/courses/${courseId}?school=${encodeURIComponent(tenantId)}`,
+  adminSubscriptions: '/admin/subscriptions',
   catalog: (tenantSlug: string) => `/c/${tenantSlug}`,
   courseLanding: (tenantSlug: string, courseSlug: string) => `/c/${tenantSlug}/${courseSlug}`,
 } as const;

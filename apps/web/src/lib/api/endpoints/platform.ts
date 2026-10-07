@@ -88,6 +88,18 @@ export type PlatformCourse = z.infer<typeof platformCourseSchema>;
 
 export type PlatformCoursesQuery = CursorParams & { tenantId?: string; q?: string };
 
+export const platformSubscriptionSchema = z.object({
+  tenantId: z.string().uuid(),
+  status: z.enum(['trial', 'active', 'expired']),
+  /** End of the free (trial) access. */
+  trialEndsAt: z.string(),
+  paidUntil: nullableInstant,
+  /** The later of trialEndsAt and paidUntil. */
+  accessUntil: z.string(),
+  version: z.number().int().nonnegative(),
+});
+export type PlatformSubscription = z.infer<typeof platformSubscriptionSchema>;
+
 /** Endpoints of the platform main administrator (`platform.manage`). */
 export const platformApi = {
   tenants: () => http.request('/platform/tenants', { schema: z.array(platformTenantSchema) }),
@@ -104,5 +116,14 @@ export const platformApi = {
   courseStorage: (tenantId: string) =>
     http.request(`/platform/storage/${encodeURIComponent(tenantId)}/courses`, {
       schema: z.array(courseStorageSchema),
+    }),
+  subscriptions: () =>
+    http.request('/platform/subscriptions', { schema: z.array(platformSubscriptionSchema) }),
+  setTrialEnd: (tenantId: string, body: { trialEndsAt: string; version: number }) =>
+    http.request(`/platform/subscriptions/${encodeURIComponent(tenantId)}/trial`, {
+      method: 'PUT',
+      body,
+      ifMatch: body.version,
+      schema: platformSubscriptionSchema,
     }),
 };

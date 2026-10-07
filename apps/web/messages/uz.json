@@ -1717,7 +1717,8 @@
       "schools": "Maktablar",
       "logs": "Jurnallar",
       "school": "Maktabni boshqarish",
-      "courses": "Kurslar"
+      "courses": "Kurslar",
+      "subscriptions": "Maktablar kirishi"
     },
     "tenant": {
       "label": "Maktab",
@@ -1899,6 +1900,58 @@
         "progress": "Progress",
         "progressOf": "Progress: {name}"
       }
+    },
+    "subscriptions": {
+      "loadError": "Maktablar va kirish muddatlarini yuklab bo‘lmadi",
+      "totalSchools": "Ro‘yxatdan o‘tgan maktablar",
+      "recentSchools": "{days} kunda {count, plural, one {# ta yangi} other {# ta yangi}}",
+      "onTrial": "Bepul kirishda",
+      "endingSoon": "Tez orada tugaydi",
+      "endingSoonHint": "Bepul kirish yaqin {days} kun ichida tugaydi",
+      "expired": "Kirishsiz",
+      "title": "Ro‘yxatdan o‘tishlar va bepul kirish",
+      "description": "Maktabni kim va qachon ro‘yxatdan o‘tkazgani hamda platformaga bepul kirish qaysi sanagacha amal qilishi. Muddatni qo‘lda uzaytirish mumkin — to‘langan davr o‘zgarmaydi.",
+      "filterLabel": "Maktablarni ko‘rsatish",
+      "filters": {
+        "all": "Hammasi",
+        "trial": "Bepul kirish",
+        "ending": "Tez orada tugaydi",
+        "active": "To‘langan",
+        "expired": "Kirishsiz"
+      },
+      "empty": "Maktablar topilmadi",
+      "emptyText": "Tanlangan filtrga birorta maktab mos kelmaydi.",
+      "school": "Maktab",
+      "owner": "Kim ro‘yxatdan o‘tkazgan",
+      "registeredAt": "Ro‘yxatdan o‘tgan sana",
+      "freeUntil": "Bepul kirish muddati",
+      "paidUntil": "To‘langan muddat",
+      "actions": "Amallar",
+      "status": {
+        "trial": "Bepul kirish",
+        "active": "To‘langan",
+        "expired": "Kirish tugagan",
+        "not_started": "Hali kirmagan"
+      },
+      "schoolSuspended": "Maktab bloklangan",
+      "daysAgo": "{count, plural, =0 {bugun} one {# kun oldin} other {# kun oldin}}",
+      "daysLeft": "{count, plural, one {# kun qoldi} other {# kun qoldi}}",
+      "endedDaysAgo": "{count, plural, =0 {bugun tugadi} one {# kun oldin tugadi} other {# kun oldin tugadi}}",
+      "notStartedHint": "Birinchi kirishda boshlanadi",
+      "notPaid": "To‘lanmagan",
+      "extend": "Uzaytirish",
+      "dialogTitle": "Bepul kirish: {name}",
+      "dialogCurrent": "Hozir bepul kirish {date} gacha amal qiladi.",
+      "dialogNotStarted": "Egasi hali kabinetga kirmagan — bepul davr boshlanmagan. Uning tugash sanasini darhol belgilash mumkin.",
+      "quickLabel": "Tezkor uzaytirish",
+      "plusDays": "+{count, plural, one {# kun} other {# kun}}",
+      "newDate": "Kirish muddati (shu kun ham)",
+      "newDateHint": "Uzaytirish bepul kirishning joriy tugash sanasidan, agar u allaqachon tugagan bo‘lsa — bugundan hisoblanadi. Avvalroq sanani ham tanlash mumkin.",
+      "dateInPast": "Kelajakdagi sanani tanlang",
+      "datePlaceholder": "Sanani tanlang",
+      "today": "Bugun",
+      "paidLaterNote": "Maktab {date} gacha to‘lagan — bu sanagacha kirish baribir saqlanadi.",
+      "savedToast": "«{name}» uchun bepul kirish {date} gacha amal qiladi"
     }
   },
   "adminUsers": {

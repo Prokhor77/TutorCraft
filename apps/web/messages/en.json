@@ -1717,7 +1717,8 @@
       "schools": "Schools",
       "logs": "Logs",
       "school": "School management",
-      "courses": "Courses"
+      "courses": "Courses",
+      "subscriptions": "School access"
     },
     "tenant": {
       "label": "School",
@@ -1899,6 +1900,58 @@
         "progress": "Progress",
         "progressOf": "Progress: {name}"
       }
+    },
+    "subscriptions": {
+      "loadError": "Could not load schools and access dates",
+      "totalSchools": "Schools registered",
+      "recentSchools": "{count, plural, one {# new} other {# new}} in {days} days",
+      "onTrial": "On free access",
+      "endingSoon": "Ending soon",
+      "endingSoonHint": "Free access ends within {days} days",
+      "expired": "No access",
+      "title": "Sign-ups and free access",
+      "description": "Who registered each school and when, and until when its free access to the platform lasts. You can extend it manually — the paid period is not affected.",
+      "filterLabel": "Show schools",
+      "filters": {
+        "all": "All",
+        "trial": "Free access",
+        "ending": "Ending soon",
+        "active": "Paid",
+        "expired": "No access"
+      },
+      "empty": "No schools found",
+      "emptyText": "No school matches the selected filter.",
+      "school": "School",
+      "owner": "Registered by",
+      "registeredAt": "Registered",
+      "freeUntil": "Free access until",
+      "paidUntil": "Paid until",
+      "actions": "Actions",
+      "status": {
+        "trial": "Free access",
+        "active": "Paid",
+        "expired": "Access ended",
+        "not_started": "Never signed in"
+      },
+      "schoolSuspended": "School suspended",
+      "daysAgo": "{count, plural, =0 {today} one {# day ago} other {# days ago}}",
+      "daysLeft": "{count, plural, one {# day left} other {# days left}}",
+      "endedDaysAgo": "{count, plural, =0 {ended today} one {ended # day ago} other {ended # days ago}}",
+      "notStartedHint": "Starts on first sign-in",
+      "notPaid": "Never paid",
+      "extend": "Extend",
+      "dialogTitle": "Free access: {name}",
+      "dialogCurrent": "Free access currently lasts until {date}.",
+      "dialogNotStarted": "The owner has not opened the dashboard yet, so the free period has not started. You can set its end date right away.",
+      "quickLabel": "Quick extension",
+      "plusDays": "+{count, plural, one {# day} other {# days}}",
+      "newDate": "Access until (inclusive)",
+      "newDateHint": "Extensions count from the current end of free access, or from today if it has already ended. An earlier date is allowed too.",
+      "dateInPast": "Choose a future date",
+      "datePlaceholder": "Choose a date",
+      "today": "Today",
+      "paidLaterNote": "The school has paid until {date} — access remains until then regardless.",
+      "savedToast": "Free access for “{name}” lasts until {date}"
     }
   },
   "adminUsers": {

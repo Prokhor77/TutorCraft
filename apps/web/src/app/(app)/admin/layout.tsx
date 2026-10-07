@@ -4,6 +4,7 @@ import {
   Activity,
   BookOpen,
   Building2,
+  CalendarClock,
   FolderTree,
   HardDrive,
   Lock,
@@ -46,6 +47,7 @@ type Group = Section & { scope: 'platform' | 'school' | 'logs'; sections?: reado
 
 const GROUPS: readonly Group[] = [
   { href: ROUTES.adminSchools, key: 'schools', icon: Building2, scope: 'platform' },
+  { href: ROUTES.adminSubscriptions, key: 'subscriptions', icon: CalendarClock, scope: 'platform' },
   { href: ROUTES.adminCourses, key: 'courses', icon: BookOpen, scope: 'platform' },
   { href: ROUTES.adminAccounts, key: 'accounts', icon: UserCog, scope: 'platform' },
   {
@@ -83,7 +85,7 @@ function groupOf(pathname: string): { group?: Group; section?: Section } {
 
 /**
  * Admin area (SPEC §10) of the single platform administrator (ADMIN_EMAIL on the server). Platform tabs (schools,
- * courses, accounts, storage) span every school; «Управление школой» works inside the school picked in the header (sent as
+ * school access, courses, accounts, storage) span every school; «Управление школой» works inside the school picked in the header (sent as
  * `X-Tenant-Id`); logs show every school or the picked one. Everyone else gets a no-access state — the API refuses
  * them anyway.
  */

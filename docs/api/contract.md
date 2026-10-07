@@ -761,6 +761,24 @@ type Subscription = { status: 'trial' | 'active' | 'expired'; trialEndsAt: Insta
 - Покупка продлевает доступ от его текущего конца (срок во время пробного периода или действующей подписки не теряется). Повтор с тем же `Idempotency-Key` не продлевает второй раз. `payments` — последние 20 оплат, только при `canManage`.
 - Пока подключён только `PAYMENT_PROVIDER=fake`: срок активируется сразу, без страницы оплаты. С другим провайдером → 422 `billing.subscription_checkout_unavailable`.
 
+### 13.3. Сроки доступа школ (`billing`, главный администратор)
+
+Право `platform.manage`.
+
+| GET | `/platform/subscriptions` | `PlatformSubscription[]` — школы, у которых пробный период уже начался (без строки — владелец ещё не заходил) |
+|---|---|---|
+| PUT | `/platform/subscriptions/{tenantId}/trial` | `If-Match` + `{ trialEndsAt: Instant, version }` → `PlatformSubscription` (новый конец бесплатного доступа: продление или сокращение; оплаченный срок не меняется) |
+
+```ts
+type PlatformSubscription = { tenantId: Id; status: 'trial' | 'active' | 'expired'; trialEndsAt: Instant;
+                              paidUntil: Instant | null; accessUntil: Instant; version: number }
+```
+
+`trialEndsAt` — в будущем и не дальше 5 лет, иначе 422 `billing.trial_end_out_of_range`; служебная школа администратора
+и несуществующая → 404 `tenant.not_found`; устаревшая версия → 409 `conflict.version`. Изменение пишется в аудит школы
+(`subscription.trial_changed`, diff `trialEndsAt.from/to`). Кто и когда зарегистрировал школу — `owner` и
+`createdAt` из `GET /platform/tenants` (§4.4).
+
 ## 14. Интеграции (`integrations`)
 
 | GET/POST | `/tokens` | `ApiTokenSummary[]` / `{ name, scopes: string[], expiresAt? }` → `{ id, token }` (один раз) · DELETE `/tokens/{id}` |

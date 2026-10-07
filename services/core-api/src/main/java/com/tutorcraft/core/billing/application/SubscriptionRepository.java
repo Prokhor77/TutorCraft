@@ -14,6 +14,12 @@ public interface SubscriptionRepository {
     /** Оптимистичная блокировка: false, если версия изменилась. */
     boolean updatePaidUntil(UUID tenantId, Instant paidUntil, long expectedVersion, Instant now);
 
+    /** Оптимистичная блокировка: false, если версия изменилась. */
+    boolean updateTrialEndsAt(UUID tenantId, Instant trialEndsAt, long expectedVersion, Instant now);
+
+    /** Подписки всех школ, у которых пробный период уже начался. */
+    List<TenantSubscription> findAll();
+
     void insertPayment(SubscriptionPayment payment);
 
     /** Последние оплаты tenant, новые первыми. */

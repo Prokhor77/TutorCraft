@@ -54,6 +54,24 @@ class JdbcSubscriptionRepository implements SubscriptionRepository {
     }
 
     @Override
+    public boolean updateTrialEndsAt(UUID tenantId, Instant trialEndsAt, long expectedVersion, Instant now) {
+        return jdbc.sql("""
+                UPDATE tenant_subscriptions SET trial_ends_at = :trialEndsAt, version = version + 1, updated_at = :now
+                WHERE tenant_id = :tenantId AND version = :expected
+                """)
+            .param("trialEndsAt", Timestamps.of(trialEndsAt)).param("now", Timestamps.of(now))
+            .param("tenantId", tenantId).param("expected", expectedVersion)
+            .update() == 1;
+    }
+
+    @Override
+    public List<TenantSubscription> findAll() {
+        return jdbc.sql("SELECT tenant_id, trial_ends_at, paid_until, version FROM tenant_subscriptions")
+            .query(JdbcSubscriptionRepository::mapSubscription)
+            .list();
+    }
+
+    @Override
     public void insertPayment(SubscriptionPayment payment) {
         jdbc.sql("""
                 INSERT INTO subscription_payments (id, tenant_id, term, amount_minor, currency, provider,

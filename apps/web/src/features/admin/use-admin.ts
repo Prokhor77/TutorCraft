@@ -196,3 +196,29 @@ export function usePlatformCourseStorage(tenantId: string | null) {
     enabled: !!tenantId,
   });
 }
+
+/** Trial and paid access of every school whose trial has started. */
+export function usePlatformSubscriptions() {
+  return useQuery({
+    queryKey: queryKeys.platformSubscriptions,
+    queryFn: platformApi.subscriptions,
+  });
+}
+
+/** Moves the end of a school's free (trial) access. */
+export function useSetTrialEnd() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      tenantId,
+      trialEndsAt,
+      version,
+    }: {
+      tenantId: string;
+      trialEndsAt: string;
+      version: number;
+    }) => platformApi.setTrialEnd(tenantId, { trialEndsAt, version }),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: queryKeys.platformSubscriptions }),
+  });
+}

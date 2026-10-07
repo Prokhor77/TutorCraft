@@ -65,6 +65,7 @@ export const queryKeys = {
   platformTenants: ['platform', 'tenants'] as const,
   platformStorage: ['platform', 'storage'] as const,
   platformCourses: (params: object) => ['platform', 'courses', params] as const,
+  platformSubscriptions: ['platform', 'subscriptions'] as const,
   platformCourseStorage: (tenantId: string) =>
     ['platform', 'storage', tenantId, 'courses'] as const,
   users: (params: object) => ['users', params] as const,
